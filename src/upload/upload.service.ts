@@ -22,6 +22,8 @@ export class UploadService {
   peer_to_peer_types = ["Collection", "LargeValueCollection", "PushP2P", "PullP2PPayment"]
 
   payment_type_consents = ["single-immediate-payment", "multi-payment", "future-dated-payment"]
+
+  discount = 200;
   async mergeCsvFiles(file1Path: string, file2Path: string) {
     const file1Data: any[] = [];
     const file2Data: any[] = [];
@@ -152,8 +154,8 @@ export class UploadService {
               if (!merchantId) return;  // Skip transactions without a merchantId
 
               const amount = parseInt(rawAmount, 10);
-              const date = new Date(timestamp).toISOString().split("T")[0]; // Extract date
-              const key = `${merchantId}_${date}`; // Use merchantId + date as unique key
+              const date = new Date(timestamp).toISOString().split("T")[0];
+              const key = `${merchantId}_${date}`;
 
               // Initialize the merchant's daily data if not already present
               if (!merchantDailyData[key]) {
@@ -163,7 +165,7 @@ export class UploadService {
                   transactions: [],
                   totalAmount: 0,
                   limitApplied: false,
-                  remainingBalance: 200, // Deduction of 200 AED per merchant per day
+                  remainingBalance: this.discount,
                 };
               }
 
@@ -269,11 +271,6 @@ export class UploadService {
       } else if (isChargeable && record["raw_api_log_data.url"].includes('insurance')) {
         api_hub_fee = 12.5;
       }
-      //todo: need to check if trhea api call is cop or blance check to apply 2 hr window condition for .5 api hub fee
-
-      //if its insurance then charge 12.5
-
-      // console.log(isChargeable)
       return {
         ...record,
         chargeable: isChargeable,
