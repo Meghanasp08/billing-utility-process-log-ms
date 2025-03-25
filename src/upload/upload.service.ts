@@ -116,6 +116,23 @@ export class UploadService {
     return billData;
   }
 
+  async pageCalculation(data: any) {
+    const pageData = data.map((record: { [x: string]: string; }) => {
+      let page = 1;
+      let pageSize = 10;
+      let total = data.length;
+      let totalPages = Math.ceil(total / pageSize);
+      return {
+        ...record,
+        page: page,
+        pageSize: pageSize,
+        total: total,
+        totalPages: totalPages
+      };
+    });
+    return pageData;
+  }
+
   async calculateFee(data: any) {
     const calculatedData = data.map((record: { [x: string]: string; }) => {
       let calculatedFee = 0;

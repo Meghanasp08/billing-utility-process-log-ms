@@ -1,6 +1,5 @@
-import { Controller, Get, HttpStatus, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guard/jwt-auth-guard';
 import { ProfileService } from './profile.service';
 
 @ApiTags('profile')
@@ -8,7 +7,7 @@ import { ProfileService } from './profile.service';
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) { }
 
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Get()
   async getProfile(@Req() req: any) {
