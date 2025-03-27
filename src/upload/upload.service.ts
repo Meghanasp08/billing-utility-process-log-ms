@@ -4,6 +4,7 @@ import * as csv from 'csv-parser';
 import * as fs from 'fs';
 import { Model } from 'mongoose';
 import { Log, LogDocument } from './schemas/billing-log.schema';
+import { LfiDataModel } from './schemas/lfi-data.schema';
 @Injectable()
 export class UploadService {
   constructor(
@@ -116,28 +117,33 @@ export class UploadService {
     return billData;
   }
 
-  async pageCalculation(data: any) {
-    const pageData = data.map((record: { [x: string]: string; }) => {
-      let page = 1;
-      let pageSize = 10;
-      let total = data.length;
-      let totalPages = Math.ceil(total / pageSize);
-      return {
-        ...record,
-        page: page,
-        pageSize: pageSize,
-        total: total,
-        totalPages: totalPages
-      };
-    });
-    return pageData;
-  }
+  async pageCalculation(records: any) {
+    let divident = 100;
+    let totalPages = Math.ceil(records / divident);
 
+    return totalPages;
+  }
+  async populateLfiData(rawData: any[]) {
+    const uniqueLfiIds = Array.from(new Set(rawData.map(data => data["raw_api_log_data.lfi_id"])));
+
+    const lfiDataToInsert = uniqueLfiIds.map(lfi_id => ({
+      lfi_id,
+      mdp_retail_sme: parseFloat((Math.random() * (3 - 2) + 2).toFixed(2)), // Random between 2-3
+      mdp_corporate: parseFloat((Math.random() * (3 - 2) + 2).toFixed(2)),  // Random between 2-3
+    }));
+
+    // Insert into the MongoDB collection
+    const insertedData = await LfiDataModel.insertMany(lfiDataToInsert);
+    return insertedData;
+  }
   async calculateFee(data: any) {
-    const calculatedData = data.map((record: { [x: string]: string; }) => {
+
+    const calculatedData = data.map(async (record: { [x: string]: string; }) => {
       let calculatedFee = 0;
       let applicableFee = 0;
+      let numberOfPages = 0;
       let result: any[] = [];
+      let lfiResults: any[] = [];
 
       if (record.group == "payment-bulk" && record['raw_api_log_data.is_large_corporate'] == 'TRUE') {
         calculatedFee = 250;
@@ -254,9 +260,21 @@ export class UploadService {
             if (record.group == 'insurance') {
               calculatedFee = 0;
               applicableFee = calculatedFee;
-            } else { }
-            calculatedFee = 250;
-            applicableFee = calculatedFee;
+            } else {
+              if (record.group == 'data') {
+                numberOfPages = Math.ceil(parseInt(record["raw_api_log_data.records"]) / 100);
+                const lfiData = await this.populateLfiData(data);
+                if (record["raw_api_log_data.is_attended"] == 'true') {
+                  lfiResults = await this.calculateLfiCharges(data, record,);
+                } else if (record["raw_api_log_data.is_attended"] == 'false') {
+
+                }
+
+              } else {
+                calculatedFee = 0;
+                applicableFee = calculatedFee;
+              }
+            }
           }
         }
       }
@@ -265,13 +283,66 @@ export class UploadService {
         ...record,
         calculatedFee: calculatedFee,
         applicableFee: applicableFee,
-        result: result
+        result: result,
+        numberOfPages: numberOfPages,
+        lfiResult: lfiResults
       };
     });
 
     return calculatedData;
   }
+  async calculateLfiCharges(data: any, record: any) {
+    const chargesData = {};
 
+    data.forEach((transaction) => {
+      const {
+        "raw_api_log_data.psu_id": psuId,
+        "raw_api_log_data.timestamp": timestamp,
+        numberOfPages,
+      } = transaction;
+
+      if (!psuId || !timestamp || !numberOfPages) return; // Skip invalid entries
+      if (psuId != record["raw_api_log_data.psu_id"]) {
+        return; // Skip transactions that don't belong to this merchant
+      }
+
+      const date = new Date(timestamp).toISOString().split("T")[0]; // Extract the date
+      const key = `${psuId}_${date}`;
+
+      // Initialize data for this customer and date
+      if (!chargesData[key]) {
+        chargesData[key] = {
+          psuId,
+          date,
+          totalPages: 0,
+          transactions: [],
+        };
+      }
+
+      // Add the transaction details
+      chargesData[key].transactions.push(transaction);
+      chargesData[key].totalPages += numberOfPages; // Aggregate the pages
+    });
+
+    // Calculate charges
+    const results = Object.values(chargesData).map((entry: { psuId: string; date: string; totalPages: number; transactions: any[] }) => {
+      let chargeableTransactions = 0;
+
+      if (entry.totalPages > 15) {
+        chargeableTransactions = entry.transactions.length; // All transactions become chargeable
+      }
+
+      return {
+        psuId: entry.psuId,
+        date: entry.date,
+        totalPages: entry.totalPages,
+        chargeableTransactions,
+        charge: chargeableTransactions * 2.5, // Calculate charges
+      };
+    })
+
+    return results;
+  };
   async chargableConvertion(data: any) {
     const updatedData = data.map((record: { [x: string]: string; }) => {
       let api_hub_fee = 2.5;
