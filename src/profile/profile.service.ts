@@ -49,9 +49,48 @@ export class ProfileService {
         },
         {
           $group: {
-            _id: "$raw_api_log_data.lfi_id",
-            total_api_hub_fee: { $sum: "$api_hub_fee" },
-            total_applicable_fee: { $sum: "$applicableFee" }
+            _id: {
+              lfi_id: "$raw_api_log_data.lfi_id",
+              group: "$group",
+              type: "$type"
+            },
+            type_applicable_fee: { $sum: "$api_hub_fee" }
+          }
+        },
+        {
+          $group: {
+            _id: {
+              lfi_id: "$_id.lfi_id",
+              group: "$_id.group"
+            },
+            group_applicable_fee: { $sum: "$type_applicable_fee" },
+            types: {
+              $push: {
+                type: "$_id.type",
+                type_applicable_fee: "$type_applicable_fee"
+              }
+            }
+          }
+        },
+        {
+          $group: {
+            _id: "$_id.lfi_id",
+            total_applicable_fee: { $sum: "$group_applicable_fee" },
+            groups: {
+              $push: {
+                group: "$_id.group",
+                group_applicable_fee: "$group_applicable_fee",
+                types: "$types"
+              }
+            }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            lfi_id: "$_id",
+            total_applicable_fee: 1,
+            groups: 1
           }
         }
       ]
