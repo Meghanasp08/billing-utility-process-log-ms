@@ -128,9 +128,9 @@ export class UploadService {
     // let result = await this.populateLfiData(feeApplied);
     // console.log('iam result', result)
 
-    // const pagesFeeApplied = await this.feeCalculationForLfi(feeApplied);
-    const billData = await this.logModel.insertMany(feeApplied);
-    return billData;
+    const pagesFeeApplied = await this.feeCalculationForLfi(feeApplied);
+    // const billData = await this.logModel.insertMany(pagesFeeApplied);
+    return pagesFeeApplied;
   }
 
   async pageCalculation(records: any) {
@@ -153,73 +153,100 @@ export class UploadService {
   }
 
   async feeCalculationForLfi(data: any) {
-    let lfiResults: any[] = [];
+    try {
+      const lfiCalculated = await Promise.all(
+        data.map(async (record: { [x: string]: any }) => {
+          if (record.group === "data" && record.type === "other") {
+            const lfiData = await this.lfiModel.findOne({
+              lfi_id: record["raw_api_log_data.lfi_id"],
+            });
 
-    await Promise.all(data.map(async (record: { [x: string]: any; }) => {
-      if (record.group == 'data' && record.type == 'other') {
-        const lfiData = await this.lfiModel.findOne({ lfi_id: record['raw_api_log_data.lfi_id'] });
-        if (!lfiData) return; // Skip if LFI data is missing
+            if (!lfiData) return null; // Return null instead of pushing (filtered later)
 
-        const isLargeCorporate = record['raw_api_log_data.is_large_corporate'] === 'TRUE';
-        const lfiMdpMultiplier = isLargeCorporate ? lfiData.mdp_corporate : lfiData.mdp_retail_sme;
+            const isLargeCorporate =
+              record["raw_api_log_data.is_large_corporate"] === "TRUE";
+            const lfiMdpMultiplier = isLargeCorporate
+              ? lfiData.mdp_corporate
+              : lfiData.mdp_retail_sme;
 
-        const margin = record["raw_api_log_data.is_attended"] === 'true' ? 15
-          : record["raw_api_log_data.is_attended"] === 'false' ? 5
-            : 0;
+            const margin =
+              record["raw_api_log_data.is_attended"] === "true"
+                ? 15
+                : record["raw_api_log_data.is_attended"] === "false"
+                  ? 5
+                  : 0;
 
-        if (margin === 0) {
-          throw new Error("Margin cannot be 0. Invalid value for 'is_attended'.");
-        }
+            if (margin === 0) {
+              throw new Error(
+                "Margin cannot be 0. Invalid value for 'is_attended'."
+              );
+            }
 
-        const chargesData = {};
+            const chargesData: Record<string, any> = {};
 
-        // Iterate over data again to process transactions
-        for (const transaction of data) {
-          const {
-            "raw_api_log_data.psu_id": psuId,
-            "raw_api_log_data.timestamp": timestamp,
-            numberOfPages
-          } = transaction;
+            // Iterate over data again to process transactions
+            data.forEach((transaction) => {
+              const {
+                "raw_api_log_data.psu_id": psuId,
+                "raw_api_log_data.timestamp": timestamp,
+                numberOfPages,
+              } = transaction;
 
-          if (!psuId || !timestamp || !numberOfPages) continue; // Skip invalid entries
-          if (psuId !== record["raw_api_log_data.psu_id"]) continue; // Ensure the transaction matches
+              if (!psuId || !timestamp || !numberOfPages) return;
+              if (psuId !== record["raw_api_log_data.psu_id"]) return;
 
-          const date = new Date(timestamp).toISOString().split("T")[0];
-          const key = `${psuId}_${date}`;
+              const date = new Date(timestamp).toISOString().split("T")[0];
+              const key = `${psuId}_${date}`;
 
-          if (!chargesData[key]) {
-            chargesData[key] = {
-              psuId,
-              date,
-              totalPages: 0,
-              transactions: []
+              if (!chargesData[key]) {
+                chargesData[key] = {
+                  psuId,
+                  date,
+                  totalPages: 0,
+                  transactions: [],
+                };
+              }
+
+              chargesData[key].transactions.push(transaction);
+              chargesData[key].totalPages += numberOfPages;
+            });
+
+            // Generate charges per customer
+            const customerCharges = Object.values(chargesData).map(
+              (entry: {
+                psuId: string;
+                date: string;
+                totalPages: number;
+                transactions: any[];
+              }) => {
+                let chargeableTransactions =
+                  entry.totalPages > margin ? entry.transactions.length : 0;
+                return {
+                  psuId: entry.psuId,
+                  date: entry.date,
+                  totalPages: entry.totalPages,
+                  chargeableTransactions,
+                  charge: chargeableTransactions * lfiMdpMultiplier,
+                };
+              }
+            );
+
+            return {
+              ...record,
+              lfiResult: customerCharges.length > 0 ? customerCharges : [],
             };
           }
+          return record; // Return unchanged if conditions are not met
+        })
+      );
 
-          chargesData[key].transactions.push(transaction);
-          chargesData[key].totalPages += numberOfPages;
-        }
-        // Generate charges per customer
-        const customerCharges = Object.values(chargesData).map((entry: { psuId: string; date: string; totalPages: number; transactions: any[] }) => {
-          let chargeableTransactions = entry.totalPages > margin ? entry.transactions.length : 0;
-          return {
-            psuId: entry.psuId,
-            date: entry.date,
-            totalPages: entry.totalPages,
-            chargeableTransactions,
-            charge: chargeableTransactions * lfiMdpMultiplier
-          };
-        });
-        console.log("iam teh data", record)
-        lfiResults.push({
-          ...record,
-          lfiResult: customerCharges.length > 0 ? customerCharges : []
-        });
-      }
-    }));
-
-    return lfiResults// Return results or empty array
+      return lfiCalculated // Remove null entries
+    } catch (error) {
+      console.error("Error calculating LFI fee:", error);
+      throw new Error("Fee calculation failed");
+    }
   }
+
 
 
 

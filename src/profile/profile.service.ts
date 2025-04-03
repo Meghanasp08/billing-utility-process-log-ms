@@ -112,51 +112,95 @@ export class ProfileService {
   async getBillingHubDetails(id: string) {
     try {
       const aggregateQuery = [
+
         {
-          "$match": {
-            "raw_api_log_data.tpp_id": id // Filter by `tpp_id`
+
+          $match: {
+
+            "raw_api_log_data.tpp_id": id,
+
+            chargeable: true
+
           }
+
         },
+
         {
-          "$group": {
-            "_id": {
-              "category": {
-                "$cond": [
-                  { "$eq": ["$discounted", true] }, "COP / Balance Check (Discounted)",
-                  {
-                    "$cond": [
-                      { "$eq": ["$group", "insurance"] }, "insurance",
-                      {
-                        "$cond": [
-                          { "$eq": ["$group", "other"] }, "other",
-                          null
-                        ]
-                      }
-                    ]
+
+          $project: {
+
+            item: {
+
+              $cond: {
+
+                if: { $eq: ["$discounted", true] },
+
+                then: "Discounted",
+
+                else: {
+
+                  $cond: {
+
+                    if: {
+
+                      $eq: ["$group", "insurance"]
+
+                    },
+
+                    then: "Insurance",
+
+                    else: "Others"
+
                   }
-                ]
+
+                }
+
               }
+
             },
-            "totalCount": { "$sum": 1 },  // Count of records in each category
-            "totalFee": { "$sum": "$api_hub_fee" },  // Sum of `api_hub_fee` per category
-            "singleHubFee": { "$first": "$api_hub_fee" } // Example of a single fee
+
+            api_hub_fee: 1
+
           }
+
         },
+
         {
-          "$match": {
-            "_id.category": { "$ne": null } // Remove null categories
+
+          $group: {
+
+            _id: "$item",
+
+            count: { $sum: 1 },
+
+            unit_api_hub_fee: { "$avg": "$api_hub_fee" },
+
+            total_api_hub_fee: { $sum: "$api_hub_fee" }
+
           }
+
         },
+
         {
-          "$project": {
-            "_id": 0,
-            "category": "$_id.category",
-            "totalCount": 1,
-            "totalFee": 1,
-            "singleHubFee": 1
+
+          $project: {
+
+            _id: 0,
+
+            item: "$_id",
+
+            count: 1,
+
+            unit_api_hub_fee: 1,
+
+            total_api_hub_fee: 1
+
           }
+
         }
+
       ];
+
 
       const result = await this.logModel.aggregate(aggregateQuery).exec();
       return result;
