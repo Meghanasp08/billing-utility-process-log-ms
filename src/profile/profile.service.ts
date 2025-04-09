@@ -3,19 +3,21 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Log, LogDocument } from 'src/upload/schemas/billing-log.schema';
 import { LfiData, LfiDataDocument } from 'src/upload/schemas/lfi-data.schema';
+import { TppData, TppDataDocument } from 'src/upload/schemas/tpp-data.schema';
 import { User, UserDocument } from './schemas/user.schema';
 
 @Injectable()
 export class ProfileService {
   constructor(@InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Log.name) private logModel: Model<LogDocument>,
-    @InjectModel(LfiData.name) private lfiModel: Model<LfiDataDocument>,) { }
+    @InjectModel(LfiData.name) private lfiModel: Model<LfiDataDocument>,
+    @InjectModel(TppData.name) private tppModel: Model<TppDataDocument>,) { }
 
   getProfile() {
     return this.userModel.find().exec();;
   }
 
-  async getLogData(startDate?: string, endDate?: string) {
+  async getLogData(startDate?: string, endDate?: string, search?: string) {
     const filter: any = {};
 
     if (startDate && endDate) {
@@ -28,12 +30,20 @@ export class ProfileService {
     } else if (endDate) {
       filter["raw_api_log_data.timestamp"] = { $lte: new Date(endDate) };
     }
-
+    if (search) {
+      const searchRegex = new RegExp(search, "i");
+      filter["$or"] = [
+        { "raw_api_log_data.tpp_id": search },
+        { "raw_api_log_data.tppName": searchRegex },
+        { "raw_api_log_data.lfi_id": search },
+        { "raw_api_log_data.lfiName": searchRegex }
+      ];
+    }
     const log = await this.logModel.find(filter).exec();
     return log;
   }
 
-  async getBillingData(group: String, startDate?: string, endDate?: string) {
+  async getBillingData(group: String, startDate?: string, endDate?: string, search?: string) {
     try {
       const filter: any = {};
 
@@ -46,6 +56,16 @@ export class ProfileService {
         filter["raw_api_log_data.timestamp"] = { $gte: new Date(startDate) };
       } else if (endDate) {
         filter["raw_api_log_data.timestamp"] = { $lte: new Date(endDate) };
+      }
+
+      if (search) {
+        const searchRegex = new RegExp(search, "i");
+        filter["$or"] = [
+          { "raw_api_log_data.tpp_id": search },
+          { "raw_api_log_data.tppName": searchRegex },
+          { "raw_api_log_data.lfi_id": search },
+          { "raw_api_log_data.lfiName": searchRegex }
+        ];
       }
       const aggregateQuery = [
         { $match: filter },
@@ -67,7 +87,7 @@ export class ProfileService {
     }
   }
 
-  async getBillingDetails(id: string, group: String, startDate?: string, endDate?: string) {
+  async getBillingDetails(id: string, group: String, startDate?: string, endDate?: string,) {
     try {
       const filter: any = {};
 
@@ -81,6 +101,16 @@ export class ProfileService {
       } else if (endDate) {
         filter["raw_api_log_data.timestamp"] = { $lte: new Date(endDate) };
       }
+
+      // if (search) {
+      //   const searchRegex = new RegExp(search, "i");
+      //   filter["$or"] = [
+      //     { "raw_api_log_data.tpp_id": search },
+      //     { "raw_api_log_data.tppName": searchRegex },
+      //     { "raw_api_log_data.lfi_id": search },
+      //     { "raw_api_log_data.lfiName": searchRegex }
+      //   ];
+      // }
 
       const matchCondition: any = group === 'tpp'
         ? { "raw_api_log_data.tpp_id": id }
@@ -269,9 +299,37 @@ export class ProfileService {
     }
   }
 
-  async getLfiDetails() {
+  async getLfiDetails(search?: string) {
     try {
-      const result = await this.lfiModel.find().exec();
+      const filter: any = {};
+
+      if (search) {
+        const searchRegex = new RegExp(search, "i");
+        filter["$or"] = [
+          { "lfi_id": search },
+          { "lfi_name": searchRegex }
+        ];
+      }
+      const result = await this.lfiModel.find(filter).exec();
+      return result;
+    } catch (error) {
+      console.error("Error fetching billing details:", error);
+      throw new Error("Failed to fetch billing details");
+    }
+  }
+
+  async getTppDetails(search?: string) {
+    try {
+      const filter: any = {};
+
+      if (search) {
+        const searchRegex = new RegExp(search, "i");
+        filter["$or"] = [
+          { "tpp_id": search },
+          { "tpp_name": searchRegex },
+        ];
+      }
+      const result = await this.tppModel.find(filter).exec();
       return result;
     } catch (error) {
       console.error("Error fetching billing details:", error);

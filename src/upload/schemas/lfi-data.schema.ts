@@ -26,10 +26,14 @@ export class LfiData {
     lfi_id: string;
 
     @Prop({ required: true })
-    mdp_retail_sme: number;
+    mdp_rate: number;
 
     @Prop({ required: true })
-    mdp_corporate: number;
+    free_limit_attended: number;
+
+    @Prop({ required: true })
+    free_limit_unattended: number;
+
 }
 
 export const LfiDataSchema = SchemaFactory.createForClass(LfiData);

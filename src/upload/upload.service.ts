@@ -5,11 +5,13 @@ import * as fs from 'fs';
 import { Model } from 'mongoose';
 import { Log, LogDocument } from './schemas/billing-log.schema';
 import { LfiData, LfiDataDocument } from './schemas/lfi-data.schema';
+import { TppData, TppDataDocument } from './schemas/tpp-data.schema';
 @Injectable()
 export class UploadService {
   constructor(
     @InjectModel(Log.name) private logModel: Model<LogDocument>,
     @InjectModel(LfiData.name) private lfiModel: Model<LfiDataDocument>,
+    @InjectModel(TppData.name) private TppModel: Model<TppDataDocument>,
   ) { }
 
   endpoints = [
@@ -125,12 +127,14 @@ export class UploadService {
     if (!feeApplied) {
       throw new Error("Fee applied data is undefined.");
     }
-    // let result = await this.populateLfiData(feeApplied);
+    let response = await this.populateLfiData(feeApplied);
+    let result = await this.populateTppData(feeApplied);
     // console.log('iam result', result)
+    // console.log('iam result', response)
 
     const pagesFeeApplied = await this.feeCalculationForLfi(feeApplied);
-    // const billData = await this.logModel.insertMany(pagesFeeApplied);
-    return pagesFeeApplied;
+    const billData = await this.logModel.insertMany(pagesFeeApplied);
+    return billData;
   }
 
   async pageCalculation(records: any) {
@@ -144,12 +148,50 @@ export class UploadService {
 
     const lfiDataToInsert = uniqueLfiIds.map(lfi_id => ({
       lfi_id,
-      mdp_retail_sme: parseFloat((Math.random() * (3 - 2) + 2).toFixed(2)),
-      mdp_corporate: parseFloat((Math.random() * (3 - 2) + 2).toFixed(2)),
+      mdp_rate: parseFloat((Math.random() * (3 - 2) + 2).toFixed(2)),
+      free_limit_attended: 15,
+      free_limit_unattended: 5,
     }));
-    // Insert into the MongoDB collection
-    const insertedData = await this.lfiModel.insertMany(lfiDataToInsert);
-    return insertedData;
+    console.log('lfi data insert')
+    const results = [];
+    for (const lfiData of lfiDataToInsert) {
+      const existing = await this.lfiModel.findOne({ lfi_id: lfiData.lfi_id });
+      console.log("iam hereee")
+      if (!existing) {
+        // If the LFI ID does not exist, insert the data
+        const inserted = await this.lfiModel.create(lfiData);
+        inserted
+      } else {
+        console.log(`Duplicate LFI ID skipped: ${lfiData.lfi_id}`);
+      }
+    }
+
+    return results;
+  }
+
+  async populateTppData(rawData: any[]) {
+    const uniqueTppIds = Array.from(new Set(rawData.map(data => data["raw_api_log_data.tpp_id"])));
+
+    const tppDataToInsert = uniqueTppIds.map(tpp_id => ({
+      tpp_id,
+      tpp_name: `TPP Name ${tpp_id}`,
+      tpp_client_id: `TPP Client ID ${tpp_id}`,
+    }));
+
+    const results = [];
+    for (const tppData of tppDataToInsert) {
+      const existing = await this.TppModel.findOne({ lfi_id: tppData.tpp_id });
+
+      if (!existing) {
+        // If the LFI ID does not exist, insert the data
+        const inserted = await this.TppModel.create(tppData);
+        inserted
+      } else {
+        console.log(`Duplicate LFI ID skipped: ${tppData.tpp_id}`);
+      }
+    }
+
+    return results;
   }
 
   async feeCalculationForLfi(data: any) {
@@ -165,9 +207,10 @@ export class UploadService {
 
             const isLargeCorporate =
               record["raw_api_log_data.is_large_corporate"] === "TRUE";
-            const lfiMdpMultiplier = isLargeCorporate
-              ? lfiData.mdp_corporate
-              : lfiData.mdp_retail_sme;
+            // const lfiMdpMultiplier = isLargeCorporate
+            //   ? lfiData.mdp_corporate
+            //   : lfiData.mdp_retail_sme;
+            const lfiMdpMultiplier = lfiData.mdp_rate;
 
             const margin =
               record["raw_api_log_data.is_attended"] === "true"

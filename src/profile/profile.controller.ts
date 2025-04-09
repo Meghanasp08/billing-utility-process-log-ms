@@ -27,9 +27,9 @@ export class ProfileController {
   @ApiBearerAuth()
   @Get('log')
   async getLogData(@Req() req: any, @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string) {
+    @Query('endDate') endDate?: string, @Query('search') search?: string) {
     try {
-      const logData = await this.profileService.getLogData(startDate, endDate);
+      const logData = await this.profileService.getLogData(startDate, endDate, search);
       return {
         message: 'List of Logs',
         result: logData,
@@ -43,10 +43,10 @@ export class ProfileController {
   @ApiBearerAuth()
   @Get('billing/lfi')
   async getBillingLfiData(@Req() req: any, @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string) {
+    @Query('endDate') endDate?: string, @Query('search') search?: string) {
     try {
       const group = 'lfi'
-      const logData = await this.profileService.getBillingData(group, startDate, endDate);
+      const logData = await this.profileService.getBillingData(group, startDate, endDate, search);
       return {
         message: 'List of Bills',
         result: logData,
@@ -121,7 +121,7 @@ export class ProfileController {
     try {
       const logData = await this.profileService.getBillingHubDetails(id, startDate, endDate);
       return {
-        message: 'Bill Details',
+        message: 'Hub Fee Details',
         result: logData,
         statusCode: HttpStatus.OK
       }
@@ -133,11 +133,26 @@ export class ProfileController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Get('lfidetails')
-  async getLfiDetails(@Req() req: any,) {
+  async getLfiDetails(@Query('search') search?: string) {
     try {
-      const logData = await this.profileService.getLfiDetails();
+      const logData = await this.profileService.getLfiDetails(search);
       return {
-        message: 'Bill Details',
+        message: 'Lfi Details',
+        result: logData,
+        statusCode: HttpStatus.OK
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Get('tppdetails')
+  async getTppDetails(@Query('search') search?: string) {
+    try {
+      const logData = await this.profileService.getTppDetails(search);
+      return {
+        message: 'Tpp Details',
         result: logData,
         statusCode: HttpStatus.OK
       }
