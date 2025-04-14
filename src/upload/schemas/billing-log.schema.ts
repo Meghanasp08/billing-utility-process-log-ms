@@ -12,6 +12,9 @@ export class RawApiLogData {
   lfi_id: string;
 
   @Prop()
+  tpp_name: string;
+
+  @Prop()
   tpp_id: string;
 
   @Prop()
@@ -80,6 +83,9 @@ export class PaymentLogs {
   lfi_id: string;
 
   @Prop()
+  tpp_name: string;
+
+  @Prop()
   tpp_id: string;
 
   @Prop()
@@ -96,6 +102,9 @@ export class PaymentLogs {
 
   @Prop()
   transaction_id: string;
+
+  @Prop()
+  payment_type: string;
 
   @Prop()
   payment_id: string;
@@ -168,6 +177,12 @@ export class Log {
 
   @Prop()
   chargeable: boolean;
+
+  @Prop()
+  lfiChargable: boolean;
+
+  @Prop()
+  success: boolean;
 
   @Prop()
   discounted: boolean;

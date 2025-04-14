@@ -17,7 +17,8 @@ export class ProfileService {
     return this.userModel.find().exec();;
   }
 
-  async getLogData(startDate?: string, endDate?: string, search?: string) {
+  async getLogData(startDate?: string, endDate?: string, search?: string, limit: number = 10,
+    offset: number = 0) {
     const filter: any = {};
 
     if (startDate && endDate) {
@@ -39,11 +40,21 @@ export class ProfileService {
         { "raw_api_log_data.lfiName": searchRegex }
       ];
     }
-    const log = await this.logModel.find(filter).exec();
-    return log;
+    const total = await this.logModel.countDocuments(filter).exec();
+    const log = await this.logModel.find(filter).skip(offset)
+      .limit(limit).exec();
+    return {
+      log,
+      pagination: {
+        offset: offset,
+        limit: limit,
+        total: total
+      }
+    }
   }
 
-  async getBillingData(group: String, startDate?: string, endDate?: string, search?: string) {
+  async getBillingData(group: String, startDate?: string, endDate?: string, search?: string, limit: number = 10,
+    offset: number = 0) {
     try {
       const filter: any = {};
 
@@ -62,9 +73,9 @@ export class ProfileService {
         const searchRegex = new RegExp(search, "i");
         filter["$or"] = [
           { "raw_api_log_data.tpp_id": search },
-          { "raw_api_log_data.tppName": searchRegex },
+          { "raw_api_log_data.tpp_name": searchRegex },
           { "raw_api_log_data.lfi_id": search },
-          { "raw_api_log_data.lfiName": searchRegex }
+          { "raw_api_log_data.lfi_name": searchRegex }
         ];
       }
       const aggregateQuery = [
@@ -203,91 +214,53 @@ export class ProfileService {
         filter["raw_api_log_data.timestamp"] = { $lte: new Date(endDate) };
       }
       const aggregateQuery = [
-
         {
-          $match: {
-            $and: [
-              { "raw_api_log_data.tpp_id": id },
-              { chargeable: true },
-              filter,
-            ],
-          },
+          "$match": {
+            "raw_api_log_data.tpp_id": id
+          }
         },
-
         {
-
-          $project: {
-
-            item: {
-
-              $cond: {
-
-                if: { $eq: ["$discounted", true] },
-
-                then: "Discounted",
-
-                else: {
-
-                  $cond: {
-
-                    if: {
-
-                      $eq: ["$group", "insurance"]
-
-                    },
-
-                    then: "Insurance",
-
-                    else: "Others"
-
+          "$group": {
+            "_id": {
+              "category": {
+                "$cond": [
+                  { "$eq": ["$discounted", true] },
+                  "COP / Balance Check (Discounted)",
+                  {
+                    "$cond": [
+                      { "$eq": ["$group", "insurance"] },
+                      "insurance",
+                      {
+                        "$cond": [
+                          { "$eq": ["$group", ""] },
+                          "other",
+                          "$group"
+                        ]
+                      }
+                    ]
                   }
-
-                }
-
+                ]
               }
-
             },
-
-            api_hub_fee: 1
-
+            "totalCount": { "$sum": 1 },
+            "totalFee": { "$sum": "$api_hub_fee" },
+            "singleHubFee": { "$first": "$api_hub_fee" }
           }
-
         },
-
         {
-
-          $group: {
-
-            _id: "$item",
-
-            count: { $sum: 1 },
-
-            unit_api_hub_fee: { "$avg": "$api_hub_fee" },
-
-            total_api_hub_fee: { $sum: "$api_hub_fee" }
-
+          "$match": {
+            "_id.category": { "$ne": null }
           }
-
         },
-
         {
-
-          $project: {
-
-            _id: 0,
-
-            item: "$_id",
-
-            count: 1,
-
-            unit_api_hub_fee: 1,
-
-            total_api_hub_fee: 1
-
+          "$project": {
+            "_id": 0,
+            "category": "$_id.category",
+            "totalCount": 1,
+            "totalFee": 1,
+            "singleHubFee": 1
           }
-
         }
-
       ];
 
 

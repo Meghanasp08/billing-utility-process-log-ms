@@ -1,5 +1,6 @@
 import {
     Controller,
+    Get,
     HttpException,
     HttpStatus,
     Post,
@@ -7,7 +8,7 @@ import {
     UseInterceptors
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation } from '@nestjs/swagger';
 import { UploadService } from './upload.service';
 
 @Controller('upload')
@@ -19,6 +20,10 @@ export class UploadController {
         { name: 'file1', maxCount: 1 },
         { name: 'file2', maxCount: 1 },]))
     @ApiConsumes('multipart/form-data')
+    @ApiOperation({
+        summary: 'Upload and merge files',
+        description: 'This endpoint accepts two files: "Payment Log Data" and "Raw API Log Data". The files are validated, processed, merged, and the result will be upload in the database.',
+    })
     @ApiBody({
         schema: {
             type: 'object',
@@ -26,12 +31,15 @@ export class UploadController {
                 file1: {
                     type: 'string',
                     format: 'binary',
+                    description: 'Raw API Log Data file',
                 },
                 file2: {
                     type: 'string',
                     format: 'binary',
+                    description: 'Payment Log Data file',
                 },
             },
+            required: ['file1', 'file2'],
         },
     })
     async uploadFiles(@UploadedFiles() files: { file1?: Express.Multer.File[]; file2?: Express.Multer.File[]; }) {
@@ -57,6 +65,22 @@ export class UploadController {
         } catch (error) {
             throw error;
 
+        }
+    }
+
+
+    @ApiBearerAuth()
+    @Get('api')
+    async getLfiDetails() {
+        try {
+            const logData = await this.uploadService.getapis();
+            return {
+                message: 'Lfi Details',
+                result: logData,
+                statusCode: HttpStatus.OK
+            }
+        } catch (error) {
+            throw error;
         }
     }
 
