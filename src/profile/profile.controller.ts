@@ -29,7 +29,7 @@ export class ProfileController {
   @ApiOperation({ summary: 'Retrieve log data based on date range and search query.' })
   @ApiQuery({ name: 'startDate', required: false, description: 'Start date of the logs (YYYY-MM-DD).' })
   @ApiQuery({ name: 'endDate', required: false, description: 'End date of the logs (YYYY-MM-DD).' })
-  @ApiQuery({ name: 'search', required: false, description: 'Search keyword for filtering logs.' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search keyword for filtering logs (TPP id, LFI Id, TPP Name , LFI Name).' })
   @Get('log')
   async getLogData(@Req() req: any, @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string, @Query('search') search?: string, @Query('limit') limit: number = 10,
@@ -50,7 +50,7 @@ export class ProfileController {
   @ApiOperation({ summary: 'Retrieve billing data for LFI group.' })
   @ApiQuery({ name: 'startDate', required: false, description: 'Start date for billing data (YYYY-MM-DD).' })
   @ApiQuery({ name: 'endDate', required: false, description: 'End date for billing data (YYYY-MM-DD).' })
-  @ApiQuery({ name: 'search', required: false, description: 'Search keyword for filtering billing data.' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search keyword for filtering billing data (TPP id, LFI Id, TPP Name , LFI Name).' })
   @Get('billing/lfi')
   async getBillingLfiData(@Req() req: any, @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string, @Query('search') search?: string, @Query('limit') limit: number = 10,
@@ -73,7 +73,7 @@ export class ProfileController {
   @ApiOperation({ summary: 'Retrieve billing data for TPP group.' })
   @ApiQuery({ name: 'startDate', required: false, description: 'Start date for billing data (YYYY-MM-DD).' })
   @ApiQuery({ name: 'endDate', required: false, description: 'End date for billing data (YYYY-MM-DD).' })
-  @ApiQuery({ name: 'search', required: false, description: 'Search keyword for filtering billing data.' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search keyword for filtering billing data (TPP id, LFI Id, TPP Name , LFI Name).' })
   @Get('billing/tpp')
   async getBillingTppData(@Req() req: any, @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string, @Query('search') search?: string) {
@@ -93,7 +93,7 @@ export class ProfileController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Retrieve detailed billing data for LFI by ID.' })
-  @ApiParam({ name: 'id', description: 'The unique ID of the LFI bill.' })
+  @ApiParam({ name: 'id', description: 'The unique LFI ID of the LFI bill.' })
   @ApiQuery({ name: 'startDate', required: false, description: 'Start date for billing details (YYYY-MM-DD).' })
   @ApiQuery({ name: 'endDate', required: false, description: 'End date for billing details (YYYY-MM-DD).' })
   @Get('billingdetail/lfi/:id')
@@ -115,7 +115,7 @@ export class ProfileController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Retrieve detailed billing data for TPP by ID.' })
-  @ApiParam({ name: 'id', description: 'The unique ID of the TPP bill.' })
+  @ApiParam({ name: 'id', description: 'The unique TPP ID of the TPP bill.' })
   @ApiQuery({ name: 'startDate', required: false, description: 'Start date for billing details (YYYY-MM-DD).' })
   @ApiQuery({ name: 'endDate', required: false, description: 'End date for billing details (YYYY-MM-DD).' })
   @Get('billingdetail/tpp/:id')
@@ -138,8 +138,8 @@ export class ProfileController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Retrieve detailed billing hub fee data for a specific ID.' })
-  @ApiParam({ name: 'id', description: 'The unique identifier for the billing hub fee record.' })
+  @ApiOperation({ summary: 'Retrieve detailed billing hub fee data for a specific TPP ID.' })
+  @ApiParam({ name: 'id', description: 'The TPP ID for getting the billing hub fee record.' })
   @ApiQuery({ name: 'startDate', required: false, description: 'Start date for the hub fee details (YYYY-MM-DD).' })
   @ApiQuery({ name: 'endDate', required: false, description: 'End date for the hub fee details (YYYY-MM-DD).' })
   @Get('apihubfee/:id')
@@ -160,7 +160,7 @@ export class ProfileController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Retrieve details of LFI.' })
-  @ApiQuery({ name: 'search', required: false, description: 'Search keyword for LFI details.' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search keyword for LFI details (LFI Id , LFI Name).' })
   @Get('lfidetails')
   async getLfiDetails(@Query('search') search?: string) {
     try {
@@ -177,7 +177,7 @@ export class ProfileController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Retrieve details of TPP.' })
-  @ApiQuery({ name: 'search', required: false, description: 'Search keyword for TPP details.' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search keyword for TPP details (TTP Id , TPP Name).' })
   @Get('tppdetails')
   async getTppDetails(@Query('search') search?: string) {
     try {
