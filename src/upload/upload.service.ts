@@ -342,7 +342,7 @@ export class UploadService {
                   ? lfiData.free_limit_unattended
                   : 0;
 
-            const lfiMdpMultiplier = lfiData.mdp_rate;
+            const lfiMdpMultiplier = record['raw_api_log_data.is_large_corporate'] ? 40 / this.aedConstant : lfiData.mdp_rate;
 
             const chargesData = psuGroupedMap[key];
 
