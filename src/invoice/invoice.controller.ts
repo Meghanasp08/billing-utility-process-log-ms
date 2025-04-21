@@ -51,4 +51,18 @@ export class InvoiceController {
       throw error;
     }
   }
+  @Get('billing-tpp/:tpp_id')
+  async getbillingTpps(@Param('tpp_id') tpp_id: string,@Query(ValidationPipe) invoiceDto: any): Promise<any> {
+    try {
+      const result = await this.invoiceService.billingTpp(tpp_id,invoiceDto);
+      return {
+        message: 'Invoice Details',
+        result: result,
+        statusCode: HttpStatus.OK,
+      };
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
+  }
 }
