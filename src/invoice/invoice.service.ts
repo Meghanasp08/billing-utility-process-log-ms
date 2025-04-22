@@ -99,7 +99,7 @@ export class InvoiceService {
                                                 '$group', 'payment-bulk'
                                             ]
                                         },
-                                        'then': 'Corporate Treasury'
+                                        'then': 'Corporate Payment'
                                     }, {
                                         'case': {
                                             '$eq': [
@@ -143,7 +143,7 @@ export class InvoiceService {
                                                 }
                                             ]
                                         },
-                                        'then': 'Corporate Treasury Data'
+                                        'then': 'Corporate Payment Data'
                                     }, {
                                         'case': {
                                             '$and': [
@@ -194,7 +194,7 @@ export class InvoiceService {
                                 'if': {
                                     '$in': [
                                         '$paymentTypeLabel', [
-                                            'Corporate Treasury', 'Payment Initiation'
+                                            'Corporate Payment', 'Payment Initiation'
                                         ]
                                     ]
                                 },
@@ -234,12 +234,12 @@ export class InvoiceService {
                             'quantity': '$quantity',
                             'unit_price': {
                                 '$round': [
-                                    '$unit_price', 3
+                                    '$unit_price', 4
                                 ]
                             },
                             'total': {
                                 '$round': [
-                                    '$total', 2
+                                    '$total', 4
                                 ]
                             }
                         }
@@ -251,71 +251,74 @@ export class InvoiceService {
                             '$push': '$item'
                         }
                     }
-                }, {
-                    '$addFields': {
-                        'allItems': {
-                            '$cond': {
-                                'if': {
-                                    '$eq': [
-                                        '$_id', 'service_initiation'
-                                    ]
-                                },
-                                'then': [
-                                    'Corporate Treasury', 'Payment Initiation'
-                                ],
-                                'else': [
-                                    'Insurance', 'Setup and Consent', 'Corporate Treasury Data', 'Confirmation of Payee', 'Balance(Discounted)', 'Bank Data Sharing'
-                                ]
-                            }
-                        }
-                    }
-                }, {
-                    '$addFields': {
-                        'items': {
-                            '$map': {
-                                'input': '$allItems',
-                                'as': 'desc',
-                                'in': {
-                                    '$let': {
-                                        'vars': {
-                                            'matchedItem': {
-                                                '$first': {
-                                                    '$filter': {
-                                                        'input': '$items',
-                                                        'as': 'item',
-                                                        'cond': {
-                                                            '$eq': [
-                                                                '$$item.description', '$$desc'
-                                                            ]
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        'in': {
-                                            'description': '$$desc',
-                                            'quantity': {
-                                                '$ifNull': [
-                                                    '$$matchedItem.quantity', 0
-                                                ]
-                                            },
-                                            'unit_price': {
-                                                '$ifNull': [
-                                                    '$$matchedItem.unit_price', 0.25
-                                                ]
-                                            },
-                                            'total': {
-                                                '$ifNull': [
-                                                    '$$matchedItem.total', 0
-                                                ]
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }, {
+                },
+                //  {
+                //     '$addFields': {
+                //         'allItems': {
+                //             '$cond': {
+                //                 'if': {
+                //                     '$eq': [
+                //                         '$_id', 'service_initiation'
+                //                     ]
+                //                 },
+                //                 'then': [
+                //                     'Corporate Treasury', 'Payment Initiation'
+                //                 ],
+                //                 'else': [
+                //                     'Insurance', 'Setup and Consent', 'Corporate Treasury Data', 'Confirmation of Payee', 'Balance(Discounted)', 'Bank Data Sharing'
+                //                 ]
+                //             }
+                //         }
+                //     }
+                // }, 
+                // {
+                //     '$addFields': {
+                //         'items': {
+                //             '$map': {
+                //                 'input': '$allItems',
+                //                 'as': 'desc',
+                //                 'in': {
+                //                     '$let': {
+                //                         'vars': {
+                //                             'matchedItem': {
+                //                                 '$first': {
+                //                                     '$filter': {
+                //                                         'input': '$items',
+                //                                         'as': 'item',
+                //                                         'cond': {
+                //                                             '$eq': [
+                //                                                 '$$item.description', '$$desc'
+                //                                             ]
+                //                                         }
+                //                                     }
+                //                                 }
+                //                             }
+                //                         },
+                //                         'in': {
+                //                             'description': '$$desc',
+                //                             'quantity': {
+                //                                 '$ifNull': [
+                //                                     '$$matchedItem.quantity', 0
+                //                                 ]
+                //                             },
+                //                             'unit_price': {
+                //                                 '$ifNull': [
+                //                                     '$$matchedItem.unit_price', 0.25
+                //                                 ]
+                //                             },
+                //                             'total': {
+                //                                 '$ifNull': [
+                //                                     '$$matchedItem.total', 0
+                //                                 ]
+                //                             }
+                //                         }
+                //                     }
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }, 
+                {
                     '$addFields': {
                         'sub_total': {
                             '$sum': '$items.total'
@@ -329,7 +332,7 @@ export class InvoiceService {
                                     '$multiply': [
                                         '$sub_total', 0.05
                                     ]
-                                }, 3
+                                }, 4
                             ]
                         },
                         'category_total': {
@@ -342,7 +345,7 @@ export class InvoiceService {
                                             ]
                                         }
                                     ]
-                                }, 3
+                                }, 4
                             ]
                         }
                     }
@@ -473,7 +476,7 @@ export class InvoiceService {
                                                 }
                                             ]
                                         },
-                                        'then': 'Corporate Treasury Data'
+                                        'then': 'Corporate Payment Data'
                                     }, {
                                         'case': {
                                             '$eq': [
@@ -512,71 +515,87 @@ export class InvoiceService {
                                 'quantity': '$quantity',
                                 'unit_price': {
                                     '$round': [
-                                        '$unit_price', 3
+                                        '$unit_price', 4
                                     ]
                                 },
                                 'total': {
                                     '$round': [
-                                        '$total', 2
+                                        '$total', 4
                                     ]
                                 }
                             }
                         }
                     }
-                }, {
-                    '$addFields': {
-                        'allLabels': [
-                            'Merchant Collection', 'Peer-to Peer', 'Me-to-Me Transfer', 'Large value collection', 'Bulk payments', 'Corporate Treasury Data', 'Customer Data'
-                        ]
-                    }
-                }, {
-                    '$project': {
-                        'lfi_id': '$_id',
-                        'labels': {
-                            '$map': {
-                                'input': '$allLabels',
-                                'as': 'lbl',
-                                'in': {
-                                    '$let': {
-                                        'vars': {
-                                            'found': {
-                                                '$first': {
-                                                    '$filter': {
-                                                        'input': '$labels',
-                                                        'as': 'l',
-                                                        'cond': {
-                                                            '$eq': [
-                                                                '$$l.label', '$$lbl'
-                                                            ]
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        'in': {
-                                            'label': '$$lbl',
-                                            'quantity': {
-                                                '$ifNull': [
-                                                    '$$found.quantity', 0
-                                                ]
-                                            },
-                                            'unit_price': {
-                                                '$ifNull': [
-                                                    '$$found.unit_price', 0.25
-                                                ]
-                                            },
-                                            'total': {
-                                                '$ifNull': [
-                                                    '$$found.total', 0
-                                                ]
-                                            }
-                                        }
-                                    }
+                },
+                {
+                    $addFields: {
+                        labels: {
+                            $filter: {
+                                input: "$labels",
+                                as: "labelItem",
+                                cond: {
+                                    $ne: ["$$labelItem.label", "Others"]
                                 }
                             }
                         }
                     }
-                }, {
+                },
+                //  {
+                //     '$addFields': {
+                //         'allLabels': [
+                //             'Merchant Collection', 'Peer-to Peer', 'Me-to-Me Transfer', 'Large value collection', 'Bulk payments', 'Corporate Treasury Data', 'Customer Data'
+                //         ]
+                //     }
+                // }, 
+                // {
+                //     '$project': {
+                //         'lfi_id': '$_id',
+                //         'labels': {
+                //             '$map': {
+                //                 'input': '$allLabels',
+                //                 'as': 'lbl',
+                //                 'in': {
+                //                     '$let': {
+                //                         'vars': {
+                //                             'found': {
+                //                                 '$first': {
+                //                                     '$filter': {
+                //                                         'input': '$labels',
+                //                                         'as': 'l',
+                //                                         'cond': {
+                //                                             '$eq': [
+                //                                                 '$$l.label', '$$lbl'
+                //                                             ]
+                //                                         }
+                //                                     }
+                //                                 }
+                //                             }
+                //                         },
+                //                         'in': {
+                //                             'label': '$$lbl',
+                //                             'quantity': {
+                //                                 '$ifNull': [
+                //                                     '$$found.quantity', 0
+                //                                 ]
+                //                             },
+                //                             'unit_price': {
+                //                                 '$ifNull': [
+                //                                     '$$found.unit_price', 0.25
+                //                                 ]
+                //                             },
+                //                             'total': {
+                //                                 '$ifNull': [
+                //                                     '$$found.total', 0
+                //                                 ]
+                //                             }
+                //                         }
+                //                     }
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }, 
+                {
                     '$sort': {
                         'lfi_id': 1,
                         'label': 1
@@ -587,7 +606,7 @@ export class InvoiceService {
                             '$round': [
                                 {
                                     '$sum': '$labels.total'
-                                }, 2
+                                }, 4
                             ]
                         }
                     }
@@ -599,7 +618,7 @@ export class InvoiceService {
                                     '$multiply': [
                                         '$full_total', 0.05
                                     ]
-                                }, 2
+                                }, 4
                             ]
                         },
                         'actual_total': {
@@ -612,7 +631,7 @@ export class InvoiceService {
                                             ]
                                         }
                                     ]
-                                }, 2
+                                }, 4
                             ]
                         }
                     }
@@ -626,7 +645,7 @@ export class InvoiceService {
         const roundedTotal = Math.round(total * 100) / 100; // 0.23
         const roundedVat = Math.round(vat * 100) / 100;
 
-        const updated_result = await this.ensureCategories(result);
+        // const updated_result = await this.ensureCategories(result);
         const invoice_data = {
             invoice_number: await this.generateInvoiceNumber(),
             tpp_id: invoiceDto?.tpp_id,
@@ -644,7 +663,7 @@ export class InvoiceService {
             generated_at: new Date(),        // Generate Date
             currency: 'AED',         //AED default
             tpp_usage_per_lfi: result_of_lfi,
-            invoice_items: updated_result,
+            invoice_items: result,
             // subtotal: 0, // vendaaaa
             vat_percent: 5, // Default 5 percent
             vat_total: roundedVat,  // vat percent of invoice total
@@ -673,7 +692,7 @@ export class InvoiceService {
                         "total": 0
                     },
                     {
-                        "description": "Corporate Treasury Data",
+                        "description": "Corporate Payment Data",
                         "quantity": 0,
                         "unit_price": 0.025,
                         "total": 0
@@ -705,7 +724,7 @@ export class InvoiceService {
             service_initiation: {
                 "items": [
                     {
-                        "description": "Corporate Treasury",
+                        "description": "Corporate Payment",
                         "quantity": 0,
                         "unit_price": 0.025,
                         "total": 0.0
@@ -785,7 +804,7 @@ export class InvoiceService {
                                                 '$group', 'payment-bulk'
                                             ]
                                         },
-                                        'then': 'Corporate Treasury'
+                                        'then': 'Corporate Payment'
                                     }, {
                                         'case': {
                                             '$eq': [
@@ -829,7 +848,7 @@ export class InvoiceService {
                                                 }
                                             ]
                                         },
-                                        'then': 'Corporate Treasury Data'
+                                        'then': 'Corporate Payment Data'
                                     }, {
                                         'case': {
                                             '$and': [
@@ -880,7 +899,7 @@ export class InvoiceService {
                                 'if': {
                                     '$in': [
                                         '$paymentTypeLabel', [
-                                            'Corporate Treasury', 'Payment Initiation'
+                                            'Corporate Payment', 'Payment Initiation'
                                         ]
                                     ]
                                 },
@@ -920,12 +939,12 @@ export class InvoiceService {
                             'quantity': '$quantity',
                             'unit_price': {
                                 '$round': [
-                                    '$unit_price', 3
+                                    '$unit_price', 4
                                 ]
                             },
                             'total': {
                                 '$round': [
-                                    '$total', 2
+                                    '$total', 4
                                 ]
                             }
                         }
@@ -947,61 +966,16 @@ export class InvoiceService {
                                     ]
                                 },
                                 'then': [
-                                    'Corporate Treasury', 'Payment Initiation'
+                                    'Corporate Payment', 'Payment Initiation'
                                 ],
                                 'else': [
-                                    'Insurance', 'Setup and Consent', 'Corporate Treasury Data', 'Confirmation of Payee', 'Balance(Discounted)', 'Bank Data Sharing'
+                                    'Insurance', 'Setup and Consent', 'Corporate Payment Data', 'Confirmation of Payee', 'Balance(Discounted)', 'Bank Data Sharing'
                                 ]
                             }
                         }
                     }
-                }, {
-                    '$addFields': {
-                        'items': {
-                            '$map': {
-                                'input': '$allItems',
-                                'as': 'desc',
-                                'in': {
-                                    '$let': {
-                                        'vars': {
-                                            'matchedItem': {
-                                                '$first': {
-                                                    '$filter': {
-                                                        'input': '$items',
-                                                        'as': 'item',
-                                                        'cond': {
-                                                            '$eq': [
-                                                                '$$item.description', '$$desc'
-                                                            ]
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        'in': {
-                                            'description': '$$desc',
-                                            'quantity': {
-                                                '$ifNull': [
-                                                    '$$matchedItem.quantity', 0
-                                                ]
-                                            },
-                                            'unit_price': {
-                                                '$ifNull': [
-                                                    '$$matchedItem.unit_price', 0.25
-                                                ]
-                                            },
-                                            'total': {
-                                                '$ifNull': [
-                                                    '$$matchedItem.total', 0
-                                                ]
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }, {
+                },
+                {
                     '$addFields': {
                         'sub_total': {
                             '$sum': '$items.total'
@@ -1154,7 +1128,7 @@ export class InvoiceService {
                                                 }
                                             ]
                                         },
-                                        'then': 'Corporate Treasury Data'
+                                        'then': 'Corporate Payment Data'
                                     }, {
                                         'case': {
                                             '$eq': [
@@ -1193,66 +1167,25 @@ export class InvoiceService {
                                 'quantity': '$quantity',
                                 'unit_price': {
                                     '$round': [
-                                        '$unit_price', 3
+                                        '$unit_price', 4
                                     ]
                                 },
                                 'total': {
                                     '$round': [
-                                        '$total', 3
+                                        '$total', 4
                                     ]
                                 }
                             }
                         }
                     }
                 }, {
-                    '$addFields': {
-                        'allLabels': [
-                            'Merchant Collection', 'Peer-to Peer', 'Me-to-Me Transfer', 'Large value collection', 'Bulk payments', 'Corporate Treasury Data', 'Customer Data'
-                        ]
-                    }
-                }, {
-                    '$project': {
-                        'lfi_id': '$_id',
-                        'labels': {
-                            '$map': {
-                                'input': '$allLabels',
-                                'as': 'lbl',
-                                'in': {
-                                    '$let': {
-                                        'vars': {
-                                            'found': {
-                                                '$first': {
-                                                    '$filter': {
-                                                        'input': '$labels',
-                                                        'as': 'l',
-                                                        'cond': {
-                                                            '$eq': [
-                                                                '$$l.label', '$$lbl'
-                                                            ]
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        'in': {
-                                            'label': '$$lbl',
-                                            'quantity': {
-                                                '$ifNull': [
-                                                    '$$found.quantity', 0
-                                                ]
-                                            },
-                                            'unit_price': {
-                                                '$ifNull': [
-                                                    '$$found.unit_price', 0.25
-                                                ]
-                                            },
-                                            'total': {
-                                                '$ifNull': [
-                                                    '$$found.total', 0
-                                                ]
-                                            }
-                                        }
-                                    }
+                    $addFields: {
+                        labels: {
+                            $filter: {
+                                input: "$labels",
+                                as: "labelItem",
+                                cond: {
+                                    $ne: ["$$labelItem.label", "Others"]
                                 }
                             }
                         }
@@ -1268,7 +1201,7 @@ export class InvoiceService {
                             '$round': [
                                 {
                                     '$sum': '$labels.total'
-                                }, 2
+                                }, 4
                             ]
                         }
                     }
@@ -1307,16 +1240,16 @@ export class InvoiceService {
 
         const roundedTotal = Math.round(total * 100) / 100; // 0.23
         const roundedVat = Math.round(vat * 100) / 100;
-        let updated_result = []
-        if (result.length != 0) {
-            updated_result = await this.ensureCategories(result);
-        }
+        // let updated_result = []
+        // if (result.length != 0) {
+        //     updated_result = await this.ensureCategories(result);
+        // }
 
         const invoice_data = {
             tpp_id: tpp_id,
             tpp_name: tppData?.tpp_name,
             tpp_usage_per_lfi: result_of_lfi,
-            invoice_items: updated_result,
+            invoice_items: result,
             // subtotal: 0, // vendaaaa
             // vat_percent: 5, // Default 5 percent
             // vat_total: roundedVat,  // vat percent of invoice total
