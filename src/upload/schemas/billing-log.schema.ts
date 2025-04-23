@@ -206,24 +206,24 @@ export class Log {
   api_hub_fee: number;
 
   @Prop()
-  api_category: number;
+  api_category: string;
 
-  @Prop()
+  @Prop({ type: Number, default: 0, validate: { validator: (val: number) => !isNaN(val), message: 'Value must be a number' } })
   calculatedFee: number;
 
-  @Prop()
+  @Prop({ type: Number, default: 0, validate: { validator: (val: number) => !isNaN(val), message: 'Value must be a number' } })
   applicableFee: number;
 
-  @Prop()
+  @Prop({ type: Number, default: 0, validate: { validator: (val: number) => !isNaN(val), message: 'Value must be a number' } })
   numberOfPages: number;
 
-  @Prop()
+  @Prop({ type: Number, default: 0, validate: { validator: (val: number) => !isNaN(val), message: 'Value must be a number' } })
   unit_price: number;
 
-  @Prop()
+  @Prop({ type: Number, default: 0, validate: { validator: (val: number) => !isNaN(val), message: 'Value must be a number' } })
   volume: number;
 
-  @Prop()
+  @Prop({ type: Number, default: 0, validate: { validator: (val: number) => !isNaN(val), message: 'Value must be a number' } })
   appliedLimit: number;
 
   @Prop()
@@ -232,7 +232,7 @@ export class Log {
   @Prop()
   isCapped: boolean;
 
-  @Prop()
+  @Prop({ type: Number, default: 0, validate: { validator: (val: number) => !isNaN(val), message: 'Value must be a number' } })
   cappedAt: number;
 
 

@@ -169,7 +169,7 @@ export class UploadService {
 
     const pageDataCalculation = await this.attendedUpdateOnNumberOfPage(pagesFeeApplied);
     return pageDataCalculation;
-    // const billData = await this.logModel.insertMany(pagesFeeApplied);
+    // const billData = await this.logModel.insertMany(pageDataCalculation);
     // return billData.length;
   }
   async attendedUpdateOnNumberOfPage(data: any) {
@@ -203,7 +203,7 @@ export class UploadService {
         "summary.psuId": uniqueLfiPageData.summary.psuId,
         'summary.date': uniqueLfiPageData.summary.date
       });
-      console.log('iam unique data', uniqueLfiPageData)
+      // console.log('iam unique data', uniqueLfiPageData)
       if (!existingMulti) {
         const lfiPageData = await this.pageMultiplier.insertMany(uniqueLfiPageData);
       }
@@ -291,7 +291,7 @@ export class UploadService {
       // Step 1: Preprocess - group by psuId + date + is_attended
       const psuGroupedMap: Record<
         string,
-        { psuId: string; date: string; isAttended: string; totalPages: number; transactions: any[] }
+        { psuId: string; date: string; isAttended: string; totalPages: number; tpp_id: string; transactions: any[] }
       > = {};
 
       data.forEach((transaction) => {
@@ -300,11 +300,12 @@ export class UploadService {
           const timestamp = transaction["raw_api_log_data.timestamp"];
           const numberOfPages = transaction.numberOfPages;
           const isAttended = transaction["raw_api_log_data.is_attended"];
+          const tpp_id = transaction["raw_api_log_data.tpp_id"];
 
           if (!psuId || !timestamp || !numberOfPages || isAttended === undefined) return;
 
           const date = new Date(timestamp).toISOString().split("T")[0];
-          const key = `${psuId}_${date}_${isAttended}`;
+          const key = `${psuId}_${date}_${isAttended}_${tpp_id}`;
 
           // console.log('iam key', key)
 
@@ -313,6 +314,7 @@ export class UploadService {
               psuId,
               date,
               isAttended,
+              tpp_id,
               totalPages: 0,
               transactions: [],
             };
@@ -340,10 +342,12 @@ export class UploadService {
             const psuId = record["raw_api_log_data.psu_id"];
             const date = new Date(record["raw_api_log_data.timestamp"]).toISOString().split("T")[0];
             const isAttended = record["raw_api_log_data.is_attended"];
-            const key = `${psuId}_${date}_${isAttended}`;
+            const tpp_id = record["raw_api_log_data.tpp_id"];
+            const key = `${psuId}_${date}_${isAttended}_${tpp_id}`;
 
             console.log('iam key', key)
             console.log('iam bool data', isAttended)
+            console.log('iam tpp data', tpp_id)
 
             const margin =
               isAttended === '1'
@@ -378,7 +382,7 @@ export class UploadService {
               };
             });
 
-            console.log('iam procesed transaction', processedTransactions)
+            // console.log('iam procesed transaction', processedTransactions)
             const totalCharge = processedTransactions.reduce((acc, txn) => acc + txn.charge, 0);
 
             const customerCharge = {
@@ -491,13 +495,12 @@ export class UploadService {
 
       // STEP 2: Now map and use fast lookup
       const calculatedData = await Promise.all(data.map(async (record: { [x: string]: string; }) => {
-
+        let volume = 0;
         let calculatedFee = 0;
         let applicableFee = 0;
         let numberOfPages = 0;
         let result: any[] = [];
         let unit_price = 0;
-        let volume = 0;
         let appliedLimit = 0;
         let limitApplied = false;
         let isCapped: boolean = false;
@@ -514,7 +517,7 @@ export class UploadService {
               applicableFee: parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * 250 / this.aedConstant).toFixed(3)), // Ensure `applicableFee` is also set
               type: "corporate",
               unit_price: 250 / this.aedConstant,
-              volume: parseInt(record["payment_logs.number_of_successful_transactions"]),
+              volume: parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0),
               isCapped: false,
               cappedAt: 0,
             }
@@ -524,16 +527,21 @@ export class UploadService {
           if (record.type === "merchant") {
 
             if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
-              // calculatedFee = parseInt(record["payment_logs.amount"]) * 0.0038;
-              // applicableFee = calculatedFee > 4 ? 4 : calculatedFee;
-              // calculatedFee = parseFloat((parseInt(record["payment_logs.amount"]) * 0.0038).toFixed(3));  //numberof succes trans * 4 AED
-              calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * 4).toFixed(3));
-              // applicableFee = parseFloat((calculatedFee > 4 ? 4 : calculatedFee).toFixed(3));
-              applicableFee = calculatedFee
-              unit_price = 4;
-              volume = parseInt(record["payment_logs.number_of_successful_transactions"]);
-              // isCapped = calculatedFee > 4; // Assign boolean value
-              // cappedAt = isCapped ? 4 : 0;
+              if (record.group == 'payment-non-bulk') {
+                calculatedFee = 4
+                // applicableFee = parseFloat((calculatedFee > 4 ? 4 : calculatedFee).toFixed(3));
+                applicableFee = calculatedFee
+                unit_price = 4;
+                volume = 1;
+              } else if (record.group == 'payment-bulk') {
+                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * 4).toFixed(3));
+                // applicableFee = parseFloat((calculatedFee > 4 ? 4 : calculatedFee).toFixed(3));
+                applicableFee = calculatedFee
+                unit_price = 4;
+                volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0);
+              }
+
+
             } else {
               const date = new Date(record["raw_api_log_data.timestamp"]).toISOString().split("T")[0];
               const key = `${record["payment_logs.merchant_id"]}_${date}`;
@@ -553,11 +561,9 @@ export class UploadService {
                   // calculatedFee = filteredTransaction.chargeableAmount * 0.0038;
                   // applicableFee = parseInt(record["payment_logs.amount"]) > 20000 ? 50 : calculatedFee;
                   calculatedFee = parseFloat((filteredTransaction.chargeableAmount * 0.0038).toFixed(3));
-                  console.log('iam payment', record["payment_logs.amount"])
                   applicableFee = parseFloat((parseInt(record["payment_logs.amount"]) > 20000 ? 50 : calculatedFee).toFixed(3));
-                  console.log('iam applicable fee', applicableFee)
                   unit_price = 0.0038;
-                  volume = filteredTransaction.chargeableAmount;
+                  volume = filteredTransaction.chargeableAmount ?? 0;
                   appliedLimit = filteredTransaction.appliedLimit;
                   // limitApplied = merchantGroup.limitApplied;
                   limitApplied = filteredTransaction.appliedLimit > 0;
@@ -572,38 +578,61 @@ export class UploadService {
 
           // PEER-2-PEER
           else if (record.type === 'peer-2-peer') {
-            if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
-              calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * 4).toFixed(3));
-              // applicableFee = parseFloat((calculatedFee > 4 ? 4 : calculatedFee).toFixed(3));
-              applicableFee = calculatedFee
-              unit_price = 4;
-              volume = parseInt(record["payment_logs.number_of_successful_transactions"]);
-              // isCapped = calculatedFee > 4; // Assign boolean value
-              // cappedAt = isCapped ? 4 : 0;
+            if (record.group === 'payment-bulk') {
+              if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
+                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * 4).toFixed(3));
+                applicableFee = calculatedFee
+                unit_price = 4;
+                volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0);
+                // isCapped = calculatedFee > 4; // Assign boolean value
+                // cappedAt = isCapped ? 4 : 0;
 
-            } else {
-              calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * (25 / this.aedConstant)).toFixed(3));
+              } else {
+                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * (25 / this.aedConstant)).toFixed(3));
 
-              applicableFee = parseFloat((record.group === "payment-bulk"
-                ? (calculatedFee > 2.50 ? 2.50 : calculatedFee)
-                : calculatedFee).toFixed(3));
-              unit_price = 25 / this.aedConstant;
-              volume = parseInt(record["payment_logs.number_of_successful_transactions"]);
-              isCapped = record.group === "payment-bulk" ? calculatedFee > 2.50 ? true : false : false; // Assign boolean value
-              cappedAt = isCapped ? 2.50 : 0;
+                applicableFee = parseFloat((calculatedFee > 2.50 ? 2.50 : calculatedFee).toFixed(3));
+                unit_price = 25 / this.aedConstant;
+                volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0);
+                isCapped = calculatedFee > 2.50 ? true : false // Assign boolean value
+                cappedAt = isCapped ? 2.50 : 0;
+              }
             }
+            else if (record.group === 'payment-non-bulk') {
+              if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
+                calculatedFee = parseFloat((4).toFixed(3));
+                applicableFee = calculatedFee
+                unit_price = 4;
+                volume = 1;
+                // isCapped = calculatedFee > 4; // Assign boolean value
+                // cappedAt = isCapped ? 4 : 0;
+
+              } else {
+                calculatedFee = parseFloat((25 / this.aedConstant).toFixed(3));
+
+                applicableFee = calculatedFee;
+                unit_price = 25 / this.aedConstant;
+                volume = 1;
+              }
+            }
+
           }
 
           // ME-2-ME
           else if (record.type === 'me-2-me') {
-            calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * (20 / this.aedConstant)).toFixed(3));
-            applicableFee = parseFloat((record.group === "payment-bulk"
-              ? (calculatedFee > 2.50 ? 2.50 : calculatedFee)
-              : calculatedFee).toFixed(3));
-            unit_price = 20 / this.aedConstant;
-            volume = parseInt(record["payment_logs.number_of_successful_transactions"]);
-            isCapped = record.group === "payment-bulk" ? calculatedFee > 2.50 ? true : false : false; // Assign boolean value
-            cappedAt = isCapped ? 2.50 : 0;
+            if (record.group === 'payment-bulk') {
+              calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0) * (20 / this.aedConstant)).toFixed(3));
+              applicableFee = parseFloat((calculatedFee > 2.50 ? 2.50 : calculatedFee).toFixed(3));
+              unit_price = 20 / this.aedConstant;
+              volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0);
+              isCapped = calculatedFee > 2.50 ? true : false
+              cappedAt = isCapped ? 2.50 : 0;
+            }
+            else if (record.group === 'payment-non-bulk') {
+              calculatedFee = parseFloat((20 / this.aedConstant).toFixed(3));
+              applicableFee = calculatedFee;
+              unit_price = 20 / this.aedConstant;
+              volume = 1;
+            }
           }
 
           // OTHER
@@ -771,7 +800,6 @@ export class UploadService {
 
   async calculateApiHubFee(processedData: any[], apiData: any[], aedConstant: number) {
     return await Promise.all(processedData.map(async record => {
-      console.log(record["raw_api_log_data.http_method"], ':', record["raw_api_log_data.purpose"], processedData.length, 'iam http method',)
 
       let discounted = false;
       let api_hub_fee = 2.5 / aedConstant;

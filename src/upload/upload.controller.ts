@@ -17,8 +17,8 @@ export class UploadController {
 
     @Post()
     @UseInterceptors(FileFieldsInterceptor([
-        { name: 'file1', maxCount: 1 },
-        { name: 'file2', maxCount: 1 },]))
+        { name: 'raw_data', maxCount: 1 },
+        { name: 'payment_data', maxCount: 1 },]))
     @ApiConsumes('multipart/form-data')
     @ApiOperation({
         summary: 'Upload and merge files',
@@ -28,34 +28,34 @@ export class UploadController {
         schema: {
             type: 'object',
             properties: {
-                file1: {
+                raw_data: {
                     type: 'string',
                     format: 'binary',
                     description: 'Raw API Log Data file',
                 },
-                file2: {
+                payment_data: {
                     type: 'string',
                     format: 'binary',
                     description: 'Payment Log Data file',
                 },
             },
-            required: ['file1', 'file2'],
+            required: ['raw_data', 'payment_data'],
         },
     })
-    async uploadFiles(@UploadedFiles() files: { file1?: Express.Multer.File[]; file2?: Express.Multer.File[]; }) {
+    async uploadFiles(@UploadedFiles() files: { raw_data?: Express.Multer.File[]; payment_data?: Express.Multer.File[]; }) {
         try {
             console.log('Uploaded files:', files);
-            if (!files?.file1 || !files?.file2) {
+            if (!files?.raw_data || !files?.payment_data) {
                 throw new HttpException('Both files are required', HttpStatus.BAD_REQUEST);
             }
 
-            const [file1Path, file2Path] = [
-                files.file1[0].path,
-                files.file2[0].path,
+            const [raw_dataPath, payment_dataPath] = [
+                files.raw_data[0].path,
+                files.payment_data[0].path,
                 // files.file3[0].path,
             ];
 
-            const mergedFilePath = await this.uploadService.mergeCsvFiles(file1Path, file2Path);
+            const mergedFilePath = await this.uploadService.mergeCsvFiles(raw_dataPath, payment_dataPath);
 
             return {
                 message: 'Files merged and uploaded successfully',
