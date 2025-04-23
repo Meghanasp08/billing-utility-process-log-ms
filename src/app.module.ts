@@ -5,10 +5,17 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { ProfileModule } from './profile/profile.module';
 import { UploadModule } from './upload/upload.module';
+import { MailModule } from './mail/mail.module';
+import { InvoiceModule } from './invoice/invoice.module';
 
 @Module({
   imports: [
-    MongooseModule.forRoot(process.env.MONGO_URL || 'mongodb://localhost:27017/defaultdb'), AuthModule, ProfileModule, UploadModule],
+    MongooseModule.forRoot(process.env.MONGO_URL || 'mongodb://localhost:27017/defaultdb'),
+    AuthModule,
+    ProfileModule,
+    UploadModule,
+    MailModule,
+    InvoiceModule],
   controllers: [AppController],
   providers: [AppService],
 })
