@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
+import { AuthModule } from 'src/auth/auth.module';
 import { Log, LogSchema } from './schemas/billing-log.schema';
 import { ApiData, ApiDataSchema } from './schemas/endpoint.schema';
 import { LfiData, LfiDataSchema } from './schemas/lfi-data.schema';
@@ -22,6 +23,7 @@ import { UploadService } from './upload.service';
       },
     }),
   }),
+    AuthModule,
   ],
   controllers: [UploadController],
   providers: [UploadService],

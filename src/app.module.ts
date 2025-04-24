@@ -7,6 +7,7 @@ import { ProfileModule } from './profile/profile.module';
 import { UploadModule } from './upload/upload.module';
 import { MailModule } from './mail/mail.module';
 import { InvoiceModule } from './invoice/invoice.module';
+import { ConfigurationModule } from './configuration/configuration.module';
 
 @Module({
   imports: [
@@ -15,7 +16,8 @@ import { InvoiceModule } from './invoice/invoice.module';
     ProfileModule,
     UploadModule,
     MailModule,
-    InvoiceModule],
+    InvoiceModule,
+    ConfigurationModule],
   controllers: [AppController],
   providers: [AppService],
 })
