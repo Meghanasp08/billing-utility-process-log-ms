@@ -21,7 +21,7 @@ export class InvoiceController {
       throw error;
     }
   }
-  
+    
   @Get('collection-memo')
   async findAllCollectionMemo(@Query(ValidationPipe) PaginationDTO: PaginationDTO) {
     try {
