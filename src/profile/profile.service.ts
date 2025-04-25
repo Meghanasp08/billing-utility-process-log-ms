@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import * as fs from 'fs';
 import { Model } from 'mongoose';
 import { Log, LogDocument } from 'src/upload/schemas/billing-log.schema';
 import { LfiData, LfiDataDocument } from 'src/upload/schemas/lfi-data.schema';
 import { TppData, TppDataDocument } from 'src/upload/schemas/tpp-data.schema';
 import { User, UserDocument } from './schemas/user.schema';
+const { Parser } = require('json2csv');
 
 @Injectable()
 export class ProfileService {
@@ -309,6 +311,115 @@ export class ProfileService {
       throw new Error("Failed to fetch billing details");
     }
   }
+  async getLogDataToCSV(startDate?: string, endDate?: string, search?: string,) {
+    const filter: any = {};
 
+    if (startDate && endDate) {
+      filter["raw_api_log_data.timestamp"] = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    } else if (startDate) {
+      filter["raw_api_log_data.timestamp"] = { $gte: new Date(startDate) };
+    } else if (endDate) {
+      filter["raw_api_log_data.timestamp"] = { $lte: new Date(endDate) };
+    }
+    if (search) {
+      const searchRegex = new RegExp(search, "i");
+      filter["$or"] = [
+        { "raw_api_log_data.tpp_id": search },
+        { "raw_api_log_data.tppName": searchRegex },
+        { "raw_api_log_data.lfi_id": search },
+        { "raw_api_log_data.lfiName": searchRegex }
+      ];
+    }
+    // const total = await this.logModel.countDocuments(filter).exec();
+    // const log = await this.logModel.find(filter).skip(offset)
+    //   .limit(limit).exec();
+    const log = await this.logModel.find(filter).exec();
+
+    const outputPath = './output/log_data.csv';
+
+    const directory = outputPath.substring(0, outputPath.lastIndexOf('/'));
+    if (!fs.existsSync(directory)) {
+      fs.mkdirSync(directory, { recursive: true });
+    }
+
+    // Define the CSV headers
+    const fields = [
+      "raw_api_log_data.timestamp",
+      "raw_api_log_data.tpp_name",
+      "raw_api_log_data.lfi_id",
+      "raw_api_log_data.tpp_id",
+      "raw_api_log_data.tpp_client_id",
+      "raw_api_log_data.api_set_sub",
+      "raw_api_log_data.http_method",
+      "raw_api_log_data.url",
+      "raw_api_log_data.tpp_response_code_group",
+      "raw_api_log_data.execution_time",
+      "raw_api_log_data.interaction_id",
+      "raw_api_log_data.resource_name",
+      "raw_api_log_data.lfi_response_code_group",
+      "raw_api_log_data.is_attended",
+      "raw_api_log_data.records",
+      "raw_api_log_data.payment_type",
+      "raw_api_log_data.payment_id",
+      "raw_api_log_data.merchant_id",
+      "raw_api_log_data.psu_id",
+      "raw_api_log_data.is_large_corporate",
+      "raw_api_log_data.user_type",
+      "raw_api_log_data.purpose",
+      "payment_logs.timestamp",
+      "payment_logs.tpp_name",
+      "payment_logs.lfi_id",
+      "payment_logs.tpp_id",
+      "payment_logs.tpp_client_id",
+      "payment_logs.status",
+      "payment_logs.currency",
+      "payment_logs.amount",
+      "payment_logs.payment_consent_type",
+      "payment_logs.payment_type",
+      "payment_logs.transaction_id",
+      "payment_logs.payment_id",
+      "payment_logs.merchant_id",
+      "payment_logs.psu_id",
+      "payment_logs.is_large_corporate",
+      "payment_logs.number_of_successful_transactions",
+      "payment_logs.international_payment",
+      "chargeable",
+      "lfiChargable",
+      "success",
+      "group",
+      "type",
+      "discountType",
+      "api_category",
+      "discounted",
+      "api_hub_fee",
+      "calculatedFee",
+      "applicableFee",
+      "unit_price",
+      "volume",
+      "appliedLimit",
+      "limitApplied",
+      "isCapped",
+      "cappedAt",
+      "numberOfPages"
+    ];
+
+    // Convert JSON to CSV
+    const parser = new Parser({ fields });
+    const csv = parser.parse(log);
+
+    // Write the CSV file
+    fs.writeFileSync(outputPath, csv, 'utf8');
+    console.log(`CSV file has been created at ${outputPath}`);
+    return outputPath;
+  } catch(error) {
+    console.error("Error creating CSV file:", error);
+  }
+  //     return {
+  //   log,
+  // }
+  // }
 
 }

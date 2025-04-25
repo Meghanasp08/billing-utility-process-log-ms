@@ -3,11 +3,12 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { ConfigurationModule } from './configuration/configuration.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { InvoiceModule } from './invoice/invoice.module';
+import { MailModule } from './mail/mail.module';
 import { ProfileModule } from './profile/profile.module';
 import { UploadModule } from './upload/upload.module';
-import { MailModule } from './mail/mail.module';
-import { InvoiceModule } from './invoice/invoice.module';
-import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     UploadModule,
     MailModule,
     InvoiceModule,
+    ConfigurationModule,
     DashboardModule],
   controllers: [AppController],
   providers: [AppService],

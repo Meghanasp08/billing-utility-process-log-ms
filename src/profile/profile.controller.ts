@@ -1,5 +1,6 @@
-import { Controller, Get, HttpStatus, Param, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Param, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Response } from 'express';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth-guard';
 import { ProfileService } from './profile.service';
 
@@ -187,6 +188,33 @@ export class ProfileController {
         result: logData,
         statusCode: HttpStatus.OK
       }
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Retrieve log csv data based on date range and search query .' })
+  @ApiQuery({ name: 'startDate', required: false, description: 'Start date of the logs (YYYY-MM-DD).' })
+  @ApiQuery({ name: 'endDate', required: false, description: 'End date of the logs (YYYY-MM-DD).' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search keyword for filtering logs (TPP id, LFI Id, TPP Name , LFI Name).' })
+  @Get('log/csv')
+  async getLogDataToCsv(@Req() req: any, @Res() res: Response, @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string, @Query('search') search?: string) {
+    try {
+      const logData = await this.profileService.getLogDataToCSV(startDate, endDate, search);
+      // return {
+      //   message: 'List of Logs',
+      //   result: logData,
+      //   statusCode: HttpStatus.OK
+      // }
+      res.download('./output/log_data.csv', 'merged-data.csv', (err) => {
+        if (err) {
+          console.error('Error while downloading file:', err);
+          res.status(HttpStatus.INTERNAL_SERVER_ERROR).send('Failed to download file.');
+        }
+      });
     } catch (error) {
       throw error;
     }
