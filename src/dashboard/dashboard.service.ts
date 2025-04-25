@@ -16,10 +16,12 @@ export class DashboardService {
       totalInvoices: await this.getTotalInvoices().then(res => res[0]?.total || 0),
       totalInvoiceAmount: await this.getTotalRevenue().then(res => res[0]?.total || 0),
       avgInvoiceAmount: await this.getAvgInvoiceAmount().then(res => res[0]?.avg || 0),
+      invoicePaid: await this.invoicePaid().then(res => res[0]?.totalPaid  || 0),
       noOfTpps: await this.getNoOfTpps().then(res => res[0]?.total || 0),
       noOfLfis: await this.getNoOfLfis().then(res => res[0]?.total || 0),
       apiHubFee: await this.getApiHubFee(),
       lfiToTppFee: await this.getLfiToTppFee(),
+      paidUnpaidInvoices: await this.getPaidUnpaidInvoices().then(res => res[0]),
     }
   }
 
@@ -106,6 +108,39 @@ export class DashboardService {
     }
   }
 
+  async getPaidUnpaidInvoices(){
+    return this.invoiceModel.aggregate([
+      {
+        $group: {
+          _id: null,
+          paid: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 1] }, 1, 0]
+            }
+          },
+          unpaid: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 0] }, 1, 0]
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          paid: 1,
+          unpaid: 1
+        }
+      }
+    ]).exec();  
+  }
+
+  async invoicePaid() {
+    return await this.invoiceModel.aggregate([
+      { $match: { status: 1 } }, 
+      { $group: { _id: null, totalPaid: { $sum: "$total_amount" } } }  
+    ]).exec()
+  }
 
 }
 
