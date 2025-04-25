@@ -21,6 +21,21 @@ export class InvoiceController {
       throw error;
     }
   }
+    
+  @Get('collection-memo')
+  async findAllCollectionMemo(@Query(ValidationPipe) PaginationDTO: PaginationDTO) {
+    try {
+      const result = await this.invoiceService.findAllCollectionMemo(PaginationDTO);
+      return {
+        message: 'Success',
+        result: result,
+        statusCode: HttpStatus.OK,
+      };
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
+  }
 
   @Post()
   async invoiceCreation(@Body(ValidationPipe) invoiceDto: any,): Promise<any> {
@@ -51,10 +66,11 @@ export class InvoiceController {
       throw error;
     }
   }
+
   @Get('billing-tpp/:tpp_id')
-  async getbillingTpps(@Param('tpp_id') tpp_id: string,@Query(ValidationPipe) invoiceDto: any): Promise<any> {
+  async getbillingTpps(@Param('tpp_id') tpp_id: string, @Query(ValidationPipe) invoiceDto: any): Promise<any> {
     try {
-      const result = await this.invoiceService.billingTpp(tpp_id,invoiceDto);
+      const result = await this.invoiceService.billingTpp(tpp_id, invoiceDto);
       return {
         message: 'Invoice Details',
         result: result,
@@ -65,4 +81,20 @@ export class InvoiceController {
       throw error;
     }
   }
+
+  @Get('billing-lfi/:lf_id')
+  async getbillingLfis(@Param('lf_id') lf_id: string, @Query(ValidationPipe) invoiceDto: any): Promise<any> {
+    try {
+      const result = await this.invoiceService.billingLfiStatement(lf_id, invoiceDto);
+      return {
+        message: 'Lfi Details',
+        result: result,
+        statusCode: HttpStatus.OK,
+      };
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
+  }
+
 }

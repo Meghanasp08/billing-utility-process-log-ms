@@ -10,6 +10,8 @@ export class InvoiceService {
         @InjectModel('Invoices') private readonly invoiceModel: Model<any>,
         @InjectModel('Logs') private readonly logsModel: Model<any>,
         @InjectModel('TppData') private readonly tppDataModel: Model<any>,
+        @InjectModel('LfiData') private readonly lfiDataModel: Model<any>,
+        @InjectModel('CollectionMemo') private readonly collectionMemoModel: Model<any>,
     ) { }
 
     async findAllInvoices(PaginationDTO: PaginationDTO): Promise<any> {
@@ -158,7 +160,7 @@ export class InvoiceService {
                                                 }
                                             ]
                                         },
-                                        'then': 'Confirmation of Payee'
+                                        'then': 'Confirmation of Payee(Discounted)'
                                     }, {
                                         'case': {
                                             '$and': [
@@ -467,7 +469,7 @@ export class InvoiceService {
                                             '$and': [
                                                 {
                                                     '$eq': [
-                                                        '$group', 'Data'
+                                                        '$group', 'data'
                                                     ]
                                                 }, {
                                                     '$eq': [
@@ -480,7 +482,7 @@ export class InvoiceService {
                                     }, {
                                         'case': {
                                             '$eq': [
-                                                '$group', 'Data'
+                                                '$group', 'data'
                                             ]
                                         },
                                         'then': 'Customer Data'
@@ -672,8 +674,71 @@ export class InvoiceService {
             notes: 'Invoice Added',
         }
         const invoice = new this.invoiceModel(invoice_data)
-        return await invoice.save();
+        await invoice.save();
+
+
+        for (const obj of result_of_lfi) {
+            console.log(obj)
+            const tpp_id = invoiceDto?.tpp_id; // replace with your actual ID
+            let collection_memo_data = await this.collectionMemoModel.find({ lfi_id: obj?._id });
+            if (collection_memo_data.length !== 0) {
+                console.log("LOG_ID1")
+
+                const new_tpp_data = {
+                    tpp_id: tpp_id,
+                    tpp_name: tppData?.tpp_name,
+                    collection_memo_subitem: obj.labels,
+                    full_total: obj?.full_total,
+                    vat_percent: 5,
+                    vat: obj?.vat,
+                    actual_total: obj?.actual_total,
+                    date: new Date()
+                };
+
+                for (const memo of collection_memo_data) {
+                    const tppExists = memo.tpp.some((t: any) => t.tpp_id === tpp_id);
+                    console.log("LOG_ID2")
+                    if (!tppExists) {
+                        console.log("LOG_ID3")
+                        memo.tpp.push(new_tpp_data);
+                        await memo.save();
+                    } else {
+                        console.log("LOG_ID4")
+                    }
+                }
+            } else {
+                console.log(obj)
+                console.log("LABELS", obj.labels)
+                const lfiData = await this.lfiDataModel.findOne({ lfi_id: obj?._id });
+                const coll_memo_tpp = new this.collectionMemoModel({
+                    invoice_number: await this.generateInvoiceNumber(),
+                    lfi_id: obj?._id,
+                    lfi_name: lfiData.lfi_name,
+                    billing_period_start: startDate,  // Month First
+                    billing_period_end: endDate,   // Month Last
+                    generated_at: new Date(),        // Generate Date
+                    currency: 'AED',         //AED default
+                    tpp: [{
+                        tpp_id: tpp_id,
+                        tpp_name: tppData?.tpp_name,
+                        collection_memo_subitem: obj?.labels,
+                        full_total: obj?.full_total,
+                        vat_percent: 5,
+                        vat: obj?.vat,
+                        actual_total: obj?.actual_total,
+                        date: new Date()
+                    }],
+                    vat_percent: 5, // Default 5 percent
+                    vat_total: roundedVat,  // vat percent of invoice total
+                    total_amount: roundedTotal,  // total of invoice array
+                    status: 1,
+                })
+                await coll_memo_tpp.save();
+            }
+        }
+
     }
+
     async ensureCategories(inputArray) {
         // Define default values for each category
         const categoryDefaults = {
@@ -698,7 +763,7 @@ export class InvoiceService {
                         "total": 0
                     },
                     {
-                        "description": "Confirmation of Payee",
+                        "description": "Confirmation of Payee(Discounted)",
                         "quantity": 0,
                         "unit_price": 0.25,
                         "total": 0
@@ -863,7 +928,7 @@ export class InvoiceService {
                                                 }
                                             ]
                                         },
-                                        'then': 'Confirmation of Payee'
+                                        'then': 'Confirmation of Payee(Discounted)'
                                     }, {
                                         'case': {
                                             '$and': [
@@ -969,7 +1034,7 @@ export class InvoiceService {
                                     'Corporate Payment', 'Payment Initiation'
                                 ],
                                 'else': [
-                                    'Insurance', 'Setup and Consent', 'Corporate Payment Data', 'Confirmation of Payee', 'Balance(Discounted)', 'Bank Data Sharing'
+                                    'Insurance', 'Setup and Consent', 'Corporate Payment Data', 'Confirmation of Payee(Discounted)', 'Balance(Discounted)', 'Bank Data Sharing'
                                 ]
                             }
                         }
@@ -1128,11 +1193,11 @@ export class InvoiceService {
                                                 }
                                             ]
                                         },
-                                        'then': 'Corporate Payment Data'
+                                        'then': 'Corporate Data'
                                     }, {
                                         'case': {
                                             '$eq': [
-                                                '$group', 'Data'
+                                                '$group', 'data'
                                             ]
                                         },
                                         'then': 'Customer Data'
@@ -1271,5 +1336,319 @@ export class InvoiceService {
             throw new BadRequestException('Invoice Detail not found');
         }
         return result;
+    }
+
+    async billingLfiStatement(
+        lfi_id: any,
+        invoiceDto: any,
+    ): Promise<any> {
+        console.log(lfi_id, invoiceDto)
+        const lfiData = await this.lfiDataModel.findOne({ lfi_id: lfi_id }).lean<any>()
+        if (!lfiData)
+            throw new Error('Invalid Lfi-ID');
+
+        let month = invoiceDto?.month;
+        let year = invoiceDto?.year;
+        if (month < 1 || month > 12)
+            throw new Error('Invalid month (1-12)');
+
+
+        const startDate = moment([year, month - 1]).format('YYYY-MM-DD');
+        const endDate = moment([year, month - 1]).endOf('month').format('YYYY-MM-DD');
+        const currentDate = new Date();
+        console.log(startDate, endDate, lfi_id)
+        // month = Number(month)
+        let aggregation: any = [
+            {
+                '$match': {
+                    'raw_api_log_data.lfi_id': lfi_id,
+                    '$expr': {
+                        '$and': [
+                            {
+                                '$eq': [
+                                    {
+                                        '$month': '$createdAt'
+                                    }, Number(month)
+                                ]
+                            }, {
+                                '$eq': [
+                                    {
+                                        '$year': '$createdAt'
+                                    }, Number(year)
+                                ]
+                            }
+                        ]
+                    }
+                }
+            }, {
+                '$addFields': {
+                    'label': {
+                        '$switch': {
+                            'branches': [
+                                {
+                                    'case': {
+                                        '$and': [
+                                            {
+                                                '$eq': [
+                                                    '$group', 'payment-non-bulk'
+                                                ]
+                                            }, {
+                                                '$eq': [
+                                                    '$type', 'merchant'
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    'then': 'Merchant Collection'
+                                }, {
+                                    'case': {
+                                        '$and': [
+                                            {
+                                                '$eq': [
+                                                    '$group', 'payment-non-bulk'
+                                                ]
+                                            }, {
+                                                '$eq': [
+                                                    '$type', 'peer-2-peer'
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    'then': 'Peer-to Peer'
+                                }, {
+                                    'case': {
+                                        '$and': [
+                                            {
+                                                '$eq': [
+                                                    '$group', 'payment-non-bulk'
+                                                ]
+                                            }, {
+                                                '$eq': [
+                                                    '$type', 'me-2-me'
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    'then': 'Me-to-Me Transfer'
+                                }, {
+                                    'case': {
+                                        '$and': [
+                                            {
+                                                '$in': [
+                                                    '$group', [
+                                                        'payment-bulk', 'payment-non-bulk'
+                                                    ]
+                                                ]
+                                            }, {
+                                                '$eq': [
+                                                    '$largevaluecollection', true
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    'then': 'Large value collection'
+                                }, {
+                                    'case': {
+                                        '$and': [
+                                            {
+                                                '$eq': [
+                                                    '$group', 'payment-bulk'
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    'then': 'Bulk payments'
+                                }, {
+                                    'case': {
+                                        '$and': [
+                                            {
+                                                '$eq': [
+                                                    '$group', 'data'
+                                                ]
+                                            }, {
+                                                '$eq': [
+                                                    '$type', 'corporate'
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    'then': 'Corporate Payment Data'
+                                }, {
+                                    'case': {
+                                        '$eq': [
+                                            '$group', 'data'
+                                        ]
+                                    },
+                                    'then': 'Customer Data'
+                                }
+                            ],
+                            'default': 'Others'
+                        }
+                    }
+                }
+            }, {
+                '$group': {
+                    '_id': {
+                        'tpp_id': '$raw_api_log_data.tpp_id',
+                        'label': '$label'
+                    },
+                    'quantity': {
+                        '$sum': 1
+                    },
+                    'unit_price': {
+                        '$avg': '$applicableFee'
+                    },
+                    'total': {
+                        '$sum': '$applicableFee'
+                    }
+                }
+            }, {
+                '$group': {
+                    '_id': '$_id.tpp_id',
+                    'labels': {
+                        '$push': {
+                            'label': '$_id.label',
+                            'quantity': '$quantity',
+                            'unit_price': {
+                                '$round': [
+                                    '$unit_price', 4
+                                ]
+                            },
+                            'total': {
+                                '$round': [
+                                    '$total', 4
+                                ]
+                            }
+                        }
+                    }
+                }
+            }, {
+                '$addFields': {
+                    'labels': {
+                        '$filter': {
+                            'input': '$labels',
+                            'as': 'labelItem',
+                            'cond': {
+                                '$ne': [
+                                    '$$labelItem.label', 'Others'
+                                ]
+                            }
+                        }
+                    }
+                }
+            }, {
+                '$sort': {
+                    'tpp_id': 1,
+                    'label': 1
+                }
+            }, {
+                '$lookup': {
+                    'from': 'tppdatas',
+                    'localField': '_id',
+                    'foreignField': 'tpp_id',
+                    'as': 'tpp_details'
+                }
+            }, {
+                '$unwind': {
+                    'path': '$tpp_details',
+                    'preserveNullAndEmptyArrays': true
+                }
+            }, {
+                '$addFields': {
+                    'full_total': {
+                        '$round': [
+                            {
+                                '$sum': '$labels.total'
+                            }, 4
+                        ]
+                    }
+                }
+            }, {
+                '$addFields': {
+                    'vat': {
+                        '$round': [
+                            {
+                                '$multiply': [
+                                    '$full_total', 0.05
+                                ]
+                            }, 4
+                        ]
+                    },
+                    'actual_total': {
+                        '$round': [
+                            {
+                                '$add': [
+                                    '$full_total', {
+                                        '$multiply': [
+                                            '$full_total', 0.05
+                                        ]
+                                    }
+                                ]
+                            }, 4
+                        ]
+                    }
+                }
+            }
+        ]
+        const result = await this.logsModel.aggregate(aggregation);
+
+        const total = result.reduce((sum, item) => sum + item.actual_total, 0);
+
+        const vat = total * 0.05;
+
+        const roundedTotal = Math.round(total * 100) / 100; // 0.23
+        const roundedVat = Math.round(vat * 100) / 100;
+
+        // const updated_result = await this.ensureCategories(result);
+        const tpp_data = {
+            invoice_number: await this.generateInvoiceNumber(),
+            lfi_id: lfi_id,
+            lfi_name: lfiData?.lfi_name,
+            billing_period_start: startDate,  // Month First
+            billing_period_end: endDate,   // Month Last
+            generated_at: new Date(),        // Generate Date
+            currency: 'AED',         //AED default
+            tpp_data: result,
+            vat_percent: 5, // Default 5 percent
+            vat_total: roundedVat,  // vat percent of invoice total
+            total_amount: roundedTotal,  // total of invoice array
+            status: 1,
+        }
+        return tpp_data;
+    }
+
+    async findAllCollectionMemo(PaginationDTO: PaginationDTO): Promise<any> {
+        // const offset = PaginationDTO.Offset
+        //     ? Number(PaginationDTO.Offset)
+        //     : PaginationEnum.OFFSET;
+        // const limit = PaginationDTO.limit
+        //     ? Number(PaginationDTO.limit)
+        //     : PaginationEnum.LIMIT;
+        const options: any = {};
+        // const status =
+        //     PaginationDTO.status != null && PaginationDTO.status != 'all'
+        //         ? PaginationDTO.status
+        //         : null;
+        // Object.assign(options, {
+        //     ...(status === null ? { status: { $ne: null } } : { status: status }),
+        // });
+        // const search = PaginationDTO.search ? PaginationDTO.search.trim() : null;
+        // if (search) {
+        //     options.$or = [
+        //     ];
+        // }
+
+        // const count = await this.invoiceModel.find(options).countDocuments();
+        const result = await this.collectionMemoModel.find(options).sort({ createdAt: -1 }).lean<any>()
+
+        return result
+        // {
+        //     result,
+        //     pagination: {
+        //         offset: offset,
+        //         limit: limit,
+        //         total: count,
+        //     },
+        // };
     }
 }
