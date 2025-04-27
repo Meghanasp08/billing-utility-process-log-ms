@@ -1,15 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as csv from 'csv-parser';
 import * as fs from 'fs';
 import { Model } from 'mongoose';
 import { AppConfig } from 'src/config/app.config';
+import { file1HeadersSchema, file2HeadersSchema } from 'src/validation/csv-validation';
 import { Log, LogDocument } from './schemas/billing-log.schema';
 import { ApiData, ApiDataDocument } from './schemas/endpoint.schema';
 import { LfiData, LfiDataDocument } from './schemas/lfi-data.schema';
 import { MerchantTransaction, MerchantTransactionDocument } from './schemas/merchant.limitapplied.schema';
 import { PageMultiplier, PageMultiplierDocument } from './schemas/pagemultiplier.schema';
 import { TppData, TppDataDocument } from './schemas/tpp-data.schema';
+import { uploadLog, uploadLogDocument } from './schemas/upload-log.schema';
 const { Parser } = require('json2csv');
 @Injectable()
 export class UploadService {
@@ -20,6 +22,7 @@ export class UploadService {
     @InjectModel(ApiData.name) private apiModel: Model<ApiDataDocument>,
     @InjectModel(MerchantTransaction.name) private merchantLimitModel: Model<MerchantTransactionDocument>,
     @InjectModel(PageMultiplier.name) private pageMultiplier: Model<PageMultiplierDocument>,
+    @InjectModel(uploadLog.name) private uploadLog: Model<uploadLogDocument>,
   ) { }
 
   private readonly endpoints = AppConfig.endpoints;
@@ -28,13 +31,51 @@ export class UploadService {
   private readonly discount = AppConfig.discount;
   private readonly aedConstant = AppConfig.aedConstant;
 
-  async mergeCsvFiles(file1Path: string, file2Path: string, downloadCsv: boolean = false) {
+  async mergeCsvFiles(userEmail: string, file1Path: string, file2Path: string, downloadCsv: boolean = false,) {
     const file1Data: any[] = [];
     const file2Data: any[] = [];
 
+    console.log('file1Path:', file1Path);
+    console.log('file2Path:', file2Path);
+
+    const logUpdate = await this.uploadLog.create({
+      batchNo: `${Date.now()}`,
+      uploadedAt: new Date(),
+      raw_log_path: file1Path,
+      payment_log_path: file2Path,
+      status: 'processing',
+      uploadedBy: userEmail,
+      remarks: 'File Uploaded, processing started',
+      log: [`Processing started for files: ${file1Path}, ${file2Path}`],
+    }
+    )
+
+
+    // Validate headers for file1
     await new Promise((resolve, reject) => {
       fs.createReadStream(file1Path)
         .pipe(csv())
+        .on('headers', async (headers) => {
+          const normalizedHeaders = headers.map((header) =>
+            header.replace(/^\ufeff/, '').trim()
+          );
+          const { error } = file1HeadersSchema.validate(normalizedHeaders);
+          if (error) {
+
+            console.error('Validation error for raw log data headers:', error.details[0]);
+            reject(new Error('Validation failed for raw API log data headers.'));
+
+            await this.uploadLog.findByIdAndUpdate(
+              logUpdate._id,
+              {
+                $set: {
+                  status: 'Failed',
+                  remarks: 'Failed to validate raw log headers',
+                },
+                $push: { log: `Validation error for raw log data headers Occured in the ${error.details[0].context.key + 1} Column, The Error Header Value is ${error.details[0].context.value}. ERROR :${JSON.stringify(error.details[0])}` }
+              });
+          }
+        })
         .on('data', (row) => {
           const normalizedRow: any = {};
           let isEmptyRow = true;
@@ -44,10 +85,9 @@ export class UploadService {
             const value = row[key]?.trim();
 
             normalizedRow[normalizedKey] = value;
-            if (value) isEmptyRow = false; // Mark row as non-empty if any field has a value
+            if (value) isEmptyRow = false;
           }
 
-          // Only add non-empty rows
           if (!isEmptyRow) {
             normalizedRow['PaymentId'] = normalizedRow['PaymentId'] || normalizedRow['Payment Id'];
             file1Data.push(normalizedRow);
@@ -57,9 +97,31 @@ export class UploadService {
         .on('error', reject);
     });
 
+    // Validate headers for file2
     await new Promise((resolve, reject) => {
       fs.createReadStream(file2Path)
         .pipe(csv())
+        .on('headers', async (headers) => {
+          const normalizedHeaders = headers.map((header) =>
+            header.replace(/^\ufeff/, '').trim()
+          );
+          const { error } = file2HeadersSchema.validate(normalizedHeaders);
+
+          if (error) {
+
+            console.error('Validation error for payment log headers:', error.details);
+            reject(new Error('Validation failed for payment log data headers.'));
+            await this.uploadLog.findByIdAndUpdate(
+              logUpdate._id,
+              {
+                $set: {
+                  status: 'Failed',
+                  remarks: 'Failed to validate payment log headers',
+                },
+                $push: { log: `Validation error for payment log data headers Occured in the ${error.details[0].context.key + 1} Column, The Error Header Value is ${error.details[0].context.value}. ERROR :${JSON.stringify(error.details[0])}` }
+              });
+          }
+        })
         .on('data', (row) => {
           const normalizedRow: any = {};
           let isEmptyRow = true;
@@ -69,10 +131,9 @@ export class UploadService {
             const value = row[key]?.trim();
 
             normalizedRow[normalizedKey] = value;
-            if (value) isEmptyRow = false; // Mark row as non-empty if any field has a value
+            if (value) isEmptyRow = false;
           }
 
-          // Only add non-empty rows
           if (!isEmptyRow) {
             normalizedRow['PaymentId'] = normalizedRow['PaymentId'] || normalizedRow['Payment Id'];
             file2Data.push(normalizedRow);
@@ -81,6 +142,12 @@ export class UploadService {
         .on('end', resolve)
         .on('error', reject);
     });
+
+
+    await this.uploadLog.findByIdAndUpdate(
+      logUpdate._id,
+      { $push: { log: `Header Validation Completed For Both Raw Log csv and Payment Log csv` } }
+    );
 
 
     const mergedData: any[] = [];
@@ -236,6 +303,20 @@ export class UploadService {
     } else {
       // return pageDataCalculation
       const billData = await this.logModel.insertMany(pageDataCalculation);
+      if (billData.length) {
+        await this.uploadLog.findByIdAndUpdate(
+          logUpdate._id,
+          {
+            $set: {
+              status: 'completed',
+              remarks: 'Database Process Completed',
+            },
+            $push: {
+              log: `Filtering Completed and the Latest Merged Data Updated In the Database`,
+            },
+          }
+        );
+      }
       return billData.length;
     }
 
@@ -874,10 +955,45 @@ export class UploadService {
 
 
 
-  async getapis() {
-    const data = await this.apiModel.find().limit(10);
-    console.log('iam data', data)
-    return data;
+  async getRawLogCsv(batchId: string) {
+    try {
+      const logData = await this.uploadLog.findOne({ _id: batchId });
+      if (!logData) {
+        throw new HttpException('Batch ID not found', HttpStatus.NOT_FOUND);
+      }
+      const filePath = logData.raw_log_path;
+      return filePath;
+    } catch (error) {
+      console.error("Error in getRawLogCsv:", error);
+      throw new Error("Failed to retrieve raw log CSV");
+
+    }
+  }
+
+  async getPaymentLogCsv(batchId: string) {
+    try {
+      const logData = await this.uploadLog.findOne({ _id: batchId });
+      if (!logData) {
+        throw new HttpException('Batch ID not found', HttpStatus.NOT_FOUND);
+      }
+      const filePath = logData.payment_log_path;
+      return filePath;
+    } catch (error) {
+      console.error("Error in getPaymentLogCsv:", error);
+      throw new Error("Failed to retrieve payment log CSV");
+
+    }
+  }
+
+  async getUploadLogData() {
+    try {
+      const uploadlogData = await this.uploadLog.find();
+      return uploadlogData;
+    } catch (error) {
+      console.error("Error in upload log getting:", error);
+      throw new Error("Failed to retrieve upload log data");
+
+    }
   }
 }
 

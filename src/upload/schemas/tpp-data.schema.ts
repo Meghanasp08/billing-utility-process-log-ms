@@ -4,7 +4,7 @@ import { Document } from 'mongoose';
 
 export type TppDataDocument = TppData & Document;
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, collection: 'tpp_data' })
 export class TppData {
     @Prop({ required: true, unique: true })
     tpp_id: string;

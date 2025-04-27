@@ -48,7 +48,7 @@ export class Summary {
     charge: number;
 }
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, collection: 'page_multiplier' })
 export class PageMultiplier {
     @Prop({ type: [Transaction], required: true })
     transactions: Transaction[];

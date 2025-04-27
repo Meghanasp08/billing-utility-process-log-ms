@@ -23,7 +23,7 @@ export class Transaction {
 
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, collection: 'merchant_transactions' })
 export class MerchantTransaction {
     @Prop({ required: true })
     merchantId: string;

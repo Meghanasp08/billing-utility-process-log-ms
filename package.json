@@ -20,6 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@hapi/joi": "^17.1.1",
     "@nestjs/common": "^11.0.11",
     "@nestjs/config": "^4.0.1",
     "@nestjs/core": "^11.0.1",
@@ -34,6 +35,7 @@
     "class-validator": "^0.14.1",
     "csv-parser": "^3.2.0",
     "fast-csv": "^5.0.2",
+    "joi": "^17.13.3",
     "json2csv": "^6.0.0-alpha.2",
     "moment": "^2.30.1",
     "mongoose": "^8.12.1",

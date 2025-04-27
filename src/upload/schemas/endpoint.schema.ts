@@ -3,7 +3,7 @@ import { Document } from 'mongoose';
 
 export type ApiDataDocument = ApiData & Document;
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, collection: 'api_data' })
 export class ApiData {
 
     @Prop({ required: true })

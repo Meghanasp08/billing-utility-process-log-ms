@@ -9,11 +9,12 @@ import { LfiData, LfiDataSchema } from './schemas/lfi-data.schema';
 import { MerchantTransaction, MerchantTransactionSchema } from './schemas/merchant.limitapplied.schema';
 import { PageMultiplier, PageMultiplierSchema } from './schemas/pagemultiplier.schema';
 import { TppData, TppDataSchema } from './schemas/tpp-data.schema';
+import { uploadLog, uploadLogSchema } from './schemas/upload-log.schema';
 import { UploadController } from './upload.controller';
 import { UploadService } from './upload.service';
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: Log.name, schema: LogSchema }, { name: LfiData.name, schema: LfiDataSchema }, { name: TppData.name, schema: TppDataSchema }, { name: ApiData.name, schema: ApiDataSchema }, { name: MerchantTransaction.name, schema: MerchantTransactionSchema }, { name: PageMultiplier.name, schema: PageMultiplierSchema }]),
+  imports: [MongooseModule.forFeature([{ name: Log.name, schema: LogSchema }, { name: LfiData.name, schema: LfiDataSchema }, { name: TppData.name, schema: TppDataSchema }, { name: ApiData.name, schema: ApiDataSchema }, { name: MerchantTransaction.name, schema: MerchantTransactionSchema }, { name: PageMultiplier.name, schema: PageMultiplierSchema }, { name: uploadLog.name, schema: uploadLogSchema },]),
   MulterModule.register({
     storage: diskStorage({
       destination: './uploads',

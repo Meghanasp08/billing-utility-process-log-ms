@@ -20,7 +20,7 @@ import { Document } from 'mongoose';
 
 export type LfiDataDocument = LfiData & Document;
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, collection: 'lfi_data' })
 export class LfiData {
     @Prop({ required: true, unique: true })
     lfi_id: string;

@@ -3,7 +3,7 @@ import { Document } from 'mongoose';
 
 export type GlobalConfigurationDocument = GlobalConfiguration & Document;
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, collection: 'global_configuration' })
 export class GlobalConfiguration {
     @Prop({ required: true })
     item: string;
