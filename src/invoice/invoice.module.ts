@@ -7,6 +7,8 @@ import { LogSchema } from 'src/upload/schemas/billing-log.schema';
 import { TppDataSchema } from 'src/upload/schemas/tpp-data.schema';
 import { LfiDataSchema } from 'src/upload/schemas/lfi-data.schema';
 import { CollectionMemoSchema } from './schemas/collection-memo.schems';
+import { SingleDayTppInvoiceSchema } from './schemas/single-day-invoice-tpp.schems';
+import { SingleDayCollectionMemoSchema } from './schemas/single_day_collection-memo.schems';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { CollectionMemoSchema } from './schemas/collection-memo.schems';
       { name: 'TppData', schema: TppDataSchema },
       {name:'LfiData', schema: LfiDataSchema},
       {name:'CollectionMemo', schema: CollectionMemoSchema},
+      {name:'SingleDayTppInvoice', schema: SingleDayTppInvoiceSchema},
+      {name:'SingleDayCollectionMemo', schema: SingleDayCollectionMemoSchema},
     ]),
   ],
   controllers: [InvoiceController],

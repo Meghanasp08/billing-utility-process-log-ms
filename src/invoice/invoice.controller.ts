@@ -51,6 +51,36 @@ export class InvoiceController {
       throw error;
     }
   }
+  
+  @Post('single-day-creation')
+  async invoiceCreationSingleDay(@Body(ValidationPipe) invoiceDto: any,): Promise<any> {
+    try {
+      const result = await this.invoiceService.invoiceCreationSingleDay();
+      return {
+        message: 'Invoice Data',
+        result: result,
+        statusCode: HttpStatus.OK,
+      }
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
+  }
+    
+  @Post('monthly-creation')
+  async invoiceCreationMonthlyTpp(@Body(ValidationPipe) invoiceDto: any,): Promise<any> {
+    try {
+      const result = await this.invoiceService.invoiceCreationMonthlyTpp();
+      return {
+        message: 'Invoice Data',
+        result: result,
+        statusCode: HttpStatus.OK,
+      }
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
+  }
 
   @Get(':id')
   async getInvoiceDetails(@Param('id') id: string): Promise<any> {
