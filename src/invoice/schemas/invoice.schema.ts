@@ -16,6 +16,8 @@ export const InvoiceSchema = new mongoose.Schema(
     billing_period_end: Date,   // Month Last
     issued_date: Date,        // Generate Date
     due_date: Date,
+    invoice_month:Number,
+    invoice_year:Number,
     generated_at: Date,        // Generate Date
     currency: String,         //AED default
     tpp_usage_per_lfi: Array,

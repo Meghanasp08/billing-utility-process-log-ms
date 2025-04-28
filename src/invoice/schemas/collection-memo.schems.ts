@@ -8,6 +8,8 @@ export const CollectionMemoSchema = new mongoose.Schema(
         lfi_name: String,
         billing_period_start: Date,  // Month First
         billing_period_end: Date,   // Month Last
+        invoice_month:Number,
+        invoice_year:Number,
         generated_at: Date,        // Generate Date
         currency: String,         //AED default
         tpp: Array,
