@@ -54,12 +54,21 @@ export class InvoiceService {
         invoiceDto: any,
     ): Promise<any> {
 
-        const tppData = await this.tppDataModel.find();
-
         let month = invoiceDto?.month;
         let year = invoiceDto?.year;
         if (month < 1 || month > 12)
             throw new Error('Invalid month (1-12)');
+
+        await this.invoiceModel.deleteMany({
+            invoice_month: month,
+            invoice_year: year
+        });
+        await this.collectionMemoModel.deleteMany({
+            invoice_month: month,
+            invoice_year: year
+        });
+
+        const tppData = await this.tppDataModel.find();
 
         const startDate = new Date(year, month - 1, 1);
         const endDate = new Date(year, month, 0);
@@ -641,6 +650,8 @@ export class InvoiceService {
                 billing_address_state: 'billing_address_state',
                 billing_address_postal_code: '1111',
                 billing_address_country: 'country',
+                invoice_month: month,
+                invoice_year: year,
                 billing_period_start: startDate,  // Month First
                 billing_period_end: endDate,   // Month Last
                 issued_date: new Date(),        // Generate Date
@@ -663,7 +674,13 @@ export class InvoiceService {
             for (const obj of result_of_lfi) {
                 console.log(obj)
                 const tpp_id = tpp?.tpp_id; // replace with your actual ID
-                let collection_memo_data = await this.collectionMemoModel.findOne({ lfi_id: obj?._id });
+                let collection_memo_data = await this.collectionMemoModel.findOne(
+                    {
+                        lfi_id: obj?._id,
+                        month: month,
+                        year: year
+                    }
+                );
                 if (collection_memo_data) {
                     console.log("LOG_ID1")
 
@@ -683,20 +700,14 @@ export class InvoiceService {
                     if (!tppExists) {
                         console.log("LOG_ID3")
                         collection_memo_data.tpp.push(new_tpp_data);
-                        collection_memo_data.vat_total = collection_memo_data?.vat_total?? 0 + obj?.vat
-                        collection_memo_data.total_amount = collection_memo_data?.total_amount?? 0 + obj?.actual_total
+                        collection_memo_data.vat_total = collection_memo_data?.vat_total ?? 0 + obj?.vat
+                        collection_memo_data.total_amount = collection_memo_data?.total_amount ?? 0 + obj?.actual_total
                         await collection_memo_data.save();
                     } else {
                         console.log("LOG_ID4")
                     }
                 } else {
-                    console.log(obj)
                     console.log("LABELS", obj.labels)
-
-                    const memo_total = result.reduce((sum, item) => sum + item.category_total, 0);
-                    const memo_vat = total * 0.05;
-                    const memo_roundedTotal = Math.round(total * 100) / 100; // 0.23
-                    const memo_roundedVat = Math.round(vat * 100) / 100;
 
                     const lfiData = await this.lfiDataModel.findOne({ lfi_id: obj?._id });
                     const coll_memo_tpp = new this.collectionMemoModel({
@@ -707,6 +718,8 @@ export class InvoiceService {
                         billing_period_end: endDate,   // Month Last
                         generated_at: new Date(),        // Generate Date
                         currency: 'AED',         //AED default
+                        invoice_month: month,
+                        invoice_year: year,
                         tpp: [{
                             tpp_id: tpp_id,
                             tpp_name: tpp?.tpp_name,
@@ -1629,12 +1642,12 @@ export class InvoiceService {
         //     },
         // };
     }
-    async findCollectionMemoById(ID:any): Promise<any> {
+    async findCollectionMemoById(ID: any): Promise<any> {
 
         const result = await this.collectionMemoModel.findById(ID).exec();
 
         return result
-       
+
     }
 
     async invoiceCreationSingleDay(): Promise<any> {
@@ -2821,4 +2834,8 @@ export class InvoiceService {
         return 'completed';
     }
 
+    // async invoiceTemplate(data:any):Promise<any> {
+
+
+    // }
 }
