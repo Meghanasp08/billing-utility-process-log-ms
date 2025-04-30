@@ -73,8 +73,21 @@ export class UploadController {
                 statusCode: HttpStatus.OK
             }
         } catch (error) {
-            throw error;
+            if (error instanceof HttpException) {
+                throw error; // Re-throw expected errors with proper status codes
+            }
 
+            const statusCode = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
+            const errorMessage = error.message || 'Internal server error';
+
+            throw new HttpException(
+                {
+                    message: errorMessage,
+                    status: statusCode,
+                    details: error.details || 'An unexpected error occurred.',
+                },
+                statusCode,
+            );
         }
     }
 

@@ -3,6 +3,19 @@ import { Document } from 'mongoose';
 
 export type uploadLogDocument = uploadLog & Document;
 
+
+
+export class LogEntry {
+    @Prop({ required: true })
+    description: string;
+
+    @Prop({ required: true })
+    status: string;
+
+    @Prop({ default: null }) // Optional field
+    errorDetail?: string;
+}
+
 @Schema({ timestamps: true, collection: 'upload_log' })
 export class uploadLog {
     @Prop({ required: true })
@@ -26,9 +39,11 @@ export class uploadLog {
     @Prop({ default: null }) // Optional
     remarks?: string;
 
-    @Prop({ type: [String], default: [] }) // Log field as an array of strings
-    log: string[];
+    @Prop({ type: [LogEntry], default: [] }) // Log field as an array of objects
+    log: LogEntry[];
 
 }
+
+
 
 export const uploadLogSchema = SchemaFactory.createForClass(uploadLog);

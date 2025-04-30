@@ -37,18 +37,57 @@ export class UploadService {
 
     console.log('file1Path:', file1Path);
     console.log('file2Path:', file2Path);
+    let logUpdate;
+    if (!file1Path || !file2Path) {
+      logUpdate = await this.uploadLog.create({
+        batchNo: `${Date.now()}`,
+        uploadedAt: new Date(),
+        raw_log_path: file1Path,
+        payment_log_path: file2Path,
+        status: 'Failed',
+        uploadedBy: userEmail,
+        remarks: 'File UploadUpload Failed, processing Stopped',
+        log: [
+          !file1Path ? {
+            description: "Uploading Failed for the raw data log",
+            status: "Failed",
+            errorDetail: "Missing file1Path for raw data log"
+          } : {
+            description: "Uploading Failed for the payment data log",
+            status: "Failed",
+            errorDetail: "Missing file1Path for payment data log"
+          }
+        ],
+      }
+      )
 
-    const logUpdate = await this.uploadLog.create({
-      batchNo: `${Date.now()}`,
-      uploadedAt: new Date(),
-      raw_log_path: file1Path,
-      payment_log_path: file2Path,
-      status: 'processing',
-      uploadedBy: userEmail,
-      remarks: 'File Uploaded, processing started',
-      log: [`Processing started for files: ${file1Path}, ${file2Path}`],
+      throw new HttpException({
+        message: !file1Path ? 'Missing raw data file' : !file2Path ? 'Missing payment data file' : 'Both files are required',
+        status: 400
+      }, HttpStatus.BAD_REQUEST);
     }
-    )
+    else {
+      console.log('iam in else')
+      logUpdate = await this.uploadLog.create({
+        batchNo: `${Date.now()}`,
+        uploadedAt: new Date(),
+        raw_log_path: file1Path,
+        payment_log_path: file2Path,
+        status: 'processing',
+        uploadedBy: userEmail,
+        remarks: 'File Uploaded, processing started',
+        log: [
+          {
+            description: "Processing and filter logic started",
+            status: "In Progress",
+            errorDetail: null
+          }
+        ]
+      }
+      )
+    }
+
+    console.log(logUpdate, 'iam log data')
 
 
     // Validate headers for file1
@@ -63,7 +102,13 @@ export class UploadService {
           if (error) {
 
             console.error('Validation error for raw log data headers:', error.details[0]);
-            reject(new Error('Validation failed for raw API log data headers.'));
+            reject(new HttpException(
+              {
+                message: 'Validation failed for raw API log data headers.',
+                status: 400,
+              },
+              HttpStatus.BAD_REQUEST, // Use the appropriate status code constant
+            ));
 
             await this.uploadLog.findByIdAndUpdate(
               logUpdate._id,
@@ -72,8 +117,15 @@ export class UploadService {
                   status: 'Failed',
                   remarks: 'Failed to validate raw log headers',
                 },
-                $push: { log: `Validation error for raw log data headers Occured in the ${error.details[0].context.key + 1} Column, The Error Header Value is ${error.details[0].context.value}. ERROR :${JSON.stringify(error.details[0])}` }
-              });
+                $push: {
+                  log: {
+                    description: `Validation error for raw log data headers occurred in column ${error.details[0].context.key + 1} with incorrect header value ${error.details[0].context.value}`,
+                    status: 'Failed',
+                    errorDetail: `Header value: ${error.details[0].context.value}. Error details: ${JSON.stringify(error.details[0])}`,
+                  },
+                },
+              }
+            );
           }
         })
         .on('data', (row) => {
@@ -110,7 +162,13 @@ export class UploadService {
           if (error) {
 
             console.error('Validation error for payment log headers:', error.details);
-            reject(new Error('Validation failed for payment log data headers.'));
+            reject(new HttpException(
+              {
+                message: 'Validation failed for payment API log data headers.',
+                status: 400,
+              },
+              HttpStatus.BAD_REQUEST, // Use the appropriate status code constant
+            ));
             await this.uploadLog.findByIdAndUpdate(
               logUpdate._id,
               {
@@ -118,7 +176,13 @@ export class UploadService {
                   status: 'Failed',
                   remarks: 'Failed to validate payment log headers',
                 },
-                $push: { log: `Validation error for payment log data headers Occured in the ${error.details[0].context.key + 1} Column, The Error Header Value is ${error.details[0].context.value}. ERROR :${JSON.stringify(error.details[0])}` }
+                $push: {
+                  log: {
+                    description: `Validation error for payment log data headers occurred in column ${error.details[0].context.key + 1} with incorrect header value ${error.details[0].context.value}`,
+                    status: 'Failed',
+                    errorDetail: `Header value: ${error.details[0].context.value}. Error details: ${JSON.stringify(error.details[0])}`,
+                  },
+                }
               });
           }
         })
@@ -146,10 +210,26 @@ export class UploadService {
 
     await this.uploadLog.findByIdAndUpdate(
       logUpdate._id,
-      { $push: { log: `Header Validation Completed For Both Raw Log csv and Payment Log csv` } }
+      {
+        $push: {
+          log: {
+            description: `Header Validation Completed For Both Raw Log csv and Payment Log csv`,
+            status: 'Completed',
+            errorDetail: null
+          }
+        }
+      }
     );
 
-
+    const parseBoolean = (value: string | null | undefined): boolean | null => {
+      console.log('iam value', value)
+      if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+        if (normalized === 'true' || normalized === '1') return true;
+        if (normalized === 'false' || normalized === '0') return false;
+      }
+      return null;
+    };
     const mergedData: any[] = [];
     for (let i = 0; i < file1Data.length; i++) {
       const rawApiRecord = file1Data[i];
@@ -168,14 +248,13 @@ export class UploadService {
         [`raw_api_log_data.interaction_id`]: rawApiRecord.interactionId || null,
         [`raw_api_log_data.resource_name`]: rawApiRecord.resourceName || null,
         [`raw_api_log_data.lfi_response_code_group`]: rawApiRecord.lfIResponseCodeGroup || null,
-        [`raw_api_log_data.is_attended`]: rawApiRecord.isAttended || null,
+        [`raw_api_log_data.is_attended`]: parseBoolean(rawApiRecord.isAttended) || null,
         [`raw_api_log_data.records`]: rawApiRecord.records || null,
         [`raw_api_log_data.payment_type`]: rawApiRecord.paymentType || null,
         [`raw_api_log_data.payment_id`]: rawApiRecord.PaymentId || null,
         [`raw_api_log_data.merchant_id`]: rawApiRecord.merchantId || null,
         [`raw_api_log_data.psu_id`]: rawApiRecord.psuId || null,
-        ["raw_api_log_data.is_large_corporate"]:
-          rawApiRecord.isLargeCorporate || null,
+        ["raw_api_log_data.is_large_corporate"]: parseBoolean(rawApiRecord.isLargeCorporate),
         [`raw_api_log_data.user_type`]: rawApiRecord.userType || null,
         [`raw_api_log_data.purpose`]: rawApiRecord.purpose || null,
 
@@ -193,13 +272,14 @@ export class UploadService {
         [`payment_logs.payment_id`]: paymentRecord.PaymentId || null,
         [`payment_logs.merchant_id`]: paymentRecord.merchantId || null,
         [`payment_logs.psu_id`]: paymentRecord.psuId || null,
-        [`payment_logs.is_large_corporate`]: paymentRecord.isLargeCorporate || null,
+        [`payment_logs.is_large_corporate`]: parseBoolean(paymentRecord.isLargeCorporate),
         [`payment_logs.number_of_successful_transactions`]: paymentRecord.numberOfSuccessfulTransactions || null,
-        [`payment_logs.international_payment`]: paymentRecord.internationalPayment || null,
+        [`payment_logs.international_payment`]: parseBoolean(paymentRecord.internationalPayment),
       };
       mergedData.push(mergedRecord);
 
     }
+    // return mergedData;
     const chargeFile = await this.chargableConvertion(mergedData);
     console.log('stage 1 completed');
 
@@ -312,7 +392,11 @@ export class UploadService {
               remarks: 'Database Process Completed',
             },
             $push: {
-              log: `Filtering Completed and the Latest Merged Data Updated In the Database`,
+              log: {
+                description: `Filtering Completed and the Latest Merged Data Updated In the Database`,
+                status: 'Completed',
+                errorDetail: null
+              },
             },
           }
         );
@@ -499,9 +583,9 @@ export class UploadService {
             console.log('iam tpp data', tpp_id)
 
             const margin =
-              isAttended === '1'
+              isAttended == true
                 ? lfiData.free_limit_attended
-                : isAttended === '0'
+                : isAttended == false
                   ? lfiData.free_limit_unattended
                   : 0;
             const lfiMdpMultiplier = record['raw_api_log_data.is_large_corporate'] ? 40 / this.aedConstant : lfiData.mdp_rate;
