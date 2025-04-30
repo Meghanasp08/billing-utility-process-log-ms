@@ -180,7 +180,7 @@ export class InvoiceController {
   ): Promise<any> {
     try {
       const filePath = await this.invoiceService.generateInvoicePDFLfi(invoiceDto);
-      const fileName = path.basename(filePath); // gets 'invoice-lfi{timestamp}.pdf'
+      const fileName = path.basename(filePath); 
 
       return res.download(filePath, fileName, (err) => {
         if (err) {
@@ -195,7 +195,7 @@ export class InvoiceController {
           }
         });
       });
-      
+
     } catch (error) {
       console.log(error);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({

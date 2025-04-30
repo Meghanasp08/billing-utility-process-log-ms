@@ -283,90 +283,90 @@ export class InvoiceService {
                         }
                     },
                     {
-                      $addFields: {
-                        allItems: {
-                          $cond: {
-                            if: {
-                              $eq: ["$_id", "service_initiation"]
-                            },
-                            then: [
-                              "Corporate Treasury",
-                              "Payment Initiation"
-                            ],
-                            else: [
-                              "Insurance",
-                              "Setup and Consent",
-                              "Corporate Treasury Data",
-                              "Confirmation of Payee",
-                              "Balance(Discounted)",
-                              "Bank Data Sharing"
-                            ]
-                          }
+                        $addFields: {
+                            allItems: {
+                                $cond: {
+                                    if: {
+                                        $eq: ["$_id", "service_initiation"]
+                                    },
+                                    then: [
+                                        "Corporate Treasury",
+                                        "Payment Initiation"
+                                    ],
+                                    else: [
+                                        "Insurance",
+                                        "Setup and Consent",
+                                        "Corporate Treasury Data",
+                                        "Confirmation of Payee",
+                                        "Balance(Discounted)",
+                                        "Bank Data Sharing"
+                                    ]
+                                }
+                            }
                         }
-                      }
                     },
                     {
-                      $addFields: {
-                        items: {
-                          $map: {
-                            input: "$allItems",
-                            as: "desc",
-                            in: {
-                              $let: {
-                                vars: {
-                                  matchedItem: {
-                                    $first: {
-                                      $filter: {
-                                        input: "$items",
-                                        as: "item",
-                                        cond: {
-                                          $eq: [
-                                            "$$item.description",
-                                            "$$desc"
-                                          ]
+                        $addFields: {
+                            items: {
+                                $map: {
+                                    input: "$allItems",
+                                    as: "desc",
+                                    in: {
+                                        $let: {
+                                            vars: {
+                                                matchedItem: {
+                                                    $first: {
+                                                        $filter: {
+                                                            input: "$items",
+                                                            as: "item",
+                                                            cond: {
+                                                                $eq: [
+                                                                    "$$item.description",
+                                                                    "$$desc"
+                                                                ]
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            in: {
+                                                description: "$$desc",
+                                                quantity: {
+                                                    $ifNull: [
+                                                        "$$matchedItem.quantity",
+                                                        0
+                                                    ]
+                                                },
+                                                unit_price: {
+                                                    $ifNull: [
+                                                        "$$matchedItem.unit_price",
+                                                        0.25
+                                                    ]
+                                                },
+                                                total: {
+                                                    $ifNull: [
+                                                        "$$matchedItem.total",
+                                                        0
+                                                    ]
+                                                },
+                                                vat_amount: {
+                                                    $ifNull: [
+                                                        "$$matchedItem.vat_amount",
+                                                        0
+                                                    ]
+                                                },
+                                                full_total: {
+                                                    $ifNull: [
+                                                        "$$matchedItem.full_total",
+                                                        0
+                                                    ]
+                                                }
+                                            }
                                         }
-                                      }
                                     }
-                                  }
-                                },
-                                in: {
-                                  description: "$$desc",
-                                  quantity: {
-                                    $ifNull: [
-                                      "$$matchedItem.quantity",
-                                      0
-                                    ]
-                                  },
-                                  unit_price: {
-                                    $ifNull: [
-                                      "$$matchedItem.unit_price",
-                                      0.25
-                                    ]
-                                  },
-                                  total: {
-                                    $ifNull: [
-                                      "$$matchedItem.total",
-                                      0
-                                    ]
-                                  },
-                                  vat_amount: {
-                                    $ifNull: [
-                                      "$$matchedItem.vat_amount",
-                                      0
-                                    ]
-                                  },
-                                  full_total: {
-                                    $ifNull: [
-                                      "$$matchedItem.full_total",
-                                      0
-                                    ]
-                                  }
                                 }
-                              }
                             }
-                          }
                         }
-                      }
                     },
                     {
                         $addFields: {
@@ -416,20 +416,20 @@ export class InvoiceService {
                 [
                     {
                         '$match': {
-                            'raw_api_log_data.tpp_id': tpp?.tpp_id,
+                            'raw_api_log_data.tpp_id': '876789',
                             '$expr': {
                                 '$and': [
                                     {
                                         '$eq': [
                                             {
                                                 '$month': '$createdAt'
-                                            }, month
+                                            }, 4
                                         ]
                                     }, {
                                         '$eq': [
                                             {
                                                 '$year': '$createdAt'
-                                            }, year
+                                            }, 2025
                                         ]
                                     }
                                 ]
@@ -504,12 +504,8 @@ export class InvoiceService {
                                             'then': 'Large value collection'
                                         }, {
                                             'case': {
-                                                '$and': [
-                                                    {
-                                                        '$eq': [
-                                                            '$group', 'payment-bulk'
-                                                        ]
-                                                    }
+                                                '$eq': [
+                                                    '$group', 'payment-bulk'
                                                 ]
                                             },
                                             'then': 'Bulk payments'
@@ -573,20 +569,6 @@ export class InvoiceService {
                                         '$round': [
                                             '$total', 4
                                         ]
-                                    },
-                                    'vat_amount': {
-                                        '$multiply': [
-                                            '$total', 0.05
-                                        ]
-                                    },
-                                    'full_total': {
-                                        '$add': [
-                                            '$total', {
-                                                '$multiply': [
-                                                    '$total', 0.05
-                                                ]
-                                            }
-                                        ]
                                     }
                                 }
                             }
@@ -594,21 +576,81 @@ export class InvoiceService {
                     }, {
                         '$addFields': {
                             'labels': {
-                                '$filter': {
-                                    'input': '$labels',
-                                    'as': 'labelItem',
-                                    'cond': {
-                                        '$ne': [
-                                            '$$labelItem.label', 'Others'
-                                        ]
+                                '$map': {
+                                    'input': [
+                                        'Merchant Collection', 'Peer-to Peer', 'Me-to-Me Transfer', 'Large value collection', 'Bulk payments', 'Corporate Payment Data', 'Customer Data'
+                                    ],
+                                    'as': 'expectedLabel',
+                                    'in': {
+                                        '$let': {
+                                            'vars': {
+                                                'matched': {
+                                                    '$first': {
+                                                        '$filter': {
+                                                            'input': '$labels',
+                                                            'as': 'existing',
+                                                            'cond': {
+                                                                '$eq': [
+                                                                    '$$existing.label', '$$expectedLabel'
+                                                                ]
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            'in': {
+                                                '$cond': {
+                                                    'if': '$$matched',
+                                                    'then': '$$matched',
+                                                    'else': {
+                                                        'label': '$$expectedLabel',
+                                                        'quantity': 0,
+                                                        'unit_price': 0,
+                                                        'total': 0
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
                     }, {
-                        '$sort': {
-                            'lfi_id': 1,
-                            'label': 1
+                        '$addFields': {
+                            'labels': {
+                                '$map': {
+                                    'input': '$labels',
+                                    'as': 'item',
+                                    'in': {
+                                        '$mergeObjects': [
+                                            '$$item', {
+                                                'vat_amount': {
+                                                    '$round': [
+                                                        {
+                                                            '$multiply': [
+                                                                '$$item.total', 0.05
+                                                            ]
+                                                        }, 4
+                                                    ]
+                                                },
+                                                'full_total': {
+                                                    '$round': [
+                                                        {
+                                                            '$add': [
+                                                                '$$item.total', {
+                                                                    '$multiply': [
+                                                                        '$$item.total', 0.05
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }, 4
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
                         }
                     }, {
                         '$addFields': {
@@ -618,15 +660,14 @@ export class InvoiceService {
                                         '$sum': '$labels.total'
                                     }, 4
                                 ]
-                            }
-                        }
-                    }, {
-                        '$addFields': {
+                            },
                             'vat': {
                                 '$round': [
                                     {
                                         '$multiply': [
-                                            '$full_total', 0.05
+                                            {
+                                                '$sum': '$labels.total'
+                                            }, 0.05
                                         ]
                                     }, 4
                                 ]
@@ -635,9 +676,13 @@ export class InvoiceService {
                                 '$round': [
                                     {
                                         '$add': [
-                                            '$full_total', {
+                                            {
+                                                '$sum': '$labels.total'
+                                            }, {
                                                 '$multiply': [
-                                                    '$full_total', 0.05
+                                                    {
+                                                        '$sum': '$labels.total'
+                                                    }, 0.05
                                                 ]
                                             }
                                         ]
@@ -688,7 +733,7 @@ export class InvoiceService {
 
 
             for (const obj of result_of_lfi) {
-                console.log(obj)
+                
                 const tpp_id = tpp?.tpp_id; // replace with your actual ID
                 let collection_memo_data = await this.collectionMemoModel.findOne(
                     {
@@ -723,7 +768,7 @@ export class InvoiceService {
                         console.log("LOG_ID4")
                     }
                 } else {
-                    console.log("LABELS", obj.labels)
+                    console.log("LABELS")
 
                     const lfiData = await this.lfiDataModel.findOne({ lfi_id: obj?._id });
                     const coll_memo_tpp = new this.collectionMemoModel({
@@ -767,48 +812,48 @@ export class InvoiceService {
                         "quantity": 0,
                         "unit_price": 0.025,
                         "total": 0,
-                        "vat_amount":0,
-                        "full_total":0
+                        "vat_amount": 0,
+                        "full_total": 0
                     },
                     {
                         "description": "Setup and Consent",
                         "quantity": 0,
                         "unit_price": 0.25,
                         "total": 0,
-                        "vat_amount":0,
-                        "full_total":0
+                        "vat_amount": 0,
+                        "full_total": 0
                     },
                     {
                         "description": "Corporate Payment Data",
                         "quantity": 0,
                         "unit_price": 0.025,
                         "total": 0,
-                        "vat_amount":0,
-                        "full_total":0
+                        "vat_amount": 0,
+                        "full_total": 0
                     },
                     {
                         "description": "Confirmation of Payee(Discounted)",
                         "quantity": 0,
                         "unit_price": 0.25,
                         "total": 0,
-                        "vat_amount":0,
-                        "full_total":0
+                        "vat_amount": 0,
+                        "full_total": 0
                     },
                     {
                         "description": "Balance(Discounted)",
                         "quantity": 0,
                         "unit_price": 0.25,
                         "total": 0,
-                        "vat_amount":0,
-                        "full_total":0
+                        "vat_amount": 0,
+                        "full_total": 0
                     },
                     {
                         "description": "Bank Data Sharing",
                         "quantity": 0,
                         "unit_price": 0.025,
                         "total": 0,
-                        "vat_amount":0,
-                        "full_total":0
+                        "vat_amount": 0,
+                        "full_total": 0
                     }
                 ],
                 "sub_total": 0,
@@ -823,16 +868,16 @@ export class InvoiceService {
                         "quantity": 0,
                         "unit_price": 0.025,
                         "total": 0.0,
-                        "vat_amount":0,
-                        "full_total":0
+                        "vat_amount": 0,
+                        "full_total": 0
                     },
                     {
                         "description": "Payment Initiation",
                         "quantity": 0,
                         "unit_price": 0.025,
                         "total": 0.00,
-                        "vat_amount":0,
-                        "full_total":0
+                        "vat_amount": 0,
+                        "full_total": 0
                     }
                 ],
                 "sub_total": 0,
@@ -2931,7 +2976,7 @@ export class InvoiceService {
             }
         });
         await browser.close();
-        
+
         return attachmentPath
 
     }
@@ -2944,7 +2989,7 @@ export class InvoiceService {
 
         let lfi_total = data?.tpp_usage_per_lfi.reduce((sum, item) => sum + item.actual_total, 0);
         let total_due = Number(lfi_total) + Number(data.total_amount);
-        
+
         const monthName = moment().month(data.invoice_month - 1).format('MMMM');
 
         for (const item of data?.tpp_usage_per_lfi) {
@@ -3723,7 +3768,7 @@ export class InvoiceService {
 
     }
 
-    async generateInvoicePDFLfi(data:any) {
+    async generateInvoicePDFLfi(data: any) {
         if (!fs.existsSync(`./temp`)) {
             fs.mkdirSync(`./temp`)
         }
@@ -3766,8 +3811,8 @@ export class InvoiceService {
 
         return attachmentPath
     }
-    async header_template(){
-        return  `
+    async header_template() {
+        return `
 
         <div class="header">
     
@@ -3800,7 +3845,7 @@ export class InvoiceService {
     </div>
                 `
     }
-    async footer_template(){
+    async footer_template() {
         return `
                 <style>
                     .footer {
@@ -3851,7 +3896,7 @@ export class InvoiceService {
     }
 
     async lfi_invoiceTemplate(data: any): Promise<any> {
-        
+
         let revenue_data = '';
         let total_vat = data?.tpp.reduce((sum, item) => sum + item.vat, 0);
         let grand_total = data?.tpp.reduce((sum, item) => sum + item.full_total, 0);
