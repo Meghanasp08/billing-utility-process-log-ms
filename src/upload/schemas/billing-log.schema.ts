@@ -9,6 +9,9 @@ export class RawApiLogData {
   timestamp: Date;
 
   @Prop()
+  lfi_name: string;
+
+  @Prop()
   lfi_id: string;
 
   @Prop()
@@ -81,6 +84,9 @@ export const RawApiLogDataSchema = SchemaFactory.createForClass(RawApiLogData);
 export class PaymentLogs {
   @Prop()
   timestamp: Date;
+
+  @Prop()
+  lfi_name: string;
 
   @Prop()
   lfi_id: string;

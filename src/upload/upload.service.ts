@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import { Model } from 'mongoose';
 import { AppConfig } from 'src/config/app.config';
 import { GlobalConfiguration, GlobalConfigurationDocument } from 'src/configuration/schema/global_config.schema';
-import { file1HeadersSchema, file2HeadersSchema } from 'src/validation/csv-validation';
+import { file1HeadersIncludeSchema, file2HeadersIncludeSchema, validateHeaders } from 'src/validation/csv-validation';
 import { Log, LogDocument } from './schemas/billing-log.schema';
 import { ApiData, ApiDataDocument } from './schemas/endpoint.schema';
 import { LfiData, LfiDataDocument } from './schemas/lfi-data.schema';
@@ -183,10 +183,41 @@ export class UploadService {
           const normalizedHeaders = headers.map((header) =>
             header.replace(/^\ufeff/, '').trim()
           );
-          const { error } = file1HeadersSchema.validate(normalizedHeaders);
-          if (error) {
+          //   const { error } = file1HeadersSchema.validate(normalizedHeaders);
+          //   if (error) {
 
-            console.error('Validation error for raw log data headers:', error.details[0]);
+          //     console.error('Validation error for raw log data headers:', error.details[0]);
+          //     reject(new HttpException(
+          //       {
+          //         message: 'Validation failed for raw API log data headers.',
+          //         status: 400,
+          //       },
+          //       HttpStatus.BAD_REQUEST, // Use the appropriate status code constant
+          //     ));
+
+          //     await this.uploadLog.findByIdAndUpdate(
+          //       logUpdate._id,
+          //       {
+          //         $set: {
+          //           status: 'Failed',
+          //           remarks: 'Failed to validate raw log headers',
+          //         },
+          //         $push: {
+          //           log: {
+          //             description: `Validation error for raw log data headers occurred in column ${error.details[0].context.key + 1} with incorrect header value ${error.details[0].context.value}`,
+          //             status: 'Failed',
+          //             errorDetail: `Header value: ${error.details[0].context.value}. Error details: ${JSON.stringify(error.details[0])}`,
+          //           },
+          //         },
+          //       }
+          //     );
+          //   }
+          // })
+          try {
+            const data1Error = validateHeaders(normalizedHeaders, file1HeadersIncludeSchema);
+            // console.log('iam data1Error', data1Error)
+          } catch (error) {
+            console.error('Validation error for raw log data headers:', error.message);
             reject(new HttpException(
               {
                 message: 'Validation failed for raw API log data headers.',
@@ -194,7 +225,6 @@ export class UploadService {
               },
               HttpStatus.BAD_REQUEST, // Use the appropriate status code constant
             ));
-
             await this.uploadLog.findByIdAndUpdate(
               logUpdate._id,
               {
@@ -204,13 +234,20 @@ export class UploadService {
                 },
                 $push: {
                   log: {
-                    description: `Validation error for raw log data headers occurred in column ${error.details[0].context.key + 1} with incorrect header value ${error.details[0].context.value}`,
+                    description: error.message,
                     status: 'Failed',
-                    errorDetail: `Header value: ${error.details[0].context.value}. Error details: ${JSON.stringify(error.details[0])}`,
+                    errorDetail: error.message,
                   },
                 },
               }
             );
+            reject(new HttpException(
+              {
+                message: 'Validation failed for raw API log data headers.',
+                status: 400,
+              },
+              HttpStatus.BAD_REQUEST
+            ));
           }
         })
         .on('data', (row) => {
@@ -242,11 +279,40 @@ export class UploadService {
           const normalizedHeaders = headers.map((header) =>
             header.replace(/^\ufeff/, '').trim()
           );
-          const { error } = file2HeadersSchema.validate(normalizedHeaders);
+          //   const { error } = file2HeadersSchema.validate(normalizedHeaders);
 
-          if (error) {
+          //   if (error) {
 
-            console.error('Validation error for payment log headers:', error.details);
+          //     console.error('Validation error for payment log headers:', error.details);
+          //     reject(new HttpException(
+          //       {
+          //         message: 'Validation failed for payment API log data headers.',
+          //         status: 400,
+          //       },
+          //       HttpStatus.BAD_REQUEST, // Use the appropriate status code constant
+          //     ));
+          //     await this.uploadLog.findByIdAndUpdate(
+          //       logUpdate._id,
+          //       {
+          //         $set: {
+          //           status: 'Failed',
+          //           remarks: 'Failed to validate payment log headers',
+          //         },
+          //         $push: {
+          //           log: {
+          //             description: `Validation error for payment log data headers occurred in column ${error.details[0].context.key + 1} with incorrect header value ${error.details[0].context.value}`,
+          //             status: 'Failed',
+          //             errorDetail: `Header value: ${error.details[0].context.value}. Error details: ${JSON.stringify(error.details[0])}`,
+          //           },
+          //         }
+          //       });
+          //   }
+          // })
+          try {
+            const dataError = validateHeaders(normalizedHeaders, file2HeadersIncludeSchema);
+            // console.log('iam data error', dataError)
+          } catch (error) {
+            console.error('Validation error for payment log data headers:', error.message);
             reject(new HttpException(
               {
                 message: 'Validation failed for payment API log data headers.',
@@ -263,12 +329,20 @@ export class UploadService {
                 },
                 $push: {
                   log: {
-                    description: `Validation error for payment log data headers occurred in column ${error.details[0].context.key + 1} with incorrect header value ${error.details[0].context.value}`,
+                    description: error.message,
                     status: 'Failed',
-                    errorDetail: `Header value: ${error.details[0].context.value}. Error details: ${JSON.stringify(error.details[0])}`,
+                    errorDetail: error.message,
                   },
-                }
-              });
+                },
+              }
+            );
+            reject(new HttpException(
+              {
+                message: 'Validation failed for payment API log data headers.',
+                status: 400,
+              },
+              HttpStatus.BAD_REQUEST
+            ));
           }
         })
         .on('data', (row) => {
@@ -321,6 +395,7 @@ export class UploadService {
       const mergedRecord = {
         [`raw_api_log_data.timestamp`]: rawApiRecord.timestamp || null,
         [`raw_api_log_data.tpp_name`]: rawApiRecord.tppName || null,
+        [`raw_api_log_data.lfi_name`]: rawApiRecord.lfiName || null,
         [`raw_api_log_data.lfi_id`]: rawApiRecord.lfiId || null,
         [`raw_api_log_data.tpp_id`]: rawApiRecord.tppId || null,
         [`raw_api_log_data.tpp_client_id`]: rawApiRecord.tppClientId || null,
@@ -344,6 +419,7 @@ export class UploadService {
 
         [`payment_logs.timestamp`]: paymentRecord.timestamp || null,
         [`payment_logs.tpp_name`]: paymentRecord.tppName || null,
+        [`payment_logs.lfi_name`]: paymentRecord.lfiName || null,
         [`payment_logs.lfi_id`]: paymentRecord.lfiId || null,
         [`payment_logs.tpp_id`]: paymentRecord.tppId || '',
         [`payment_logs.tpp_client_id`]: paymentRecord.tppClientId || null,
@@ -363,7 +439,7 @@ export class UploadService {
       mergedData.push(mergedRecord);
 
     }
-    // return mergedData;
+    return mergedData;
     const chargeFile = await this.chargableConvertion(mergedData);
     console.log('stage 1 completed');
 
@@ -396,6 +472,7 @@ export class UploadService {
         const fields = [
           "raw_api_log_data.timestamp",
           "raw_api_log_data.tpp_name",
+          "raw_api_log_data.lfi_name",
           "raw_api_log_data.lfi_id",
           "raw_api_log_data.tpp_id",
           "raw_api_log_data.tpp_client_id",

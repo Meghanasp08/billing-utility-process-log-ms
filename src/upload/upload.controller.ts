@@ -55,7 +55,7 @@ export class UploadController {
     })
     async uploadFiles(@UploadedFiles() files: { raw_data?: Express.Multer.File[]; payment_data?: Express.Multer.File[]; }, @Req() req: any) {
         try {
-            console.log('Uploaded files:', req.user.email);
+            // console.log('Uploaded files:', req.user.email);
             if (!files?.raw_data || !files?.payment_data) {
                 throw new HttpException('Both files are required', HttpStatus.BAD_REQUEST);
             }
