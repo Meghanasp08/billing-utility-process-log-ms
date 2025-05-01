@@ -791,6 +791,7 @@ export class InvoiceService {
                             actual_total: obj?.actual_total,
                             date: new Date()
                         }],
+                        due_date: futureDate,  //issued_date + 30 days
                         vat_percent: 5, // Default 5 percent
                         vat_total: obj?.vat,  // vat percent of invoice total
                         total_amount: obj?.actual_total,  // total of invoice array
@@ -3017,9 +3018,9 @@ export class InvoiceService {
             service_initiation += ` <tr>
                 <td>${service_items.description}</td>
                 <td class="table-total">${service_items.quantity}</td>
-                <td class="table-total">${service_items.description}</td>
                 <td class="table-total">${service_items.unit_price}</td>
                 <td class="table-total">${service_items.total}</td>
+                <td class="table-total">5</td>
                 <td class="table-total">${service_items.vat_amount}</td>
                 <td class="table-total">${service_items.full_total}</td>
             </tr>`;
@@ -3032,9 +3033,9 @@ export class InvoiceService {
             data_sharing += ` <tr>
                 <td>${data_items.description}</td>
                 <td class="table-total">${data_items.quantity}</td>
-                <td class="table-total">${data_items.description}</td>
                 <td class="table-total">${data_items.unit_price}</td>
                 <td class="table-total">${data_items.total}</td>
+                <td class="table-total">5</td>
                 <td class="table-total">${data_items.vat_amount}</td>
                 <td class="table-total">${data_items.full_total}</td>
             </tr>`;
@@ -3055,7 +3056,7 @@ export class InvoiceService {
                         <div class="date">${moment(data.generated_at).format('D MMMM YYYY')}</div>
                         <div class="lfi-info">
                             <div>LFI Alpha</div>
-                            <div class="lfi-info-space">LFI123456</div>
+                            <div class="lfi-info-space">LFI-${memo._id}</div>
                             <div class="lfi-info-space">4567 Business Park<br>Innovation City, IC 12345<br>United Arab
                                 Emirates</div>
                         </div>

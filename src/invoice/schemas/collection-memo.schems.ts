@@ -13,6 +13,7 @@ export const CollectionMemoSchema = new mongoose.Schema(
         generated_at: Date,        // Generate Date
         currency: String,         //AED default
         tpp: Array,
+        due_date: Date,
         subtotal: Number,
         vat_percent: Number, // Default 5 percent
         vat_total: Number,  // vat percent of invoice total
