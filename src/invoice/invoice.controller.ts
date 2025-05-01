@@ -31,8 +31,9 @@ export class InvoiceController {
       const result = await this.invoiceService.findAllCollectionMemo(PaginationDTO);
       return {
         message: 'Success',
-        result: result,
+        result: result?.result,
         statusCode: HttpStatus.OK,
+        pagination: result?.pagination,
       };
     } catch (error) {
       console.log(error);

@@ -417,6 +417,7 @@ export class InvoiceService {
                     {
                         '$match': {
                             'raw_api_log_data.tpp_id': tpp?.tpp_id,
+                            'lfiChargable':true,
                             '$expr': {
                                 '$and': [
                                     {
@@ -1449,6 +1450,7 @@ export class InvoiceService {
             {
                 '$match': {
                     'raw_api_log_data.lfi_id': lfi_id,
+                    'lfiChargable':true,
                     $and: [
                         startDate && endDate
                             ? {
@@ -1698,12 +1700,12 @@ export class InvoiceService {
     }
 
     async findAllCollectionMemo(PaginationDTO: PaginationDTO): Promise<any> {
-        // const offset = PaginationDTO.Offset
-        //     ? Number(PaginationDTO.Offset)
-        //     : PaginationEnum.OFFSET;
-        // const limit = PaginationDTO.limit
-        //     ? Number(PaginationDTO.limit)
-        //     : PaginationEnum.LIMIT;
+        const offset = PaginationDTO.Offset
+            ? Number(PaginationDTO.Offset)
+            : PaginationEnum.OFFSET;
+        const limit = PaginationDTO.limit
+            ? Number(PaginationDTO.limit)
+            : PaginationEnum.LIMIT;
         const options: any = {};
         // const status =
         //     PaginationDTO.status != null && PaginationDTO.status != 'all'
@@ -1718,18 +1720,17 @@ export class InvoiceService {
         //     ];
         // }
 
-        // const count = await this.invoiceModel.find(options).countDocuments();
-        const result = await this.collectionMemoModel.find(options).sort({ createdAt: -1 }).lean<any>()
+        const count = await this.invoiceModel.find(options).countDocuments();
+        const result = await this.collectionMemoModel.find(options).skip(offset).limit(limit).sort({ createdAt: -1 }).lean<any>();
 
-        return result
-        // {
-        //     result,
-        //     pagination: {
-        //         offset: offset,
-        //         limit: limit,
-        //         total: count,
-        //     },
-        // };
+        return {
+            result,
+            pagination: {
+                offset: offset,
+                limit: limit,
+                total: count,
+            },
+        };
     }
     async findCollectionMemoById(ID: any): Promise<any> {
 
