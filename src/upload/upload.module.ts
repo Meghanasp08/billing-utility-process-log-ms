@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { AuthModule } from 'src/auth/auth.module';
+import { GlobalConfiguration, GlobalConfigurationSchema } from 'src/configuration/schema/global_config.schema';
 import { Log, LogSchema } from './schemas/billing-log.schema';
 import { ApiData, ApiDataSchema } from './schemas/endpoint.schema';
 import { LfiData, LfiDataSchema } from './schemas/lfi-data.schema';
@@ -14,7 +15,7 @@ import { UploadController } from './upload.controller';
 import { UploadService } from './upload.service';
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: Log.name, schema: LogSchema }, { name: LfiData.name, schema: LfiDataSchema }, { name: TppData.name, schema: TppDataSchema }, { name: ApiData.name, schema: ApiDataSchema }, { name: MerchantTransaction.name, schema: MerchantTransactionSchema }, { name: PageMultiplier.name, schema: PageMultiplierSchema }, { name: uploadLog.name, schema: uploadLogSchema },]),
+  imports: [MongooseModule.forFeature([{ name: Log.name, schema: LogSchema }, { name: LfiData.name, schema: LfiDataSchema }, { name: TppData.name, schema: TppDataSchema }, { name: ApiData.name, schema: ApiDataSchema }, { name: MerchantTransaction.name, schema: MerchantTransactionSchema }, { name: PageMultiplier.name, schema: PageMultiplierSchema }, { name: uploadLog.name, schema: uploadLogSchema }, { name: GlobalConfiguration.name, schema: GlobalConfigurationSchema },]),
   MulterModule.register({
     storage: diskStorage({
       destination: './uploads',

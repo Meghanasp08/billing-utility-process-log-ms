@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { LfiData, LfiDataDocument } from 'src/upload/schemas/lfi-data.schema';
+import { UpdateglobalValueDto } from './dto/global_value.dto';
 import { UpdateLfiDataDto } from './dto/lfi_update.dto';
 import { GlobalConfiguration, GlobalConfigurationDocument } from './schema/global_config.schema';
 
@@ -25,10 +26,36 @@ export class ConfigurationService {
         return updatedLfi;
     }
 
-    async getGlobalData(): Promise<GlobalConfiguration[]> {
+    async updateGlobalData(id: string, updateGlobalvalueDto: UpdateglobalValueDto) {
+
+        const existingGlobal = await this.globalModel.findById(id);
+        if (!existingGlobal) {
+            throw new NotFoundException(`global data with ID ${id} not found.`);
+        }
+
+        const updatedglobalData = await this.globalModel.findByIdAndUpdate(
+            id,
+            { $set: updateGlobalvalueDto },
+            { new: true }
+        );
+
+        return updatedglobalData;
+    }
+    async getGlobalData(limit: number = 10, offset: number = 0) {
         try {
-            const globalData = await this.globalModel.find().exec();
-            return globalData;
+            const total = await this.globalModel.countDocuments().exec();
+
+            const globalData = await this.globalModel.find().skip(offset)
+                .limit(limit).exec();
+            // return globalData;
+            return {
+                globalData,
+                pagination: {
+                    offset: offset,
+                    limit: limit,
+                    total: total
+                }
+            }
         } catch (error) {
             throw new Error(`Error retrieving global data: ${error.message}`);
         }

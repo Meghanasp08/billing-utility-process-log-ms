@@ -235,7 +235,11 @@ export class Log {
   @Prop({ type: Number, default: 0, validate: { validator: (val: number) => !isNaN(val), message: 'Value must be a number' } })
   cappedAt: number;
 
+  @Prop()
+  createdAt: Date; // Explicitly define the createdAt field
 
+  @Prop()
+  updatedAt: Date;
   // @Prop({ type: [MerchantDailyData] })
   // result: MerchantDailyData[];
 }

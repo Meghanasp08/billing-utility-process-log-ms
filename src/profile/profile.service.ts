@@ -19,7 +19,7 @@ export class ProfileService {
     return this.userModel.find().exec();;
   }
 
-  async getLogData(startDate?: string, endDate?: string, search?: string, limit: number = 10,
+  async getLogData(startDate?: string, endDate?: string, search?: string, limit: number = 100,
     offset: number = 0) {
     const filter: any = {};
 
@@ -80,20 +80,35 @@ export class ProfileService {
           { "raw_api_log_data.lfi_name": searchRegex }
         ];
       }
+
+      const numericOffset = Number(offset);
+      const numericLimit = Number(limit);
+      const total = await this.logModel.countDocuments(filter).exec();
       const aggregateQuery = [
         { $match: filter },
         {
           $group: {
-            _id: group == 'lfi' ? "$raw_api_log_data.lfi_id" : "$raw_api_log_data.tpp_id",
+            _id: group === 'lfi' ? "$raw_api_log_data.lfi_id" : "$raw_api_log_data.tpp_id",
             total_api_hub_fee: { $sum: "$api_hub_fee" },
             total_calculated_fee: { $sum: "$calculatedFee" },
-            total_applicable_fee: { $sum: "$applicableFee" }
-          }
-        }
+            total_applicable_fee: { $sum: "$applicableFee" },
+          },
+        },
+        // { $sort: { _id: 1 as 1 | -1 } }, // Sort by _id (can customize if needed)
+        { $skip: numericOffset }, // Skip records for pagination
+        { $limit: numericLimit }, // Limit the number of records returned
       ];
 
       const result = await this.logModel.aggregate(aggregateQuery).exec();
-      return result;
+      // return result;
+      return {
+        result,
+        pagination: {
+          offset: offset,
+          limit: limit,
+          total: total
+        }
+      }
     } catch (error) {
       console.error("Error fetching billing data:", error);
       throw new Error("Failed to fetch billing data");
@@ -274,7 +289,8 @@ export class ProfileService {
     }
   }
 
-  async getLfiDetails(search?: string) {
+  async getLfiDetails(search?: string, limit: number = 10,
+    offset: number = 0) {
     try {
       const filter: any = {};
 
@@ -285,15 +301,28 @@ export class ProfileService {
           { "lfi_name": searchRegex }
         ];
       }
-      const result = await this.lfiModel.find(filter).exec();
-      return result;
+      // const numericOffset = Number(offset);
+      // const numericLimit = Number(limit);
+      const total = await this.lfiModel.countDocuments(filter).exec();
+      const result = await this.lfiModel.find(filter).skip(offset)
+        .limit(limit).exec();
+      // return result;
+      return {
+        result,
+        pagination: {
+          offset: offset,
+          limit: limit,
+          total: total
+        }
+      }
     } catch (error) {
       console.error("Error fetching billing details:", error);
       throw new Error("Failed to fetch billing details");
     }
   }
 
-  async getTppDetails(search?: string) {
+  async getTppDetails(search?: string, limit: number = 10,
+    offset: number = 0) {
     try {
       const filter: any = {};
 
@@ -304,8 +333,18 @@ export class ProfileService {
           { "tpp_name": searchRegex },
         ];
       }
-      const result = await this.tppModel.find(filter).exec();
-      return result;
+      const total = await this.tppModel.countDocuments(filter).exec();
+      const result = await this.tppModel.find(filter).skip(offset)
+        .limit(limit).exec();
+      // return result;
+      return {
+        result,
+        pagination: {
+          offset: offset,
+          limit: limit,
+          total: total
+        }
+      }
     } catch (error) {
       console.error("Error fetching billing details:", error);
       throw new Error("Failed to fetch billing details");
@@ -336,7 +375,35 @@ export class ProfileService {
     // const total = await this.logModel.countDocuments(filter).exec();
     // const log = await this.logModel.find(filter).skip(offset)
     //   .limit(limit).exec();
-    const log = await this.logModel.find(filter).exec();
+    const log = await this.logModel.find(filter).lean().exec();
+
+    if (!log.length) {
+      throw new Error("No data found for the given filters.");
+    }
+
+    // Flatten the log data
+    const flattenedLog = log.map(({ _id, ...entry }) => ({
+      ...entry.raw_api_log_data,
+      ...entry.payment_logs,
+      chargeable: entry.chargeable,
+      lfiChargable: entry.lfiChargable,
+      success: entry.success,
+      group: entry.group,
+      type: entry.type,
+      discountType: entry.discountType,
+      api_category: entry.api_category,
+      discounted: entry.discounted,
+      api_hub_fee: entry.api_hub_fee,
+      calculatedFee: entry.calculatedFee,
+      applicableFee: entry.applicableFee,
+      unit_price: entry.unit_price,
+      volume: entry.volume,
+      appliedLimit: entry.appliedLimit,
+      limitApplied: entry.limitApplied,
+      isCapped: entry.isCapped,
+      cappedAt: entry.cappedAt,
+      numberOfPages: entry.numberOfPages,
+    }));
 
     const outputPath = './output/log_data.csv';
 
@@ -346,69 +413,9 @@ export class ProfileService {
     }
 
     // Define the CSV headers
-    const fields = [
-      "raw_api_log_data.timestamp",
-      "raw_api_log_data.tpp_name",
-      "raw_api_log_data.lfi_id",
-      "raw_api_log_data.tpp_id",
-      "raw_api_log_data.tpp_client_id",
-      "raw_api_log_data.api_set_sub",
-      "raw_api_log_data.http_method",
-      "raw_api_log_data.url",
-      "raw_api_log_data.tpp_response_code_group",
-      "raw_api_log_data.execution_time",
-      "raw_api_log_data.interaction_id",
-      "raw_api_log_data.resource_name",
-      "raw_api_log_data.lfi_response_code_group",
-      "raw_api_log_data.is_attended",
-      "raw_api_log_data.records",
-      "raw_api_log_data.payment_type",
-      "raw_api_log_data.payment_id",
-      "raw_api_log_data.merchant_id",
-      "raw_api_log_data.psu_id",
-      "raw_api_log_data.is_large_corporate",
-      "raw_api_log_data.user_type",
-      "raw_api_log_data.purpose",
-      "payment_logs.timestamp",
-      "payment_logs.tpp_name",
-      "payment_logs.lfi_id",
-      "payment_logs.tpp_id",
-      "payment_logs.tpp_client_id",
-      "payment_logs.status",
-      "payment_logs.currency",
-      "payment_logs.amount",
-      "payment_logs.payment_consent_type",
-      "payment_logs.payment_type",
-      "payment_logs.transaction_id",
-      "payment_logs.payment_id",
-      "payment_logs.merchant_id",
-      "payment_logs.psu_id",
-      "payment_logs.is_large_corporate",
-      "payment_logs.number_of_successful_transactions",
-      "payment_logs.international_payment",
-      "chargeable",
-      "lfiChargable",
-      "success",
-      "group",
-      "type",
-      "discountType",
-      "api_category",
-      "discounted",
-      "api_hub_fee",
-      "calculatedFee",
-      "applicableFee",
-      "unit_price",
-      "volume",
-      "appliedLimit",
-      "limitApplied",
-      "isCapped",
-      "cappedAt",
-      "numberOfPages"
-    ];
-
-    // Convert JSON to CSV
+    const fields = Object.keys(flattenedLog[0]); // Dynamically generate headers from data keys
     const parser = new Parser({ fields });
-    const csv = parser.parse(log);
+    const csv = parser.parse(flattenedLog);
 
     // Write the CSV file
     fs.writeFileSync(outputPath, csv, 'utf8');

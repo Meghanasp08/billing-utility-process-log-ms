@@ -1,7 +1,8 @@
-import { Body, Controller, Get, HttpStatus, Param, Patch, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Param, Patch, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth-guard';
 import { ConfigurationService } from './configuration.service';
+import { UpdateglobalValueDto } from './dto/global_value.dto';
 import { UpdateLfiDataDto } from './dto/lfi_update.dto';
 
 @ApiTags('configuration')
@@ -30,12 +31,12 @@ export class ConfigurationController {
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Update Lfi details like MDP rate and Attended unattended calls.' })
     @Patch('global/:id')
-    async updateGlobalData(@Req() req: any, @Param('id') id: string,) {
+    async updateGlobalData(@Req() req: any, @Param('id') id: string, @Body() updateGlobalvalueDto: UpdateglobalValueDto,) {
         try {
-            // const lfiData = await this.configService.updateGlobalData(id, updateLfiDataDto);
+            const globalData = await this.configService.updateGlobalData(id, updateGlobalvalueDto);
             return {
-                message: 'Lfi data updated successfully',
-                result: 'lfiData',
+                message: 'global data updated successfully',
+                result: globalData,
                 statusCode: HttpStatus.OK
             }
         } catch (error) {
@@ -47,9 +48,10 @@ export class ConfigurationController {
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Update Lfi details like MDP rate and Attended unattended calls.' })
     @Get('global')
-    async GetGlobalData(@Req() req: any,) {
+    async GetGlobalData(@Req() req: any, @Query('limit') limit: number = 10,
+        @Query('offset') offset: number = 0) {
         try {
-            const globalData = await this.configService.getGlobalData();
+            const globalData = await this.configService.getGlobalData(limit, offset);
             return {
                 message: 'Global Data Fetched successfully',
                 result: globalData,

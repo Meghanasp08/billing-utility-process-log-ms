@@ -33,7 +33,7 @@ export class ProfileController {
   @ApiQuery({ name: 'search', required: false, description: 'Search keyword for filtering logs (TPP id, LFI Id, TPP Name , LFI Name).' })
   @Get('log')
   async getLogData(@Req() req: any, @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string, @Query('search') search?: string, @Query('limit') limit: number = 10,
+    @Query('endDate') endDate?: string, @Query('search') search?: string, @Query('limit') limit: number = 100,
     @Query('offset') offset: number = 0) {
     try {
       const logData = await this.profileService.getLogData(startDate, endDate, search, limit, offset);
@@ -77,10 +77,11 @@ export class ProfileController {
   @ApiQuery({ name: 'search', required: false, description: 'Search keyword for filtering billing data (TPP id, LFI Id, TPP Name , LFI Name).' })
   @Get('billing/tpp')
   async getBillingTppData(@Req() req: any, @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string, @Query('search') search?: string) {
+    @Query('endDate') endDate?: string, @Query('search') search?: string, @Query('limit') limit: number = 10,
+    @Query('offset') offset: number = 0) {
     try {
       const group = 'tpp'
-      const logData = await this.profileService.getBillingData(group, startDate, endDate, search);
+      const logData = await this.profileService.getBillingData(group, startDate, endDate, search, limit, offset);
       return {
         message: 'List of Bills',
         result: logData,
@@ -163,9 +164,10 @@ export class ProfileController {
   @ApiOperation({ summary: 'Retrieve details of LFI.' })
   @ApiQuery({ name: 'search', required: false, description: 'Search keyword for LFI details (LFI Id , LFI Name).' })
   @Get('lfidetails')
-  async getLfiDetails(@Query('search') search?: string) {
+  async getLfiDetails(@Query('search') search?: string, @Query('limit') limit: number = 10,
+    @Query('offset') offset: number = 0) {
     try {
-      const logData = await this.profileService.getLfiDetails(search);
+      const logData = await this.profileService.getLfiDetails(search, limit, offset);
       return {
         message: 'Lfi Details',
         result: logData,
@@ -180,9 +182,10 @@ export class ProfileController {
   @ApiOperation({ summary: 'Retrieve details of TPP.' })
   @ApiQuery({ name: 'search', required: false, description: 'Search keyword for TPP details (TTP Id , TPP Name).' })
   @Get('tppdetails')
-  async getTppDetails(@Query('search') search?: string) {
+  async getTppDetails(@Query('search') search?: string, @Query('limit') limit: number = 10,
+    @Query('offset') offset: number = 0) {
     try {
-      const logData = await this.profileService.getTppDetails(search);
+      const logData = await this.profileService.getTppDetails(search, limit, offset);
       return {
         message: 'Tpp Details',
         result: logData,

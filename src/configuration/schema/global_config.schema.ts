@@ -6,19 +6,17 @@ export type GlobalConfigurationDocument = GlobalConfiguration & Document;
 @Schema({ timestamps: true, collection: 'global_configuration' })
 export class GlobalConfiguration {
     @Prop({ required: true })
-    item: string;
+    description: string;
 
     @Prop({ required: true })
-    group: string;
+    key: string;
 
     @Prop({ required: true })
-    type: string;
+    value: number;
 
     @Prop({ required: false })
-    amount?: string; // Example: "50 AED", "250 fils"
+    type: string; // Example: "50 AED", "250 fils"
 
-    @Prop({ required: false })
-    count?: number; // Example: "15", "5" for free limits
 }
 
 export const GlobalConfigurationSchema = SchemaFactory.createForClass(GlobalConfiguration);

@@ -5,6 +5,7 @@ import {
     HttpStatus,
     Param,
     Post,
+    Query,
     Req,
     Res,
     UploadedFiles,
@@ -192,9 +193,11 @@ export class UploadController {
     @Get('log')
     @UseGuards(JwtAuthGuard)
     @ApiOperation({ summary: 'Get upload log data' })
-    async getUploadLog(@Req() req: any) {
+    async getUploadLog(@Req() req: any, @Query('limit') limit: number = 10,
+        @Query('offset') offset: number = 0) {
         try {
-            const uploadLog = await this.uploadService.getUploadLogData();
+
+            const uploadLog = await this.uploadService.getUploadLogData(limit, offset);
             return {
                 message: 'Upload Log details',
                 result: uploadLog,

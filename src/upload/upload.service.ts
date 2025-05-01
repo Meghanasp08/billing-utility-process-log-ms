@@ -4,6 +4,7 @@ import * as csv from 'csv-parser';
 import * as fs from 'fs';
 import { Model } from 'mongoose';
 import { AppConfig } from 'src/config/app.config';
+import { GlobalConfiguration, GlobalConfigurationDocument } from 'src/configuration/schema/global_config.schema';
 import { file1HeadersSchema, file2HeadersSchema } from 'src/validation/csv-validation';
 import { Log, LogDocument } from './schemas/billing-log.schema';
 import { ApiData, ApiDataDocument } from './schemas/endpoint.schema';
@@ -13,6 +14,7 @@ import { PageMultiplier, PageMultiplierDocument } from './schemas/pagemultiplier
 import { TppData, TppDataDocument } from './schemas/tpp-data.schema';
 import { uploadLog, uploadLogDocument } from './schemas/upload-log.schema';
 const { Parser } = require('json2csv');
+
 @Injectable()
 export class UploadService {
   constructor(
@@ -23,21 +25,106 @@ export class UploadService {
     @InjectModel(MerchantTransaction.name) private merchantLimitModel: Model<MerchantTransactionDocument>,
     @InjectModel(PageMultiplier.name) private pageMultiplier: Model<PageMultiplierDocument>,
     @InjectModel(uploadLog.name) private uploadLog: Model<uploadLogDocument>,
+    @InjectModel(GlobalConfiguration.name) private globalModel: Model<GlobalConfigurationDocument>,
   ) { }
 
-  private readonly endpoints = AppConfig.endpoints;
   private readonly peer_to_peer_types = AppConfig.peerToPeerTypes;
-  private readonly payment_type_consents = AppConfig.paymentTypeConsents;
-  private readonly discount = AppConfig.discount;
-  private readonly aedConstant = AppConfig.aedConstant;
+
+  private variables: {
+    nonLargeValueCapMerchant?: any; //50 aed
+    nonLargeValueFreeLimitMerchant?: any; //200 aed
+    bulkLargeCorporatefee?: any; // 2.5
+    nonBulkLargeValueCapMerchant?: any; //4 aed
+    paymentLargeValueFeePeer?: any; //4 aed
+    paymentFeeMe2me?: any; // 0.2 aed
+    bulkMe2meCap?: any; //2.5 aed
+    paymentNonLargevalueFeePeer?: any; //0.25 aed
+    attendedCallFreeLimit?: any; // 15 count
+    unAttendedCallFreeLimit?: any; // 5 count
+    nonLargeValueCapMerchantCheck?: any; //20000 aed
+    nonLargeValueMerchantBps?: any; //0.0038 aed
+    bulkPeernonLargeValueCap?: any; //2.5 aed
+    dataLargeCorporateMdp?: any; // 0.4 aed
+    paymentApiHubFee?: any; // 0.025 aed
+    discountApiHubFee?: any; // 0.005 aed
+    insuranceApiHubFee?: any; // 0.125 aed
+    discountHourValue?: any; // 2 hour
+  } = {};
 
   async mergeCsvFiles(userEmail: string, file1Path: string, file2Path: string, downloadCsv: boolean = false,) {
     const file1Data: any[] = [];
     const file2Data: any[] = [];
+    let globalData = await this.globalModel.find();
+    if (globalData.length) {
+      globalData.forEach((obj) => {
+        switch (obj.key) {
+          case 'nonLargeValueCapMerchant':
+            this.variables.nonLargeValueCapMerchant = obj;
+            break;
+          case 'nonLargeValueFreeLimitMerchant':
+            this.variables.nonLargeValueFreeLimitMerchant = obj;
+            break;
+          case 'nonBulkLargeValueCapMerchant':
+            this.variables.nonBulkLargeValueCapMerchant = obj;
+            break;
+          case 'paymentLargeValueFeePeer':
+            this.variables.paymentLargeValueFeePeer = obj;
+            break;
+          case 'bulkLargeCorporatefee':
+            this.variables.bulkLargeCorporatefee = obj;
+            break;
+          case 'paymentFeeMe2me':
+            this.variables.paymentFeeMe2me = obj;
+            break;
+          case 'bulkMe2meCap':
+            this.variables.bulkMe2meCap = obj;
+            break;
+          case 'paymentNonLargevalueFeePeer':
+            this.variables.paymentNonLargevalueFeePeer = obj;
+            break;
+          case 'attendedCallFreeLimit':
+            this.variables.attendedCallFreeLimit = obj;
+            break;
+          case 'unAttendedCallFreeLimit':
+            this.variables.unAttendedCallFreeLimit = obj;
+            break;
+          case 'nonLargeValueCapMerchantCheck':
+            this.variables.nonLargeValueCapMerchantCheck = obj;
+            break;
+          case 'nonLargeValueMerchantBps':
+            this.variables.nonLargeValueMerchantBps = obj;
+            break;
+          case 'bulkPeernonLargeValueCap':
+            this.variables.bulkPeernonLargeValueCap = obj;
+            break;
+          case 'dataLargeCorporateMdp':
+            this.variables.dataLargeCorporateMdp = obj;
+            break;
+          case 'paymentApiHubFee':
+            this.variables.paymentApiHubFee = obj;
+            break;
+          case 'discountApiHubFee':
+            this.variables.discountApiHubFee = obj;
+            break;
+          case 'insuranceApiHubFee':
+            this.variables.insuranceApiHubFee = obj;
+            break;
+          case 'discountHourValue':
+            this.variables.discountHourValue = obj;
+            break;
+          default:
+            console.warn(`Unknown key: ${obj.key}`);
+        }
+      });
 
-    console.log('file1Path:', file1Path);
-    console.log('file2Path:', file2Path);
-    let logUpdate;
+    } else {
+      throw new HttpException({
+        message: 'Your Global Configuration is not setup completely',
+        status: 400
+      }, HttpStatus.BAD_REQUEST);
+    }
+
+    let logUpdate: any;
     if (!file1Path || !file2Path) {
       logUpdate = await this.uploadLog.create({
         batchNo: `${Date.now()}`,
@@ -67,7 +154,6 @@ export class UploadService {
       }, HttpStatus.BAD_REQUEST);
     }
     else {
-      console.log('iam in else')
       logUpdate = await this.uploadLog.create({
         batchNo: `${Date.now()}`,
         uploadedAt: new Date(),
@@ -87,7 +173,6 @@ export class UploadService {
       )
     }
 
-    console.log(logUpdate, 'iam log data')
 
 
     // Validate headers for file1
@@ -221,8 +306,7 @@ export class UploadService {
       }
     );
 
-    const parseBoolean = (value: string | null | undefined): boolean | null => {
-      console.log('iam value', value)
+    const parseBoolean = (value: string) => {
       if (typeof value === 'string') {
         const normalized = value.trim().toLowerCase();
         if (normalized === 'true' || normalized === '1') return true;
@@ -248,7 +332,7 @@ export class UploadService {
         [`raw_api_log_data.interaction_id`]: rawApiRecord.interactionId || null,
         [`raw_api_log_data.resource_name`]: rawApiRecord.resourceName || null,
         [`raw_api_log_data.lfi_response_code_group`]: rawApiRecord.lfIResponseCodeGroup || null,
-        [`raw_api_log_data.is_attended`]: parseBoolean(rawApiRecord.isAttended) || null,
+        [`raw_api_log_data.is_attended`]: parseBoolean(rawApiRecord.isAttended),
         [`raw_api_log_data.records`]: rawApiRecord.records || null,
         [`raw_api_log_data.payment_type`]: rawApiRecord.paymentType || null,
         [`raw_api_log_data.payment_id`]: rawApiRecord.PaymentId || null,
@@ -284,17 +368,17 @@ export class UploadService {
     console.log('stage 1 completed');
 
     const feeApplied = await this.calculateFee(chargeFile);
-    console.log('stage 3 completed');
+    console.log('stage 2 completed');
 
     let response = await this.populateLfiData(feeApplied);
-    console.log('stage 5 completed');
+    console.log('stage 3 completed');
 
     let result = await this.populateTppData(feeApplied);
-    console.log('stage 6 completed');
+    console.log('stage 4 completed');
 
 
     const pagesFeeApplied = await this.feeCalculationForLfi(feeApplied);
-    console.log('stage 7 completed');
+    console.log('stage 5 completed');
 
     const pageDataCalculation = await this.attendedUpdateOnNumberOfPage(pagesFeeApplied);
 
@@ -423,7 +507,7 @@ export class UploadService {
           volume: outerData.chargeableAmount,
           limitApplied: outerData.appliedLimit > 0,
           // charge: outerData.charge,
-          unit_price: record['raw_api_log_data.is_large_corporate'] ? 40 / this.aedConstant : outerData.mdp_rate,
+          unit_price: record['raw_api_log_data.is_large_corporate'] ? this.variables.dataLargeCorporateMdp.value : outerData.mdp_rate,
         };
       }
 
@@ -464,20 +548,14 @@ export class UploadService {
     };
   }
 
-  async pageCalculation(records: any) {
-    let divident = 100;
-    let totalPages = Math.ceil(records / divident);
-
-    return totalPages;
-  }
   async populateLfiData(rawData: any[]) {
     const uniqueLfiIds = Array.from(new Set(rawData.map(data => data["raw_api_log_data.lfi_id"])));
 
     const lfiDataToInsert = uniqueLfiIds.map(lfi_id => ({
       lfi_id,
       mdp_rate: parseFloat((Math.random() * (3 - 2) + 2).toFixed(2)),
-      free_limit_attended: 15,
-      free_limit_unattended: 5,
+      free_limit_attended: this.variables.attendedCallFreeLimit.value,
+      free_limit_unattended: this.variables.unAttendedCallFreeLimit.value,
     }));
     const results = [];
     for (const lfiData of lfiDataToInsert) {
@@ -495,33 +573,47 @@ export class UploadService {
   }
 
   async populateTppData(rawData: any[]) {
-    const uniqueTppIds = Array.from(new Set(rawData.map(data => data["raw_api_log_data.tpp_id"])));
+    try {
+      // Use a Map to ensure uniqueness while extracting relevant fields
+      const tppMap = new Map();
 
-    const tppDataToInsert = uniqueTppIds.map(tpp_id => ({
-      tpp_id,
-      tpp_name: `TPP Name ${tpp_id}`,
-      tpp_client_id: `TPP Client ID ${tpp_id}`,
-    }));
+      rawData.forEach(data => {
+        const tpp_id = data["raw_api_log_data.tpp_id"];
+        const tpp_name = data["raw_api_log_data.tpp_name"];
+        const tpp_client_id = data["raw_api_log_data.tpp_client_id"];
 
-    for (const tppData of tppDataToInsert) {
-      try {
-        // Atomic check-and-insert operation
-        await this.TppModel.updateOne(
-          { tpp_id: tppData.tpp_id }, // Filter for existing record
-          { $setOnInsert: tppData }, // Insert only if not found
-          { upsert: true }           // Create new document if no match is found
-        );
-      } catch (error) {
-        console.error(`Error processing TPP ID ${tppData.tpp_id}:`, error.message);
+        if (tpp_id && !tppMap.has(tpp_id)) {
+          tppMap.set(tpp_id, { tpp_id, tpp_name, tpp_client_id });
+        }
+      });
+
+      // Prepare data for insertion
+      const tppDataToInsert = Array.from(tppMap.values());
+
+      // Insert or update TPP data
+      for (const tppData of tppDataToInsert) {
+        try {
+          await this.TppModel.updateOne(
+            { tpp_id: tppData.tpp_id }, // Filter for existing record
+            { $setOnInsert: tppData }, // Insert only if not found
+            { upsert: true }           // Create new document if no match is found
+          );
+        } catch (error) {
+          console.error(`Error processing TPP ID ${tppData.tpp_id}:`, error.message);
+        }
       }
-    }
 
-    return `Processed ${tppDataToInsert.length} TPP records.`;
+      return `Processed ${tppDataToInsert.length} TPP records.`;
+    } catch (error) {
+      console.error("Error during TPP data processing:", error.message);
+      throw new Error("Failed to populate TPP data.");
+    }
   }
+
 
   async feeCalculationForLfi(data: any) {
     try {
-      // Step 1: Preprocess - group by psuId + date + is_attended
+      // Step 1: Preprocess -> group by psuId + date + is_attended
       const psuGroupedMap: Record<
         string,
         { psuId: string; date: string; isAttended: string; totalPages: number; tpp_id: string; transactions: any[] }
@@ -588,7 +680,7 @@ export class UploadService {
                 : isAttended == false
                   ? lfiData.free_limit_unattended
                   : 0;
-            const lfiMdpMultiplier = record['raw_api_log_data.is_large_corporate'] ? 40 / this.aedConstant : lfiData.mdp_rate;
+            const lfiMdpMultiplier = record['raw_api_log_data.is_large_corporate'] ? this.variables.dataLargeCorporateMdp.value : lfiData.mdp_rate;
 
             const chargesData = psuGroupedMap[key];
 
@@ -699,7 +791,8 @@ export class UploadService {
               transactions: [],
               totalAmount: 0,
               limitApplied: false,
-              remainingBalance: this.discount,
+              // remainingBalance: this.discount,
+              remainingBalance: this.variables.nonLargeValueFreeLimitMerchant.value,
             };
           }
 
@@ -743,10 +836,12 @@ export class UploadService {
 
             return {
               ...record,
-              calculatedFee: parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * 250 / this.aedConstant).toFixed(3)),
-              applicableFee: parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * 250 / this.aedConstant).toFixed(3)), // Ensure `applicableFee` is also set
+              // calculatedFee: parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * 250 / this.aedConstant).toFixed(3)),
+              // applicableFee: parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * 250 / this.aedConstant).toFixed(3)), // Ensure `applicableFee` is also set
+              calculatedFee: parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * this.variables.bulkLargeCorporatefee.value).toFixed(3)),
+              applicableFee: parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * this.variables.bulkLargeCorporatefee.value).toFixed(3)), // Ensure 
               type: "corporate",
-              unit_price: 250 / this.aedConstant,
+              unit_price: this.variables.bulkLargeCorporatefee.value,
               volume: parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0),
               isCapped: false,
               cappedAt: 0,
@@ -758,14 +853,14 @@ export class UploadService {
 
             if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
               if (record.group == 'payment-non-bulk') {
-                calculatedFee = 4
+                calculatedFee = this.variables.nonBulkLargeValueCapMerchant.value
                 applicableFee = calculatedFee
-                unit_price = 4;
+                unit_price = this.variables.nonBulkLargeValueCapMerchant.value;
                 volume = 1;
               } else if (record.group == 'payment-bulk') {
-                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * 4).toFixed(3));
+                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * this.variables.nonBulkLargeValueCapMerchant.value).toFixed(3));
                 applicableFee = calculatedFee
-                unit_price = 4;
+                unit_price = this.variables.nonBulkLargeValueCapMerchant.value;
                 volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0);
               }
 
@@ -786,14 +881,14 @@ export class UploadService {
                 );
 
                 if (filteredTransaction) {
-                  calculatedFee = parseFloat((filteredTransaction.chargeableAmount * 0.0038).toFixed(3));
-                  applicableFee = parseFloat((parseInt(record["payment_logs.amount"]) > 20000 ? 50 : calculatedFee).toFixed(3));
-                  unit_price = 0.0038;
+                  calculatedFee = parseFloat((filteredTransaction.chargeableAmount * this.variables.nonLargeValueMerchantBps.value).toFixed(3));
+                  applicableFee = parseFloat((parseInt(record["payment_logs.amount"]) > this.variables.nonLargeValueCapMerchantCheck.value ? this.variables.nonLargeValueCapMerchant.value : calculatedFee).toFixed(3));
+                  unit_price = this.variables.nonLargeValueMerchantBps.value;
                   volume = filteredTransaction.chargeableAmount ?? 0;
                   appliedLimit = filteredTransaction.appliedLimit;
                   limitApplied = filteredTransaction.appliedLimit > 0;
-                  isCapped = parseInt(record["payment_logs.amount"]) > 20000; // Assign boolean value
-                  cappedAt = isCapped ? 50 : 0;
+                  isCapped = parseInt(record["payment_logs.amount"]) > this.variables.nonLargeValueCapMerchantCheck.value; // Assign boolean value
+                  cappedAt = isCapped ? this.variables.nonLargeValueCapMerchant.value : 0;
 
                 }
               }
@@ -805,33 +900,33 @@ export class UploadService {
           else if (record.type === 'peer-2-peer') {
             if (record.group === 'payment-bulk') {
               if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
-                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * 4).toFixed(3));
+                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * this.variables.paymentLargeValueFeePeer.value).toFixed(3));
                 applicableFee = calculatedFee
-                unit_price = 4;
+                unit_price = this.variables.paymentLargeValueFeePeer.value;
                 volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0);
 
               } else {
-                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * (25 / this.aedConstant)).toFixed(3));
+                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * this.variables.paymentNonLargevalueFeePeer.value).toFixed(3));
 
-                applicableFee = parseFloat((calculatedFee > 2.50 ? 2.50 : calculatedFee).toFixed(3));
-                unit_price = 25 / this.aedConstant;
+                applicableFee = parseFloat((calculatedFee > this.variables.bulkPeernonLargeValueCap.value ? this.variables.bulkPeernonLargeValueCap.value : calculatedFee).toFixed(3));
+                unit_price = this.variables.paymentNonLargevalueFeePeer.value;
                 volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0);
-                isCapped = calculatedFee > 2.50 ? true : false // Assign boolean value
-                cappedAt = isCapped ? 2.50 : 0;
+                isCapped = calculatedFee > this.variables.bulkPeernonLargeValueCap.value ? true : false // Assign boolean value
+                cappedAt = isCapped ? this.variables.bulkPeernonLargeValueCap.value : 0;
               }
             }
             else if (record.group === 'payment-non-bulk') {
               if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
-                calculatedFee = parseFloat((4).toFixed(3));
+                calculatedFee = parseFloat((this.variables.paymentLargeValueFeePeer.value).toFixed(3));
                 applicableFee = calculatedFee
-                unit_price = 4;
+                unit_price = this.variables.paymentLargeValueFeePeer.value;
                 volume = 1;
 
               } else {
-                calculatedFee = parseFloat((25 / this.aedConstant).toFixed(3));
+                calculatedFee = parseFloat(this.variables.paymentNonLargevalueFeePeer.value.toFixed(3));
 
                 applicableFee = calculatedFee;
-                unit_price = 25 / this.aedConstant;
+                unit_price = this.variables.paymentNonLargevalueFeePeer.value;
                 volume = 1;
               }
             }
@@ -841,17 +936,17 @@ export class UploadService {
           // ME-2-ME
           else if (record.type === 'me-2-me') {
             if (record.group === 'payment-bulk') {
-              calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0) * (20 / this.aedConstant)).toFixed(3));
-              applicableFee = parseFloat((calculatedFee > 2.50 ? 2.50 : calculatedFee).toFixed(3));
-              unit_price = 20 / this.aedConstant;
+              calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0) * this.variables.paymentFeeMe2me.value).toFixed(3));
+              applicableFee = parseFloat((calculatedFee > this.variables.bulkMe2meCap.value ? this.variables.bulkMe2meCap.value : calculatedFee).toFixed(3));
+              unit_price = this.variables.paymentFeeMe2me.value;
               volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0);
-              isCapped = calculatedFee > 2.50 ? true : false
-              cappedAt = isCapped ? 2.50 : 0;
+              isCapped = calculatedFee > this.variables.bulkMe2meCap.value ? true : false
+              cappedAt = isCapped ? this.variables.bulkMe2meCap.value : 0;
             }
             else if (record.group === 'payment-non-bulk') {
-              calculatedFee = parseFloat((20 / this.aedConstant).toFixed(3));
+              calculatedFee = parseFloat((this.variables.paymentFeeMe2me.value).toFixed(3));
               applicableFee = calculatedFee;
-              unit_price = 20 / this.aedConstant;
+              unit_price = this.variables.paymentFeeMe2me.value;
               volume = 1;
             }
           }
@@ -945,11 +1040,11 @@ export class UploadService {
     });
   }
 
-  async calculateApiHubFee(processedData: any[], apiData: any[], aedConstant: number) {
+  async calculateApiHubFee(processedData: any[], apiData: any[],) {
     return await Promise.all(processedData.map(async record => {
 
       let discounted = false;
-      let api_hub_fee = 2.5 / aedConstant;
+      let api_hub_fee = this.variables.paymentApiHubFee.value;
 
 
       const groupData = apiData.find(api =>
@@ -981,13 +1076,13 @@ export class UploadService {
           const timeDiff = Math.abs(currentRecordTime.getTime() - lastRecordTime.getTime());
           const hours = Math.ceil(timeDiff / (1000 * 60 * 60));
 
-          if (hours <= 2) {
-            api_hub_fee = 0.5 / aedConstant;
+          if (hours <= this.variables.discountHourValue.value) {
+            api_hub_fee = this.variables.discountApiHubFee.value;
             discounted = true;
           }
         }
       } else if (record.chargeable && record.success && group === 'insurance') {
-        api_hub_fee = 12.5 / aedConstant;
+        api_hub_fee = this.variables.insuranceApiHubFee.value;
       } else if (!record.chargeable || !record.success) {
         api_hub_fee = 0;
       }
@@ -1006,6 +1101,7 @@ export class UploadService {
 
   async chargableConvertion(data: any) {
     try {
+      // console.log(globalData)
       const apiData = await this.apiModel.find({
         $or: [
           { chargeable_api_hub_fee: true },
@@ -1014,7 +1110,7 @@ export class UploadService {
       });
 
       const processedData = await this.determineChargeableAndSuccess(data, apiData);
-      const updatedData = await this.calculateApiHubFee(processedData, apiData, this.aedConstant);
+      const updatedData = await this.calculateApiHubFee(processedData, apiData,);
 
       return updatedData;
     } catch (error) {
@@ -1069,10 +1165,19 @@ export class UploadService {
     }
   }
 
-  async getUploadLogData() {
+  async getUploadLogData(limit: number = 10, offset: number = 0) {
     try {
-      const uploadlogData = await this.uploadLog.find();
-      return uploadlogData;
+      const total = await this.uploadLog.countDocuments().exec();
+      const uploadlogData = await this.uploadLog.find().skip(offset).limit(limit).exec();
+      // return uploadlogData;
+      return {
+        uploadlogData,
+        pagination: {
+          offset: offset,
+          limit: limit,
+          total: total
+        }
+      }
     } catch (error) {
       console.error("Error in upload log getting:", error);
       throw new Error("Failed to retrieve upload log data");
