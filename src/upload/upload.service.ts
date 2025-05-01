@@ -439,7 +439,7 @@ export class UploadService {
       mergedData.push(mergedRecord);
 
     }
-    return mergedData;
+    // return mergedData;
     const chargeFile = await this.chargableConvertion(mergedData);
     console.log('stage 1 completed');
 
@@ -630,6 +630,7 @@ export class UploadService {
 
     const lfiDataToInsert = uniqueLfiIds.map(lfi_id => ({
       lfi_id,
+      lfi_name: rawData.find(data => data["raw_api_log_data.lfi_id"] === lfi_id)["raw_api_log_data.lfi_name"],
       mdp_rate: parseFloat((Math.random() * (3 - 2) + 2).toFixed(2)),
       free_limit_attended: this.variables.attendedCallFreeLimit.value,
       free_limit_unattended: this.variables.unAttendedCallFreeLimit.value,

@@ -26,6 +26,9 @@ export class LfiData {
     lfi_id: string;
 
     @Prop({ required: true })
+    lfi_name: string;
+
+    @Prop({ required: true })
     mdp_rate: number;
 
     @Prop({ required: true })
