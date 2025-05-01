@@ -1,6 +1,9 @@
-import { Body, Controller, Get, HttpStatus, Param, Post, Query, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Param, Post, Query, Res, ValidationPipe } from '@nestjs/common';
 import { InvoiceService } from './invoice.service';
 import { PaginationDTO } from 'src/common/dto/common.dto';
+import * as path from 'path';
+import { Response } from 'express';
+import * as fs from 'fs';
 
 @Controller('invoice')
 export class InvoiceController {
@@ -66,7 +69,7 @@ export class InvoiceController {
       throw error;
     }
   }
-  
+
   @Post('single-day-creation')
   async invoiceCreationSingleDay(@Body(ValidationPipe) invoiceDto: any,): Promise<any> {
     try {
@@ -81,7 +84,7 @@ export class InvoiceController {
       throw error;
     }
   }
-    
+
   @Post('monthly-creation')
   async invoiceCreationMonthlyTpp(@Body(ValidationPipe) invoiceDto: any,): Promise<any> {
     try {
@@ -142,4 +145,63 @@ export class InvoiceController {
     }
   }
 
+  @Post('pdf-generate-tpp')
+  async generateInvoicePDFTpp(@Body(ValidationPipe) invoiceDto: any, @Res() res: Response
+  ): Promise<any> {
+    try {
+      const filePath = await this.invoiceService.generateInvoicePDFTpp(invoiceDto);
+      const fileName = path.basename(filePath); // gets 'invoice-lfi{timestamp}.pdf'
+
+      return res.download(filePath, fileName, (err) => {
+        if (err) {
+          console.error('Download error:', err);
+        }
+
+        // Remove the file after sending response
+        fs.unlink(filePath, (unlinkErr) => {
+          if (unlinkErr) {
+            console.error('Error deleting PDF file:', unlinkErr);
+          } else {
+            console.log(`Deleted temp PDF: ${filePath}`);
+          }
+        });
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        message: 'Failed to generate invoice PDF',
+        error: error.message,
+      });
+    }
+  }
+
+  @Post('pdf-generate-lfi')
+  async generateInvoicePDFLfi(@Body(ValidationPipe) invoiceDto: any, @Res() res: Response
+  ): Promise<any> {
+    try {
+      const filePath = await this.invoiceService.generateInvoicePDFLfi(invoiceDto);
+      const fileName = path.basename(filePath); 
+
+      return res.download(filePath, fileName, (err) => {
+        if (err) {
+          console.error('Download error:', err);
+        }
+
+        fs.unlink(filePath, (unlinkErr) => {
+          if (unlinkErr) {
+            console.error('Error deleting PDF file:', unlinkErr);
+          } else {
+            console.log(`Deleted temp PDF: ${filePath}`);
+          }
+        });
+      });
+
+    } catch (error) {
+      console.log(error);
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        message: 'Failed to generate invoice PDF',
+        error: error.message,
+      });
+    }
+  }
 }
