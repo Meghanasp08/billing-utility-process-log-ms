@@ -416,7 +416,7 @@ export class InvoiceService {
                 [
                     {
                         '$match': {
-                            'raw_api_log_data.tpp_id': '876789',
+                            'raw_api_log_data.tpp_id': tpp?.tpp_id,
                             '$expr': {
                                 '$and': [
                                     {
@@ -733,7 +733,7 @@ export class InvoiceService {
 
 
             for (const obj of result_of_lfi) {
-                
+
                 const tpp_id = tpp?.tpp_id; // replace with your actual ID
                 let collection_memo_data = await this.collectionMemoModel.findOne(
                     {
@@ -1427,12 +1427,13 @@ export class InvoiceService {
             throw new Error('Invalid Lfi-ID');
 
         const startDate = invoiceDto?.startDate
-            ? moment(invoiceDto?.fromdate, 'DD-MM-YYYY').startOf('day').format()
-            : null
-        const endDate = invoiceDto?.endDate
-            ? moment(invoiceDto?.todate, 'DD-MM-YYYY').endOf('day').format()
-            : null
+            ? moment(invoiceDto.startDate, 'DD-MM-YYYY').startOf('day').toDate()
+            : null;
 
+        const endDate = invoiceDto?.endDate
+            ? moment(invoiceDto.endDate, 'DD-MM-YYYY').endOf('day').toDate()
+            : null;
+ 
         let aggregation: any = [
             {
                 '$match': {
@@ -1611,7 +1612,7 @@ export class InvoiceService {
                 }
             }, {
                 '$lookup': {
-                    'from': 'tppdatas',
+                    'from': 'tpp_data',
                     'localField': '_id',
                     'foreignField': 'tpp_id',
                     'as': 'tpp_details'
@@ -2969,8 +2970,8 @@ export class InvoiceService {
             headerTemplate: await this.header_template(),
             footerTemplate: await this.footer_template(),
             margin: {
-                top: '70px',
-                bottom: '60px',
+                top: '100px',
+                bottom: '100px',
                 left: '20px',
                 right: '20px'
             }
@@ -2997,7 +2998,7 @@ export class InvoiceService {
                         <td class="table-td">00${lfi_count}</td>
                         <td class="table-td">${item?._id} - ${monthName} ${data.invoice_year}</td>
                         <td class="table-total">${item.actual_total} </td>
-                    </tr`
+                    </tr>`
             lfi_count++
 
 
@@ -3040,10 +3041,29 @@ export class InvoiceService {
         }
 
         let collection_memo = ''
-
+        let displayIndex = 0;
         for (const memo of data?.tpp_usage_per_lfi || []) {
+            displayIndex++;
             collection_memo += ` 
-              <div class="collection-summary">
+            <div class="new-page-section">
+
+            <div class="">
+                <div class="header">
+                    <div>
+                        <div class="title">Collection Memo</div>
+                        <div class="memo-number">Collection Memo # 00${displayIndex}</div>
+                        <div class="date">${moment(data.generated_at).format('D MMMM YYYY')}</div>
+                        <div class="lfi-info">
+                            <div>LFI Alpha</div>
+                            <div class="lfi-info-space">LFI123456</div>
+                            <div class="lfi-info-space">4567 Business Park<br>Innovation City, IC 12345<br>United Arab
+                                Emirates</div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="collection-summary">
                 <div class="summary-title">LFI-${memo._id} Collection Summary:</div>
                 <div class="billing-period">Billing Period: ${moment(data.billing_period_start).format('D MMMM YYYY')} to ${moment(data.billing_period_end).format('Do MMMM YYYY')}</div>
                 <table>
@@ -3054,8 +3074,8 @@ export class InvoiceService {
                       <th class="table-total">Unit Price</th>
                       <th class="table-total">Total</th>
                     </tr>
-                  </thead>
-                  <tbody>
+                </thead>
+                <tbody>
             `;
 
             for (const label of memo.labels || []) {
@@ -3087,6 +3107,16 @@ export class InvoiceService {
                   <span class="invoice-total-amount">${(memo.actual_total).toFixed(2)}</span>
                 </div>
               </div>
+
+                <div class="note">
+                    Note- This is a collection memo on behalf of the LFIs and Nebras is authorized to collect fees on behalf of the Licensed Financial Institutes.
+                </div>
+                
+
+            </div>
+        </div>
+              
+              
             `;
         }
 
@@ -3109,7 +3139,7 @@ export class InvoiceService {
         .container {
             /* max-width: 800px; */
             margin: 0 auto;
-            padding: 20px;
+            padding: 0 20px;
             position: relative;
         }
 
@@ -3135,7 +3165,7 @@ export class InvoiceService {
 
 
         .table-td {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
             color: #1b194f;
         }
@@ -3180,7 +3210,8 @@ export class InvoiceService {
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 30px;
+            margin-bottom:30px;
+            font-size:14px;
         }
 
         thead {
@@ -3570,11 +3601,6 @@ export class InvoiceService {
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td class="table-td">001</td>
-                        <td class="table-td">Nebras Invoice -${monthName} ${data.invoice_year}</td>
-                        <td class="table-total"> ${data.total_amount}</td>
-                    </tr>
                     ${lfi_list}
                 </tbody>
             </table>
@@ -3729,34 +3755,7 @@ export class InvoiceService {
 
 
 
-
-        <div class="new-page-section">
-
-            <div class="">
-                <div class="header">
-                    <div>
-                        <div class="title">Collection Memo</div>
-                        <div class="memo-number">Collection Memo # 003</div>
-                        <div class="date">09 April 2025</div>
-                        <div class="lfi-info">
-                            <div>LFI Alpha</div>
-                            <div class="lfi-info-space">LFI123456</div>
-                            <div class="lfi-info-space">4567 Business Park<br>Innovation City, IC 12345<br>United Arab
-                                Emirates</div>
-                        </div>
-                    </div>
-
-                </div>
-
-                ${collection_memo}
-
-                <div class="note">
-                    Note- This is a collection memo on behalf of the LFIs and Nebras is authorized to collect fees on behalf of the Licensed Financial Institutes.
-                </div>
-                
-
-            </div>
-        </div>
+        ${collection_memo}
 
 
 
@@ -3800,8 +3799,8 @@ export class InvoiceService {
             headerTemplate: await this.header_template(),
             footerTemplate: await this.footer_template(),
             margin: {
-                top: '70px',
-                bottom: '60px',
+                top: '100px',
+                bottom: '100px',
                 left: '20px',
                 right: '20px'
             }
@@ -3871,9 +3870,8 @@ export class InvoiceService {
 
                     .bottom-bar {
                         height: 30px;
-                        background: linear-gradient(to right, #1b194f, #4ab0a3);
+                        background: blue;
 
-                        margin-top: 20px;
                     }
                 </style>
 
