@@ -915,13 +915,19 @@ export class InvoiceService {
         const tppData = await this.tppDataModel.findOne({ tpp_id: tpp_id });
         if (!tppData)
             throw new Error('Invalid TppID');
-
+        console.log(invoiceDto?.startDate, invoiceDto.endDate)
         const startDate = invoiceDto?.startDate
-            ? moment(invoiceDto?.fromdate, 'DD-MM-YYYY').startOf('day').format()
-            : null
+            ? new Date(
+                moment(invoiceDto.startDate.toString()).startOf('day').format()
+            )
+            : undefined
+
         const endDate = invoiceDto?.endDate
-            ? moment(invoiceDto?.todate, 'DD-MM-YYYY').endOf('day').format()
-            : null
+            ? new Date(
+                moment(invoiceDto.endDate.toString()).startOf('day').format()
+            ) : undefined
+
+        console.log(startDate, endDate)
         const result = await this.logsModel.aggregate(
             [
                 {
@@ -931,8 +937,8 @@ export class InvoiceService {
                             startDate && endDate
                                 ? {
                                     createdAt: {
-                                        $gte: new Date(startDate),
-                                        $lte: new Date(endDate)
+                                        $gte: startDate,
+                                        $lte: endDate
                                     }
                                 }
                                 : {}
@@ -1428,13 +1434,17 @@ export class InvoiceService {
             throw new Error('Invalid Lfi-ID');
 
         const startDate = invoiceDto?.startDate
-            ? moment(invoiceDto.startDate, 'DD-MM-YYYY').startOf('day').toDate()
-            : null;
+            ? new Date(
+                moment(invoiceDto.startDate.toString()).startOf('day').format()
+            )
+            : undefined
 
         const endDate = invoiceDto?.endDate
-            ? moment(invoiceDto.endDate, 'DD-MM-YYYY').endOf('day').toDate()
-            : null;
- 
+            ? new Date(
+                moment(invoiceDto.endDate.toString()).startOf('day').format()
+            ) : undefined
+
+
         let aggregation: any = [
             {
                 '$match': {
@@ -1443,8 +1453,8 @@ export class InvoiceService {
                         startDate && endDate
                             ? {
                                 createdAt: {
-                                    $gte: new Date(startDate),
-                                    $lte: new Date(endDate)
+                                    $gte: startDate,
+                                    $lte: endDate
                                 }
                             }
                             : {}
