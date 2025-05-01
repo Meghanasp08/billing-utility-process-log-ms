@@ -423,13 +423,13 @@ export class InvoiceService {
                                         '$eq': [
                                             {
                                                 '$month': '$createdAt'
-                                            }, 4
+                                            }, month
                                         ]
                                     }, {
                                         '$eq': [
                                             {
                                                 '$year': '$createdAt'
-                                            }, 2025
+                                            }, year
                                         ]
                                     }
                                 ]
