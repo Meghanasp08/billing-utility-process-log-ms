@@ -63,11 +63,11 @@ export class InvoiceService {
             throw new Error('Invalid month (1-12)');
 
         await this.invoiceModel.deleteMany({
-            invoice_month: month,
+            // invoice_month: month,
             invoice_year: year
         });
         await this.collectionMemoModel.deleteMany({
-            invoice_month: month,
+            // invoice_month: month,
             invoice_year: year
         });
 
@@ -90,7 +90,7 @@ export class InvoiceService {
                                     {
                                         $eq: [
                                             {
-                                                $month: "$createdAt"
+                                                $month: "$raw_api_log_data.timestamp"
                                             },
                                             month
                                         ]
@@ -98,7 +98,7 @@ export class InvoiceService {
                                     {
                                         $eq: [
                                             {
-                                                $year: "$createdAt"
+                                                $year: "$raw_api_log_data.timestamp"
                                             },
                                             year
                                         ]
@@ -422,13 +422,13 @@ export class InvoiceService {
                                     {
                                         '$eq': [
                                             {
-                                                '$month': '$createdAt'
+                                                '$month': '$raw_api_log_data.timestamp'
                                             }, month
                                         ]
                                     }, {
                                         '$eq': [
                                             {
-                                                '$year': '$createdAt'
+                                                '$year': '$raw_api_log_data.timestamp'
                                             }, year
                                         ]
                                     }
@@ -938,7 +938,7 @@ export class InvoiceService {
                         $and: [
                             startDate && endDate
                                 ? {
-                                    createdAt: {
+                                    'raw_api_log_data.timestamp': {
                                         $gte: startDate,
                                         $lte: endDate
                                     }
@@ -1181,7 +1181,7 @@ export class InvoiceService {
                         $and: [
                             startDate && endDate
                                 ? {
-                                    createdAt: {
+                                    'raw_api_log_data.timestamp': {
                                         $gte: new Date(startDate),
                                         $lte: new Date(endDate)
                                     }
@@ -1458,7 +1458,7 @@ export class InvoiceService {
                     $and: [
                         startDate && endDate
                             ? {
-                                createdAt: {
+                                'raw_api_log_data.timestamp': {
                                     $gte: startDate,
                                     $lte: endDate
                                 }
@@ -1770,7 +1770,7 @@ export class InvoiceService {
                     {
                         '$match': {
                             'raw_api_log_data.tpp_id': tpp?.tpp_id,
-                            createdAt: {
+                            'raw_api_log_data.timestamp': {
                                 $gte: fromDate,
                                 $lte: toDate
                             }
@@ -2054,7 +2054,7 @@ export class InvoiceService {
                     {
                         '$match': {
                             'raw_api_log_data.tpp_id': tpp?.tpp_id,
-                            createdAt: {
+                            'raw_api_log_data.timestamp': {
                                 $gte: fromDate,
                                 $lte: toDate
                             }
