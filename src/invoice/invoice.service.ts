@@ -416,7 +416,7 @@ export class InvoiceService {
                     {
                         '$match': {
                             'raw_api_log_data.tpp_id': tpp?.tpp_id,
-                            'lfiChargable':true,
+                            'lfiChargable': true,
                             '$expr': {
                                 '$and': [
                                     {
@@ -768,11 +768,13 @@ export class InvoiceService {
                         console.log("LOG_ID4")
                     }
                 } else {
-                    console.log("LABELS")
+                    console.log("LABELS",futureDate)
 
                     const lfiData = await this.lfiDataModel.findOne({ lfi_id: obj?._id });
+                    console.log("LFI_NAME",lfiData?.lfi_name)
+
                     const coll_memo_tpp = new this.collectionMemoModel({
-                        invoice_number: await this.generateInvoiceNumber(),
+                        invoice_number: await this.generateInvoiceNumber('CLM'),
                         lfi_id: obj?._id,
                         lfi_name: lfiData?.lfi_name,
                         billing_period_start: startDate,  // Month First
@@ -781,6 +783,7 @@ export class InvoiceService {
                         currency: 'AED',         //AED default
                         invoice_month: month,
                         invoice_year: year,
+                        due_date: futureDate,  //issued_date + 30 days
                         tpp: [{
                             tpp_id: tpp_id,
                             tpp_name: tpp?.tpp_name,
@@ -791,7 +794,6 @@ export class InvoiceService {
                             actual_total: obj?.actual_total,
                             date: new Date()
                         }],
-                        due_date: futureDate,  //issued_date + 30 days
                         vat_percent: 5, // Default 5 percent
                         vat_total: obj?.vat,  // vat percent of invoice total
                         total_amount: obj?.actual_total,  // total of invoice array
@@ -1410,10 +1412,13 @@ export class InvoiceService {
         return invoice_data
     }
 
-    async generateInvoiceNumber() {
-        const timestamp = Date.now(); // milliseconds since 1970
+    async generateInvoiceNumber(key='INV'): Promise<string> {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
         const random = Math.floor(1000 + Math.random() * 9000); // 4-digit random number
-        return `INV-${timestamp}-${random}`;
+        return `${key}-${year}-${month}${day}-${random}`;
     }
 
     async getInvoiceDetails(id: string): Promise<any> {
@@ -1449,7 +1454,7 @@ export class InvoiceService {
             {
                 '$match': {
                     'raw_api_log_data.lfi_id': lfi_id,
-                    'lfiChargable':true,
+                    'lfiChargable': true,
                     $and: [
                         startDate && endDate
                             ? {
@@ -1720,7 +1725,7 @@ export class InvoiceService {
             ];
         }
 
-        const count = await this.invoiceModel.find(options).countDocuments();
+        const count = await this.collectionMemoModel.find(options).countDocuments();
         const result = await this.collectionMemoModel.find(options).skip(offset).limit(limit).sort({ createdAt: -1 }).lean<any>();
 
         return {
