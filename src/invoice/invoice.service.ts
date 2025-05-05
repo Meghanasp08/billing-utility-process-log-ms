@@ -239,10 +239,10 @@ export class InvoiceService {
                                 $sum: 1
                             },
                             unit_price: {
-                                $first: "$api_hub_fee"
+                                $first: "$applicableApiHubFee"
                             },
                             total: {
-                                $sum: "$api_hub_fee"
+                                $sum: "$applicableApiHubFee"
                             }
                         }
                     },
@@ -1075,10 +1075,10 @@ export class InvoiceService {
                             '$sum': 1
                         },
                         'unit_price': {
-                            '$first': '$api_hub_fee'
+                            '$first': '$applicableApiHubFee'
                         },
                         'total': {
-                            '$sum': '$api_hub_fee'
+                            '$sum': '$applicableApiHubFee'
                         }
                     }
                 }, {
@@ -1901,10 +1901,10 @@ export class InvoiceService {
                                 '$sum': 1
                             },
                             'unit_price': {
-                                '$first': '$api_hub_fee'
+                                '$first': '$applicableApiHubFee'
                             },
                             'total': {
-                                '$sum': '$api_hub_fee'
+                                '$sum': '$applicableApiHubFee'
                             }
                         }
                     }, {
