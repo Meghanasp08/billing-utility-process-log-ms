@@ -69,7 +69,7 @@ export class UploadController {
                 // files.file3[0].path,
             ];
 
-            const mergedFilePath = await this.uploadService.mergeCsvFiles('req.user.email', raw_dataPath, payment_dataPath,);
+            const mergedFilePath = await this.uploadService.mergeCsvFiles(req.user.email, raw_dataPath, payment_dataPath,);
 
             return {
                 message: 'Files merged and uploaded successfully',
