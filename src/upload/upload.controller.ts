@@ -10,12 +10,15 @@ import {
     Res,
     UploadedFiles,
     UseGuards,
-    UseInterceptors
+    UseInterceptors,
+    ValidationPipe
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation } from '@nestjs/swagger';
 import { Response } from 'express';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth-guard';
+import { PaginationDTO } from 'src/common/dto/common.dto';
+
 import { UploadService } from './upload.service';
 
 
@@ -66,7 +69,7 @@ export class UploadController {
                 // files.file3[0].path,
             ];
 
-            const mergedFilePath = await this.uploadService.mergeCsvFiles(req.user.email, raw_dataPath, payment_dataPath,);
+            const mergedFilePath = await this.uploadService.mergeCsvFiles('req.user.email', raw_dataPath, payment_dataPath,);
 
             return {
                 message: 'Files merged and uploaded successfully',
@@ -193,11 +196,10 @@ export class UploadController {
     @Get('log')
     @UseGuards(JwtAuthGuard)
     @ApiOperation({ summary: 'Get upload log data' })
-    async getUploadLog(@Req() req: any, @Query('limit') limit: number = 10,
-        @Query('offset') offset: number = 0) {
+    async getUploadLog(@Query(ValidationPipe) PaginationDTO: PaginationDTO) {
         try {
 
-            const uploadLog = await this.uploadService.getUploadLogData(limit, offset);
+            const uploadLog = await this.uploadService.getUploadLogData(PaginationDTO);
             return {
                 message: 'Upload Log details',
                 result: uploadLog,

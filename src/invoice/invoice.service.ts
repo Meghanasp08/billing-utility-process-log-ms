@@ -1,12 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { PaginationDTO } from 'src/common/dto/common.dto';
-import { PaginationEnum, } from 'src/common/constants/constants.enum';
-import * as moment from 'moment'
-const puppeteer = require('puppeteer')
 import * as fs from "fs";
-import * as path from "path";
+import * as moment from 'moment';
+import { Model, Types } from 'mongoose';
+import { PaginationEnum, } from 'src/common/constants/constants.enum';
+import { PaginationDTO } from 'src/common/dto/common.dto';
+const puppeteer = require('puppeteer')
 
 @Injectable()
 export class InvoiceService {
@@ -37,8 +36,8 @@ export class InvoiceService {
         });
         const search = PaginationDTO.search ? PaginationDTO.search.trim() : null;
         if (search) {
-            options.$or = [
-            ];
+            const searchRegex = new RegExp(search, "i");
+            options.$or = [{ "tpp_id": search }, { "tpp_name": searchRegex },];
         }
 
         const count = await this.invoiceModel.find(options).countDocuments();
@@ -1714,11 +1713,12 @@ export class InvoiceService {
         // Object.assign(options, {
         //     ...(status === null ? { status: { $ne: null } } : { status: status }),
         // });
-        // const search = PaginationDTO.search ? PaginationDTO.search.trim() : null;
-        // if (search) {
-        //     options.$or = [
-        //     ];
-        // }
+        const search = PaginationDTO.search ? PaginationDTO.search.trim() : null;
+        if (search) {
+            const searchRegex = new RegExp(search, "i");
+            options.$or = [{ "lfi_id": search }, { "lfi_name": searchRegex }
+            ];
+        }
 
         const count = await this.invoiceModel.find(options).countDocuments();
         const result = await this.collectionMemoModel.find(options).skip(offset).limit(limit).sort({ createdAt: -1 }).lean<any>();

@@ -3,6 +3,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import * as csv from 'csv-parser';
 import * as fs from 'fs';
 import { Model } from 'mongoose';
+import { PaginationEnum, StatusEnum } from 'src/common/constants/constants.enum';
+import { PaginationDTO } from 'src/common/dto/common.dto';
 import { AppConfig } from 'src/config/app.config';
 import { GlobalConfiguration, GlobalConfigurationDocument } from 'src/configuration/schema/global_config.schema';
 import { file1HeadersIncludeSchema, file2HeadersIncludeSchema, validateHeaders } from 'src/validation/csv-validation';
@@ -159,7 +161,7 @@ export class UploadService {
         uploadedAt: new Date(),
         raw_log_path: file1Path,
         payment_log_path: file2Path,
-        status: 'processing',
+        status: 'Processing',
         uploadedBy: userEmail,
         remarks: 'File Uploaded, processing started',
         log: [
@@ -458,6 +460,8 @@ export class UploadService {
 
     const pageDataCalculation = await this.attendedUpdateOnNumberOfPage(pagesFeeApplied);
 
+    const totalHubFeecalculation = await this.calculateTotalApiHubFee(pageDataCalculation);
+
     if (downloadCsv) {
       try {
         // Define the CSV headers
@@ -519,6 +523,7 @@ export class UploadService {
           "api_category",
           "discounted",
           "api_hub_fee",
+          "applicableApiHubFee",
           "calculatedFee",
           "applicableFee",
           "unit_price",
@@ -532,7 +537,7 @@ export class UploadService {
 
         // Convert JSON to CSV
         const parser = new Parser({ fields });
-        const csv = parser.parse(pageDataCalculation);
+        const csv = parser.parse(totalHubFeecalculation);
 
         // Write the CSV file
         fs.writeFileSync(outputPath, csv, 'utf8');
@@ -542,8 +547,8 @@ export class UploadService {
         console.error("Error creating CSV file:", error);
       }
     } else {
-      // return pageDataCalculation
-      const billData = await this.logModel.insertMany(pageDataCalculation);
+      // return totalHubFeecalculation
+      const billData = await this.logModel.insertMany(totalHubFeecalculation);
       if (billData.length) {
         await this.uploadLog.findByIdAndUpdate(
           logUpdate._id,
@@ -565,6 +570,31 @@ export class UploadService {
       return billData.length;
     }
 
+  }
+
+  async calculateTotalApiHubFee(data: any) {
+    console.log('iam inside total hub fee')
+    return data.map((record: any) => {
+      let totalApiHubFee = record.api_hub_fee ?? 0;
+      if (record.group === "payment-bulk" && record.success && record.chargeable) {
+        totalApiHubFee *= record['payment_logs.number_of_successful_transactions'] ?? 0;
+      } else if (record.group === "data" && record.success && record.chargeable) {
+        if (!record.lfiChargable) {
+          console.log(record["raw_api_log_data.records"], 'iam record value')
+          const records = parseInt(record["raw_api_log_data.records"] ?? "0", 10);
+          record.numberOfPages = Math.ceil(records / 100) || 1;
+          record.volume = record.numberOfPages;
+          totalApiHubFee *= record.numberOfPages;
+        } else {
+          // Use volume when lfiChargable is true
+          totalApiHubFee *= record.volume ?? 1;
+        }
+      }
+      return {
+        ...record,
+        applicableApiHubFee: totalApiHubFee,
+      };
+    });
   }
   async attendedUpdateOnNumberOfPage(data: any) {
     let lfiPageDataArray: any[] = [];
@@ -1243,10 +1273,34 @@ export class UploadService {
     }
   }
 
-  async getUploadLogData(limit: number = 10, offset: number = 0) {
+  async getUploadLogData(paginationDTO: PaginationDTO) {
     try {
-      const total = await this.uploadLog.countDocuments().exec();
-      const uploadlogData = await this.uploadLog.find().skip(offset).limit(limit).exec();
+      const offset = paginationDTO.Offset
+        ? Number(paginationDTO.Offset)
+        : PaginationEnum.OFFSET;
+      const limit = paginationDTO.limit
+        ? Number(paginationDTO.limit)
+        : PaginationEnum.LIMIT;
+      const options: any = {};
+      const status =
+        paginationDTO.status && paginationDTO.status !== 'all'
+          ? paginationDTO.status
+          : null;
+
+      if (status && !Object.values(StatusEnum).includes(status as StatusEnum)) {
+        throw new Error(`Invalid status value. Allowed values are: ${Object.values(StatusEnum).join(', ')}`);
+      }
+      // console.log('iam status', status)
+      // console.log('iam options', options)
+      Object.assign(options, {
+        ...(status === null ? { status: { $ne: null } } : { status: status }),
+      });
+      const search = paginationDTO.search ? paginationDTO.search.trim() : null;
+      if (search) {
+        options.$or = [{ "batchNo": search }];
+      }
+      const total = await this.uploadLog.countDocuments(options).exec();
+      const uploadlogData = await this.uploadLog.find(options).skip(offset).limit(limit).sort({ createdAt: -1 }).lean<any>()
       // return uploadlogData;
       return {
         uploadlogData,

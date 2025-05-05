@@ -212,6 +212,9 @@ export class Log {
   api_hub_fee: number;
 
   @Prop()
+  applicableApiHubFee: number;
+
+  @Prop()
   api_category: string;
 
   @Prop({ type: Number, default: 0, validate: { validator: (val: number) => !isNaN(val), message: 'Value must be a number' } })

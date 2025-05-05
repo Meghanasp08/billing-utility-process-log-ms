@@ -38,6 +38,6 @@ export class PaginationDTO {
     @IsString()
     search: string
 
-    fromDate:Date
-    toDate:Date
+    fromDate: Date
+    toDate: Date
 }

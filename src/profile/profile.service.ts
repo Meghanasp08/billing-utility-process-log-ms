@@ -89,6 +89,12 @@ export class ProfileService {
         {
           $group: {
             _id: group === 'lfi' ? "$raw_api_log_data.lfi_id" : "$raw_api_log_data.tpp_id",
+            ...(group === 'tpp' && {
+              tpp_name: { $first: "$raw_api_log_data.tpp_name" },
+            }),
+            ...(group === 'lfi' && {
+              lfi_name: { $first: "$raw_api_log_data.lfi_name" },
+            }),
             total_api_hub_fee: { $sum: "$api_hub_fee" },
             total_calculated_fee: { $sum: "$calculatedFee" },
             total_applicable_fee: { $sum: "$applicableFee" },
@@ -422,6 +428,7 @@ export class ProfileService {
       api_category: entry.api_category,
       discounted: entry.discounted,
       api_hub_fee: entry.api_hub_fee,
+      applicableApiHubFee: entry.applicableApiHubFee,
       calculatedFee: entry.calculatedFee,
       applicableFee: entry.applicableFee,
       unit_price: entry.unit_price,
