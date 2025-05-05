@@ -63,11 +63,11 @@ export class InvoiceService {
             throw new Error('Invalid month (1-12)');
 
         await this.invoiceModel.deleteMany({
-            // invoice_month: month,
+            invoice_month: month,
             invoice_year: year
         });
         await this.collectionMemoModel.deleteMany({
-            // invoice_month: month,
+            invoice_month: month,
             invoice_year: year
         });
 
