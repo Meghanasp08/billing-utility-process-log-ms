@@ -5,8 +5,9 @@ import * as moment from 'moment';
 import { Model, Types } from 'mongoose';
 import { PaginationEnum, } from 'src/common/constants/constants.enum';
 import { PaginationDTO } from 'src/common/dto/common.dto';
+import { GlobalConfiguration, GlobalConfigurationDocument } from 'src/configuration/schema/global_config.schema';
 const puppeteer = require('puppeteer')
-
+import { invoice_config, collection_memo_config } from 'src/config/app.config'
 @Injectable()
 export class InvoiceService {
     constructor(
@@ -17,6 +18,8 @@ export class InvoiceService {
         @InjectModel('CollectionMemo') private readonly collectionMemoModel: Model<any>,
         @InjectModel('SingleDayTppInvoice') private readonly singleDayTppInvoiceModel: Model<any>,
         @InjectModel('SingleDayCollectionMemo') private readonly singleDayCollectionMemoModel: Model<any>,
+        @InjectModel('Counter') private readonly CounterModel: Model<any>,
+        @InjectModel(GlobalConfiguration.name) private globalModel: Model<GlobalConfigurationDocument>
     ) { }
 
     async findAllInvoices(PaginationDTO: PaginationDTO): Promise<any> {
@@ -71,6 +74,12 @@ export class InvoiceService {
             invoice_year: year
         });
 
+        const vat = await this.globalModel.findOne({
+            key: 'vatPercentageValue',
+        });
+        const vatPercent = vat?.value ?? 5
+        const vatDecimal = vatPercent / 100;
+
         const tppData = await this.tppDataModel.find();
 
         const startDate = new Date(year, month - 1, 1);
@@ -85,6 +94,8 @@ export class InvoiceService {
                     {
                         $match: {
                             "raw_api_log_data.tpp_id": tpp?.tpp_id,
+                            "chargeable": true,
+                            "success": true,
                             $expr: {
                                 $and: [
                                     {
@@ -260,13 +271,13 @@ export class InvoiceService {
                                     $round: ["$total", 4]
                                 },
                                 vat_amount: {
-                                    $multiply: ["$total", 0.05]
+                                    $multiply: ["$total", vatDecimal]
                                 },
                                 full_total: {
                                     $add: [
                                         "$total",
                                         {
-                                            $multiply: ["$total", 0.05]
+                                            $multiply: ["$total", vatDecimal]
                                         }
                                     ]
                                 }
@@ -379,7 +390,7 @@ export class InvoiceService {
                             vat_amount: {
                                 $round: [
                                     {
-                                        $multiply: ["$sub_total", 0.05]
+                                        $multiply: ["$sub_total", vatDecimal]
                                     },
                                     4
                                 ]
@@ -390,7 +401,7 @@ export class InvoiceService {
                                         $add: [
                                             "$sub_total",
                                             {
-                                                $multiply: ["$sub_total", 0.05]
+                                                $multiply: ["$sub_total", vatDecimal]
                                             }
                                         ]
                                     },
@@ -417,6 +428,7 @@ export class InvoiceService {
                         '$match': {
                             'raw_api_log_data.tpp_id': tpp?.tpp_id,
                             'lfiChargable': true,
+                            "success": true,
                             '$expr': {
                                 '$and': [
                                     {
@@ -628,7 +640,7 @@ export class InvoiceService {
                                                     '$round': [
                                                         {
                                                             '$multiply': [
-                                                                '$$item.total', 0.05
+                                                                '$$item.total', vatDecimal
                                                             ]
                                                         }, 4
                                                     ]
@@ -639,7 +651,7 @@ export class InvoiceService {
                                                             '$add': [
                                                                 '$$item.total', {
                                                                     '$multiply': [
-                                                                        '$$item.total', 0.05
+                                                                        '$$item.total', vatDecimal
                                                                     ]
                                                                 }
                                                             ]
@@ -667,7 +679,7 @@ export class InvoiceService {
                                         '$multiply': [
                                             {
                                                 '$sum': '$labels.total'
-                                            }, 0.05
+                                            }, vatDecimal
                                         ]
                                     }, 4
                                 ]
@@ -682,7 +694,7 @@ export class InvoiceService {
                                                 '$multiply': [
                                                     {
                                                         '$sum': '$labels.total'
-                                                    }, 0.05
+                                                    }, vatDecimal
                                                 ]
                                             }
                                         ]
@@ -722,7 +734,7 @@ export class InvoiceService {
                 tpp_usage_per_lfi: result_of_lfi,
                 invoice_items: updated_result,
                 // subtotal: 0, // vendaaaa
-                vat_percent: 5, // Default 5 percent
+                vat_percent: vatPercent, // Default 5 percent
                 vat_total: roundedVat,  // vat percent of invoice total
                 total_amount: roundedTotal,  // total of invoice array
                 status: 1,
@@ -750,7 +762,7 @@ export class InvoiceService {
                         tpp_name: tpp?.tpp_name,
                         collection_memo_subitem: obj.labels,
                         full_total: obj?.full_total,
-                        vat_percent: 5,
+                        vat_percent: vatPercent,
                         vat: obj?.vat,
                         actual_total: obj?.actual_total,
                         date: new Date()
@@ -768,13 +780,13 @@ export class InvoiceService {
                         console.log("LOG_ID4")
                     }
                 } else {
-                    console.log("LABELS",futureDate)
+                    console.log("LABELS", futureDate)
 
                     const lfiData = await this.lfiDataModel.findOne({ lfi_id: obj?._id });
-                    console.log("LFI_NAME",lfiData?.lfi_name)
+                    console.log("LFI_NAME", lfiData?.lfi_name)
 
                     const coll_memo_tpp = new this.collectionMemoModel({
-                        invoice_number: await this.generateInvoiceNumber('CLM'),
+                        invoice_number: await this.generateCollectionMemoInvNumber(),
                         lfi_id: obj?._id,
                         lfi_name: lfiData?.lfi_name,
                         billing_period_start: startDate,  // Month First
@@ -935,6 +947,8 @@ export class InvoiceService {
                 {
                     '$match': {
                         'raw_api_log_data.tpp_id': tpp_id,
+                        "chargeable": true,
+                        "success": true,
                         $and: [
                             startDate && endDate
                                 ? {
@@ -1178,6 +1192,8 @@ export class InvoiceService {
                 {
                     '$match': {
                         'raw_api_log_data.tpp_id': tpp_id,
+                        "lfiChargable": true,
+                        "success": true,
                         $and: [
                             startDate && endDate
                                 ? {
@@ -1412,13 +1428,76 @@ export class InvoiceService {
         return invoice_data
     }
 
-    async generateInvoiceNumber(key='INV'): Promise<string> {
+    async generateInvoiceNumberOld(key = 'INV'): Promise<string> {
         const now = new Date();
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const day = String(now.getDate()).padStart(2, '0');
         const random = Math.floor(1000 + Math.random() * 9000); // 4-digit random number
         return `${key}-${year}-${month}${day}-${random}`;
+    }
+
+    async generateInvoiceNumber(): Promise<string> {
+
+        const config = invoice_config;
+        const counter = await this.CounterModel.findOne({ key: 'invoice_counter' });
+
+        if (counter) {
+
+            await this.CounterModel.findOneAndUpdate(
+                { key: 'invoice_counter' },
+                { $inc: { lastInvoiceNumber: 1 } },
+                { returnDocument: 'after', upsert: true }
+            );
+
+        } else {
+            await this.CounterModel.create(
+                {
+                    key: 'invoice_counter',
+                    lastInvoiceNumber: config.startNumber + 1
+                },
+            );
+        }
+        let startNumber = counter?.lastInvoiceNumber ?? config.startNumber
+        const nextNumber = startNumber + 1;
+        const paddedNumber = String(nextNumber).padStart(config.minDigits, config.leadingChar);
+
+        const prefixPart = config.prefix ? config.prefix + config.prefixSeparator : "";
+        const suffixPart = config.suffix ? config.suffixSeparator + config.suffix : "";
+
+        return `${prefixPart}${paddedNumber}${suffixPart}`;
+    }
+
+    async generateCollectionMemoInvNumber(): Promise<string> {
+
+        const config = collection_memo_config;
+        const counter = await this.CounterModel.findOne({ key: 'collection_memo_counter' });
+        
+        if (counter) {
+
+            await this.CounterModel.findOneAndUpdate(
+                { key: 'collection_memo_counter' },
+                { $inc: { lastcollectionMemoNumber: 1 } },
+                { returnDocument: 'after', upsert: true }
+            );
+
+        } else {
+            await this.CounterModel.create(
+                {
+                    key: 'collection_memo_counter',
+                    lastcollectionMemoNumber: config.startNumber + 1
+                },
+            );
+        }
+
+        let startNumber = counter?.lastcollectionMemoNumber ?? config.startNumber
+        const nextNumber = startNumber + 1;
+        const paddedNumber = String(nextNumber).padStart(config.minDigits, config.leadingChar);
+
+        const prefixPart = config.prefix ? config.prefix + config.prefixSeparator : "";
+        const suffixPart = config.suffix ? config.suffixSeparator + config.suffix : "";
+
+        return `${prefixPart}${paddedNumber}${suffixPart}`;
     }
 
     async getInvoiceDetails(id: string): Promise<any> {
@@ -1449,12 +1528,18 @@ export class InvoiceService {
                 moment(invoiceDto.endDate.toString()).startOf('day').format()
             ) : undefined
 
+        const vat_details = await this.globalModel.findOne({
+            key: 'vatPercentageValue',
+        });
+        const vatPercent = vat_details?.value ?? 5
+        const vatDecimal = vatPercent / 100;
 
         let aggregation: any = [
             {
                 '$match': {
                     'raw_api_log_data.lfi_id': lfi_id,
                     'lfiChargable': true,
+                    "success": true,
                     $and: [
                         startDate && endDate
                             ? {
@@ -1655,7 +1740,7 @@ export class InvoiceService {
                         '$round': [
                             {
                                 '$multiply': [
-                                    '$full_total', 0.05
+                                    '$full_total', vatDecimal
                                 ]
                             }, 4
                         ]
@@ -1666,7 +1751,7 @@ export class InvoiceService {
                                 '$add': [
                                     '$full_total', {
                                         '$multiply': [
-                                            '$full_total', 0.05
+                                            '$full_total', vatDecimal
                                         ]
                                     }
                                 ]
@@ -1680,7 +1765,7 @@ export class InvoiceService {
 
         const total = result.reduce((sum, item) => sum + item.actual_total, 0);
 
-        const vat = total * 0.05;
+        const vat = total * vatDecimal;
 
         const roundedTotal = Math.round(total * 100) / 100; // 0.23
         const roundedVat = Math.round(vat * 100) / 100;
@@ -1695,7 +1780,7 @@ export class InvoiceService {
             generated_at: new Date(),        // Generate Date
             currency: 'AED',         //AED default
             tpp_data: result,
-            vat_percent: 5, // Default 5 percent
+            vat_percent: vatPercent, // Default 5 percent
             vat_total: roundedVat,  // vat percent of invoice total
             total_amount: roundedTotal,  // total of invoice array
             status: 1,
@@ -1770,6 +1855,8 @@ export class InvoiceService {
                     {
                         '$match': {
                             'raw_api_log_data.tpp_id': tpp?.tpp_id,
+                            "chargeable": true,
+                            "success": true,
                             'raw_api_log_data.timestamp': {
                                 $gte: fromDate,
                                 $lte: toDate
@@ -2054,6 +2141,8 @@ export class InvoiceService {
                     {
                         '$match': {
                             'raw_api_log_data.tpp_id': tpp?.tpp_id,
+                            "lfiChargable": true,
+                            "success": true,
                             'raw_api_log_data.timestamp': {
                                 $gte: fromDate,
                                 $lte: toDate
@@ -2911,7 +3000,7 @@ export class InvoiceService {
             const roundedVat = Math.round(vat * 100) / 100;
             const lfiData = await this.lfiDataModel.findOne({ lfi_id: obj?._id });
             const coll_memo_tpp = new this.collectionMemoModel({
-                invoice_number: await this.generateInvoiceNumber(),
+                invoice_number: await this.generateCollectionMemoInvNumber(),
                 lfi_id: obj?._id,
                 lfi_name: lfiData.lfi_name,
                 billing_period_start: startDate,  // Month First
@@ -3883,6 +3972,7 @@ export class InvoiceService {
                     .footer-right {
                         text-align: right;
                         direction: rtl;
+                        font-family: 'Tahoma','Arial', 'Segoe UI', sans-serif;
                     }
 
                     .bottom-bar {

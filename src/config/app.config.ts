@@ -22,3 +22,23 @@ export const AppConfig = {
     discount: 200,
     aedConstant: 100,
 };
+
+export const invoice_config = {
+    startNumber: 1000,
+    minDigits: 6,
+    leadingChar: "0",
+    prefix: "INV",
+    prefixSeparator: "-",
+    suffix: "",
+    suffixSeparator: ""
+};
+
+export const collection_memo_config = {
+    startNumber: 4000,
+    minDigits: 6,
+    leadingChar: "0",
+    prefix: "CM",
+    prefixSeparator: "-",
+    suffix: "",
+    suffixSeparator: ""
+};
