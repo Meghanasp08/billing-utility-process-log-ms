@@ -768,10 +768,10 @@ export class InvoiceService {
                         console.log("LOG_ID4")
                     }
                 } else {
-                    console.log("LABELS",futureDate)
+                    console.log("LABELS", futureDate)
 
                     const lfiData = await this.lfiDataModel.findOne({ lfi_id: obj?._id });
-                    console.log("LFI_NAME",lfiData?.lfi_name)
+                    console.log("LFI_NAME", lfiData?.lfi_name)
 
                     const coll_memo_tpp = new this.collectionMemoModel({
                         invoice_number: await this.generateInvoiceNumber('CLM'),
@@ -1412,7 +1412,7 @@ export class InvoiceService {
         return invoice_data
     }
 
-    async generateInvoiceNumber(key='INV'): Promise<string> {
+    async generateInvoiceNumber(key = 'INV'): Promise<string> {
         const now = new Date();
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');

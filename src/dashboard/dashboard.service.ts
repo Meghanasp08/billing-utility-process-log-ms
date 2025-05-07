@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class DashboardService {
@@ -33,12 +33,12 @@ export class DashboardService {
       this.getLfiToTppFee(),
       this.getPaidUnpaidInvoices()
     ]);
-  
+
     return {
       totalInvoices: totalInvoicesResult[0]?.total || 0,
-      totalInvoiceAmount: totalInvoiceAmountResult[0]?.total || 0,
-      avgInvoiceAmount: avgInvoiceAmountResult[0]?.avg || 0,
-      invoicePaid: invoicePaidResult[0]?.totalPaid || 0,
+      totalInvoiceAmount: parseFloat((totalInvoiceAmountResult[0]?.total || 0).toFixed(2)),
+      avgInvoiceAmount: parseFloat((avgInvoiceAmountResult[0]?.avg || 0).toFixed(2)),
+      invoicePaid: parseFloat((invoicePaidResult[0]?.totalPaid || 0).toFixed(2)),
       noOfTpps: noOfTppsResult[0]?.total || 0,
       noOfLfis: noOfLfisResult[0]?.total || 0,
       apiHubFee,
@@ -145,7 +145,7 @@ export class DashboardService {
     }
   }
 
-  async getPaidUnpaidInvoices(){
+  async getPaidUnpaidInvoices() {
     return this.invoiceModel.aggregate([
       {
         $group: {
@@ -169,13 +169,13 @@ export class DashboardService {
           unpaid: 1
         }
       }
-    ]).exec();  
+    ]).exec();
   }
 
   async invoicePaid() {
     return await this.invoiceModel.aggregate([
-      { $match: { status: 1 } }, 
-      { $group: { _id: null, totalPaid: { $sum: "$total_amount" } } }  
+      { $match: { status: 1 } },
+      { $group: { _id: null, totalPaid: { $sum: "$total_amount" } } }
     ]).exec()
   }
 

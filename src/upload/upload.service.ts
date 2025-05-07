@@ -576,23 +576,29 @@ export class UploadService {
     console.log('iam inside total hub fee')
     return data.map((record: any) => {
       let totalApiHubFee = record.api_hub_fee ?? 0;
+      let apiHubVolume = 1;
       if (record.group === "payment-bulk" && record.success && record.chargeable) {
-        totalApiHubFee *= record['payment_logs.number_of_successful_transactions'] ?? 0;
+        apiHubVolume = record['payment_logs.number_of_successful_transactions'] ?? 1;
+        totalApiHubFee *= apiHubVolume;
       } else if (record.group === "data" && record.success && record.chargeable) {
         if (!record.lfiChargable) {
           console.log(record["raw_api_log_data.records"], 'iam record value')
           const records = parseInt(record["raw_api_log_data.records"] ?? "0", 10);
           record.numberOfPages = Math.ceil(records / 100) || 1;
-          record.volume = record.numberOfPages;
-          totalApiHubFee *= record.numberOfPages;
+          // record.volume = record.numberOfPages;
+          apiHubVolume = record.numberOfPages;
+          totalApiHubFee *= apiHubVolume;
         } else {
           // Use volume when lfiChargable is true
-          totalApiHubFee *= record.volume ?? 1;
+          apiHubVolume = record.volume ?? 1;
+          totalApiHubFee *= apiHubVolume;
+
         }
       }
       return {
         ...record,
         applicableApiHubFee: totalApiHubFee,
+        apiHubVolume: apiHubVolume
       };
     });
   }

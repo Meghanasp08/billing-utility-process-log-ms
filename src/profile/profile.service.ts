@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as fs from 'fs';
+const moment = require('moment-timezone');
+
 import { Model } from 'mongoose';
 import { Log, LogDocument } from 'src/upload/schemas/billing-log.schema';
 import { LfiData, LfiDataDocument } from 'src/upload/schemas/lfi-data.schema';
@@ -22,16 +24,17 @@ export class ProfileService {
   async getLogData(startDate?: string, endDate?: string, search?: string, limit: number = 100,
     offset: number = 0) {
     const filter: any = {};
+    let timezone: string = moment.tz.guess();
 
     if (startDate && endDate) {
       filter["raw_api_log_data.timestamp"] = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
+        $gte: moment.tz(startDate, timezone).utc().toDate(),
+        $lte: moment.tz(endDate, timezone).utc().toDate(),
       };
     } else if (startDate) {
-      filter["raw_api_log_data.timestamp"] = { $gte: new Date(startDate) };
+      filter["raw_api_log_data.timestamp"] = { $gte: moment.tz(startDate, timezone).utc().toDate(), };
     } else if (endDate) {
-      filter["raw_api_log_data.timestamp"] = { $lte: new Date(endDate) };
+      filter["raw_api_log_data.timestamp"] = { $lte: moment.tz(endDate, timezone).utc().toDate(), };
     }
     if (search) {
       const searchRegex = new RegExp(search, "i");
@@ -44,9 +47,19 @@ export class ProfileService {
     }
     const total = await this.logModel.countDocuments(filter).exec();
     const log = await this.logModel.find(filter).skip(offset)
-      .limit(limit).exec();
+      .limit(limit).lean().exec();
+
+    const localizedLog = log.map((entry: any) => {
+      const timestamp = entry.raw_api_log_data?.timestamp;
+      if (timestamp) {
+        entry.raw_api_log_data.timestamp = moment.utc(timestamp).tz(timezone).format(); // Convert to local timezone
+        entry.payment_logs.timestamp = moment.utc(timestamp).tz(timezone).format(); // Convert to local timezone
+      }
+      return entry;
+    });
+
     return {
-      log,
+      localizedLog,
       pagination: {
         offset: offset,
         limit: limit,
@@ -59,16 +72,16 @@ export class ProfileService {
     offset: number = 0) {
     try {
       const filter: any = {};
-
+      let timezone: string = moment.tz.guess();
       if (startDate && endDate) {
         filter["raw_api_log_data.timestamp"] = {
-          $gte: new Date(startDate),
-          $lte: new Date(endDate)
+          $gte: moment.tz(startDate, timezone).utc().toDate(),
+          $lte: moment.tz(endDate, timezone).utc().toDate(),
         };
       } else if (startDate) {
-        filter["raw_api_log_data.timestamp"] = { $gte: new Date(startDate) };
+        filter["raw_api_log_data.timestamp"] = { $gte: moment.tz(startDate, timezone).utc().toDate(), };
       } else if (endDate) {
-        filter["raw_api_log_data.timestamp"] = { $lte: new Date(endDate) };
+        filter["raw_api_log_data.timestamp"] = { $lte: moment.tz(endDate, timezone).utc().toDate(), };
       }
 
       if (search) {
@@ -359,15 +372,17 @@ export class ProfileService {
   async getLogDataToCSV(startDate?: string, endDate?: string, search?: string,) {
     const filter: any = {};
 
+    let timezone: string = moment.tz.guess();
+
     if (startDate && endDate) {
       filter["raw_api_log_data.timestamp"] = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
+        $gte: moment.tz(startDate, timezone).utc().toDate(),
+        $lte: moment.tz(endDate, timezone).utc().toDate(),
       };
     } else if (startDate) {
-      filter["raw_api_log_data.timestamp"] = { $gte: new Date(startDate) };
+      filter["raw_api_log_data.timestamp"] = { $gte: moment.tz(startDate, timezone).utc().toDate(), };
     } else if (endDate) {
-      filter["raw_api_log_data.timestamp"] = { $lte: new Date(endDate) };
+      filter["raw_api_log_data.timestamp"] = { $lte: moment.tz(endDate, timezone).utc().toDate(), };
     }
     if (search) {
       const searchRegex = new RegExp(search, "i");
@@ -389,7 +404,10 @@ export class ProfileService {
 
     // Flatten the log data
     const flattenedLog = log.map(({ _id, ...entry }) => ({
-      timestamp: entry.raw_api_log_data.timestamp,
+      timestamp: moment
+        .utc(entry.raw_api_log_data.timestamp)   // Parse as UTC
+        .tz(timezone)                            // Convert to local timezone
+        .format('YYYY-MM-DD HH:mm:ss'),
       lfi_id: entry.raw_api_log_data.lfi_id,
       lfi_name: entry.raw_api_log_data.lfi_name,
       tpp_id: entry.raw_api_log_data.tpp_id,

@@ -212,6 +212,9 @@ export class Log {
   api_hub_fee: number;
 
   @Prop()
+  apiHubVolume: number;
+
+  @Prop()
   applicableApiHubFee: number;
 
   @Prop()
