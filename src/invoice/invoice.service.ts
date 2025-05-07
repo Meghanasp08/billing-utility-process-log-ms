@@ -257,10 +257,10 @@ export class InvoiceService {
                                 description: "$paymentTypeLabel"
                             },
                             quantity: {
-                                $sum: 1
+                                $sum: "$apiHubVolume"
                             },
                             unit_price: {
-                                $first: "$applicableApiHubFee"
+                                $first: "$api_hub_fee"
                             },
                             total: {
                                 $sum: "$applicableApiHubFee"
@@ -275,10 +275,10 @@ export class InvoiceService {
                                 description: "$_id.description",
                                 quantity: "$quantity",
                                 unit_price: {
-                                    $round: ["$unit_price", 4]
+                                    $round: ["$unit_price", 3]
                                 },
                                 total: {
-                                    $round: ["$total", 4]
+                                    $round: ["$total", 3]
                                 },
                                 vat_amount: {
                                     $multiply: ["$total", vatDecimal]
@@ -566,10 +566,10 @@ export class InvoiceService {
                                 'label': '$label'
                             },
                             'quantity': {
-                                '$sum': 1
+                                '$sum': "$volume"
                             },
                             'unit_price': {
-                                '$avg': '$applicableFee'
+                                '$first': "$unit_price"
                             },
                             'total': {
                                 '$sum': '$applicableFee'
@@ -584,12 +584,12 @@ export class InvoiceService {
                                     'quantity': '$quantity',
                                     'unit_price': {
                                         '$round': [
-                                            '$unit_price', 4
+                                            '$unit_price', 3
                                         ]
                                     },
                                     'total': {
                                         '$round': [
-                                            '$total', 4
+                                            '$total', 3
                                         ]
                                     }
                                 }
@@ -719,8 +719,8 @@ export class InvoiceService {
 
             const vat = total * 0.05;
 
-            const roundedTotal = Math.round(total * 10000) / 10000;
-            const roundedVat = Math.round(vat * 10000) / 10000;
+            const roundedTotal = Math.round(total * 100) / 100;
+            const roundedVat = Math.round(vat * 100) / 100;
 
             const updated_result = await this.ensureCategories(result);
             const invoice_data = {
@@ -1098,13 +1098,13 @@ export class InvoiceService {
                             'description': '$paymentTypeLabel'
                         },
                         'quantity': {
-                            '$sum': 1
+                            '$sum': "$apiHubVolume"
                         },
                         'unit_price': {
-                            '$first': '$applicableApiHubFee'
+                            '$first': "$api_hub_fee"
                         },
                         'total': {
-                            '$sum': '$applicableApiHubFee'
+                            '$sum': "$applicableApiHubFee"
                         }
                     }
                 }, {
@@ -1328,10 +1328,10 @@ export class InvoiceService {
                             'label': '$label'
                         },
                         'quantity': {
-                            '$sum': 1
+                            '$sum': "$volume"
                         },
                         'unit_price': {
-                            '$avg': '$applicableFee'
+                            '$first': "$unit_price"
                         },
                         'total': {
                             '$sum': '$applicableFee'
@@ -1685,13 +1685,13 @@ export class InvoiceService {
                         'label': '$label'
                     },
                     'quantity': {
-                        '$sum': 1
+                        '$sum': "$volume"
                     },
                     'unit_price': {
-                        '$avg': '$applicableFee'
+                        '$first': "$unit_price"
                     },
                     'total': {
-                        '$sum': '$applicableFee'
+                        '$sum': "$applicableFee"
                     }
                 }
             }, {
