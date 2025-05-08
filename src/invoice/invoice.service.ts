@@ -951,7 +951,7 @@ export class InvoiceService {
                 moment(invoiceDto.endDate.toString()).startOf('day').format()
             ) : undefined
 
-        console.log(startDate, endDate)
+        console.log(startDate, endDate);
         const result = await this.logsModel.aggregate(
             [
                 {
@@ -1396,6 +1396,7 @@ export class InvoiceService {
                         'path': '$lfi_data'
                     }
                 }
+                
                 // {
                 //     '$addFields': {
                 //         'vat': {
