@@ -574,10 +574,10 @@ export class InvoiceService {
                                 'label': '$label'
                             },
                             'quantity': {
-                                '$sum': "$volume"
+                                '$sum': 1
                             },
                             'unit_price': {
-                                '$first': "$unit_price"
+                                '$avg': '$applicableFee'
                             },
                             'total': {
                                 '$sum': '$applicableFee'
@@ -592,7 +592,7 @@ export class InvoiceService {
                                     'quantity': '$quantity',
                                     'unit_price': {
                                         '$round': [
-                                            '$unit_price', 3
+                                            '$unit_price', 4
                                         ]
                                     },
                                     'total': {
@@ -1336,10 +1336,10 @@ export class InvoiceService {
                             'label': '$label'
                         },
                         'quantity': {
-                            '$sum': "$volume"
+                            '$sum': 1
                         },
                         'unit_price': {
-                            '$first': "$unit_price"
+                            '$avg': '$applicableFee'
                         },
                         'total': {
                             '$sum': '$applicableFee'
