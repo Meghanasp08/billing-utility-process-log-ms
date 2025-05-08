@@ -281,14 +281,22 @@ export class InvoiceService {
                                     $round: ["$total", 3]
                                 },
                                 vat_amount: {
-                                    $multiply: ["$total", vatDecimal]
+                                    $round: [
+                                        { $multiply: ["$total", vatDecimal] },
+                                        3 
+                                    ]
                                 },
                                 full_total: {
-                                    $add: [
-                                        "$total",
+                                    $round: [
                                         {
-                                            $multiply: ["$total", vatDecimal]
-                                        }
+                                            $add: [
+                                                "$total",
+                                                {
+                                                    $multiply: ["$total",vatDecimal]
+                                                }
+                                            ]
+                                        },
+                                        3
                                     ]
                                 }
                             }
@@ -402,7 +410,7 @@ export class InvoiceService {
                                     {
                                         $multiply: ["$sub_total", vatDecimal]
                                     },
-                                    4
+                                    3
                                 ]
                             },
                             category_total: {
@@ -415,7 +423,7 @@ export class InvoiceService {
                                             }
                                         ]
                                     },
-                                    4
+                                    3
                                 ]
                             }
                         }
@@ -652,7 +660,7 @@ export class InvoiceService {
                                                             '$multiply': [
                                                                 '$$item.total', vatDecimal
                                                             ]
-                                                        }, 4
+                                                        }, 3
                                                     ]
                                                 },
                                                 'full_total': {
@@ -665,7 +673,7 @@ export class InvoiceService {
                                                                     ]
                                                                 }
                                                             ]
-                                                        }, 4
+                                                        }, 3
                                                     ]
                                                 }
                                             }
@@ -680,7 +688,7 @@ export class InvoiceService {
                                 '$round': [
                                     {
                                         '$sum': '$labels.total'
-                                    }, 4
+                                    }, 3
                                 ]
                             },
                             'vat': {
@@ -691,7 +699,7 @@ export class InvoiceService {
                                                 '$sum': '$labels.total'
                                             }, vatDecimal
                                         ]
-                                    }, 4
+                                    }, 3
                                 ]
                             },
                             'actual_total': {
@@ -708,7 +716,7 @@ export class InvoiceService {
                                                 ]
                                             }
                                         ]
-                                    }, 4
+                                    }, 3
                                 ]
                             }
                         }
@@ -1116,12 +1124,12 @@ export class InvoiceService {
                             'quantity': '$quantity',
                             'unit_price': {
                                 '$round': [
-                                    '$unit_price', 4
+                                    '$unit_price', 3
                                 ]
                             },
                             'total': {
                                 '$round': [
-                                    '$total', 4
+                                    '$total', 3
                                 ]
                             }
                         }
@@ -1346,12 +1354,12 @@ export class InvoiceService {
                                 'quantity': '$quantity',
                                 'unit_price': {
                                     '$round': [
-                                        '$unit_price', 4
+                                        '$unit_price', 3
                                     ]
                                 },
                                 'total': {
                                     '$round': [
-                                        '$total', 4
+                                        '$total', 3
                                     ]
                                 }
                             }
@@ -1380,7 +1388,7 @@ export class InvoiceService {
                             '$round': [
                                 {
                                     '$sum': '$labels.total'
-                                }, 4
+                                }, 3
                             ]
                         }
                     }
@@ -1704,12 +1712,12 @@ export class InvoiceService {
                             'quantity': '$quantity',
                             'unit_price': {
                                 '$round': [
-                                    '$unit_price', 4
+                                    '$unit_price', 3
                                 ]
                             },
                             'total': {
                                 '$round': [
-                                    '$total', 4
+                                    '$total', 3
                                 ]
                             }
                         }
@@ -1752,7 +1760,7 @@ export class InvoiceService {
                         '$round': [
                             {
                                 '$sum': '$labels.total'
-                            }, 4
+                            }, 3
                         ]
                     }
                 }
