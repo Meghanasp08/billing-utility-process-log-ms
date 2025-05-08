@@ -578,7 +578,7 @@ export class UploadService {
       let totalApiHubFee = record.api_hub_fee ?? 0;
       let apiHubVolume = 1;
       if (record.group === "payment-bulk" && record.success && record.chargeable) {
-        apiHubVolume = record['payment_logs.number_of_successful_transactions'] ?? 1;
+        apiHubVolume = parseInt(record['payment_logs.number_of_successful_transactions'] ?? 1);
         totalApiHubFee *= apiHubVolume;
       } else if (record.group === "data" && record.success && record.chargeable) {
         if (!record.lfiChargable) {
