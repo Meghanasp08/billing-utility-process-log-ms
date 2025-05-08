@@ -49,17 +49,17 @@ export class ProfileService {
     const log = await this.logModel.find(filter).skip(offset)
       .limit(limit).lean().exec();
 
-    const localizedLog = log.map((entry: any) => {
-      const timestamp = entry.raw_api_log_data?.timestamp;
-      if (timestamp) {
-        entry.raw_api_log_data.timestamp = moment.utc(timestamp).tz(timezone).format(); // Convert to local timezone
-        entry.payment_logs.timestamp = moment.utc(timestamp).tz(timezone).format(); // Convert to local timezone
-      }
-      return entry;
-    });
+    // const localizedLog = log.map((entry: any) => {
+    //   const timestamp = entry.raw_api_log_data?.timestamp;
+    //   if (timestamp) {
+    //     entry.raw_api_log_data.timestamp = moment.utc(timestamp).tz(timezone).format(); // Convert to local timezone
+    //     entry.payment_logs.timestamp = moment.utc(timestamp).tz(timezone).format(); // Convert to local timezone
+    //   }
+    //   return entry;
+    // });
 
     return {
-      localizedLog,
+      log,
       pagination: {
         offset: offset,
         limit: limit,
@@ -96,7 +96,7 @@ export class ProfileService {
 
       const numericOffset = Number(offset);
       const numericLimit = Number(limit);
-      const total = await this.logModel.countDocuments(filter).exec();
+      // const total = await this.logModel.countDocuments(filter).exec();
       const aggregateQuery = [
         { $match: filter },
         {
@@ -125,7 +125,7 @@ export class ProfileService {
         pagination: {
           offset: offset,
           limit: limit,
-          total: total
+          total: result.length
         }
       }
     } catch (error) {
