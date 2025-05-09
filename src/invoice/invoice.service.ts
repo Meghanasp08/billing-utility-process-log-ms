@@ -1541,12 +1541,16 @@ export class InvoiceService {
                 // }
             ]
         )
-        const total = result.reduce((sum, item) => sum + item.category_total, 0);
+        let invoice_total = result.reduce((sum, item) => sum + item.category_total, 0);
+        let lfi_total = result_of_lfi.reduce((sum, item) => sum + item.full_total, 0);
 
-        const vat = total * 0.05;
+        const total = Number(invoice_total) + Number(lfi_total)
+        const vat = invoice_total * 0.05;
 
         const roundedTotal = Math.round(total * 100) / 100; // 0.23
         const roundedVat = Math.round(vat * 100) / 100;
+        invoice_total = invoice_total.toFixed(2)
+        lfi_total = lfi_total.toFixed(2)
         // let updated_result = []
         // if (result.length != 0) {
         //     updated_result = await this.ensureCategories(result);
@@ -1557,6 +1561,8 @@ export class InvoiceService {
             tpp_name: tppData?.tpp_name,
             tpp_usage_per_lfi: result_of_lfi,
             invoice_items: result,
+            invoice_total:invoice_total,
+            lfi_total:lfi_total,
             // subtotal: 0, // vendaaaa
             // vat_percent: 5, // Default 5 percent
             // vat_total: roundedVat,  // vat percent of invoice total
