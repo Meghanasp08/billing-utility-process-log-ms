@@ -524,7 +524,7 @@ export class InvoiceService {
                                                     }
                                                 ]
                                             },
-                                            then: "Peer-to Peer"
+                                            then: "Peer-to-Peer"
                                         },
                                         {
                                             case: {
@@ -658,7 +658,7 @@ export class InvoiceService {
                                 $map: {
                                     input: [
                                         "Merchant Collection",
-                                        "Peer-to Peer",
+                                        "Peer-to-Peer",
                                         "Me-to-Me Transfer",
                                         "Large value collection",
                                         "Corporate Payments",
@@ -1346,7 +1346,7 @@ export class InvoiceService {
                                                 }
                                             ]
                                         },
-                                        then: "Peer-to Peer"
+                                        then: "Peer-to-Peer"
                                     },
                                     {
                                         case: {
@@ -1742,7 +1742,7 @@ export class InvoiceService {
                                             }
                                         ]
                                     },
-                                    then: "Peer-to Peer"
+                                    then: "Peer-to-Peer"
                                 },
                                 {
                                     case: {
@@ -2361,7 +2361,7 @@ export class InvoiceService {
                                                     }
                                                 ]
                                             },
-                                            'then': 'Peer-to Peer'
+                                            'then': 'Peer-to-Peer'
                                         }, {
                                             'case': {
                                                 '$and': [
@@ -2486,7 +2486,7 @@ export class InvoiceService {
                     //  {
                     //     '$addFields': {
                     //         'allLabels': [
-                    //             'Merchant Collection', 'Peer-to Peer', 'Me-to-Me Transfer', 'Large value collection', 'Bulk payments', 'Corporate Treasury Data', 'Customer Data'
+                    //             'Merchant Collection', 'Peer-to-Peer', 'Me-to-Me Transfer', 'Large value collection', 'Bulk payments', 'Corporate Treasury Data', 'Customer Data'
                     //         ]
                     //     }
                     // }, 
@@ -3398,17 +3398,12 @@ export class InvoiceService {
                       <td class="sub-total-row" colspan="3">SUB TOTAL</td>
                       <td class="table-total">${memo.full_total.toFixed(2)}</td>
                     </tr>
-                    <tr class="vat-row">
-                      <td class="sub-total-row" colspan="3">VAT</td>
-                      <td class="table-total">${memo.vat.toFixed(2)}</td>
-                    </tr>
                   </tbody>
                 </table>
           
                 <div class="invoice-total">
-                  <span class="invoice-total-label"> Total <br>
-                    <span style="font-size: 12px; font-weight: normal;">(Incl. VAT)</span></span>
-                  <span class="invoice-total-amount">${(memo.actual_total).toFixed(2)}</span>
+                  <span class="invoice-total-label"> Total <br></span>
+                  <span class="invoice-total-amount">${(memo.full_total).toFixed(2)}</span>
                 </div>
               </div>
 
@@ -4538,7 +4533,7 @@ export class InvoiceService {
 //                     }
 //                   ]
 //                 },
-//                 'then': 'Peer-to Peer'
+//                 'then': 'Peer-to-Peer'
 //               }, {
 //                 'case': {
 //                   '$and': [
@@ -4563,7 +4558,7 @@ export class InvoiceService {
 //                     }
 //                   ]
 //                 },
-//                 'then': 'Peer-to Peer (Capped)'
+//                 'then': 'Peer-to-Peer (Capped)'
 //               }, {
 //                 'case': {
 //                   '$and': [
@@ -4741,7 +4736,7 @@ export class InvoiceService {
 //         'labels': {
 //           '$map': {
 //             'input': [
-//               'Merchant Collection', 'Merchant Collection (Capped)', 'Peer-to Peer', 'Peer-to Peer (Capped)', 'Me-to-Me Transfer', 'Me-to-Me Transfer (Capped)', 'Large value collection', 'Corporate Payments', 'Corporate Treasury Data', 'Customer Data'
+//               'Merchant Collection', 'Merchant Collection (Capped)', 'Peer-to-Peer', 'Peer-to-Peer (Capped)', 'Me-to-Me Transfer', 'Me-to-Me Transfer (Capped)', 'Large value collection', 'Corporate Payments', 'Corporate Treasury Data', 'Customer Data'
 //             ],
 //             'as': 'expectedLabel',
 //             'in': {
