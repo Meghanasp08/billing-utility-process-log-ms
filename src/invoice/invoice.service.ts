@@ -181,7 +181,7 @@ export class InvoiceService {
                                                     }
                                                 ]
                                             },
-                                            then: "Corporate Payment Data"
+                                            then: "Corporate Data"
                                         },
                                         {
                                             case: {
@@ -318,13 +318,13 @@ export class InvoiceService {
                                         $eq: ["$_id", "service_initiation"]
                                     },
                                     then: [
-                                        "Corporate Treasury",
+                                        "Corporate Payment",
                                         "Payment Initiation"
                                     ],
                                     else: [
                                         "Insurance",
                                         "Setup and Consent",
-                                        "Corporate Treasury Data",
+                                        "Corporate Data",
                                         "Confirmation of Payee",
                                         "Balance(Discounted)",
                                         "Bank Data Sharing"
@@ -702,50 +702,50 @@ export class InvoiceService {
                             }
                         }
                     },
-                    {
-                        $addFields: {
-                            labels: {
-                                $map: {
-                                    input: "$labels",
-                                    as: "item",
-                                    in: {
-                                        $mergeObjects: [
-                                            "$$item",
-                                            {
-                                                vat_amount: {
-                                                    $round: [
-                                                        {
-                                                            $multiply: [
-                                                                "$$item.total",
-                                                                vatDecimal
-                                                            ]
-                                                        },
-                                                        3
-                                                    ]
-                                                },
-                                                full_total: {
-                                                    $round: [
-                                                        {
-                                                            $add: [
-                                                                "$$item.total",
-                                                                {
-                                                                    $multiply: [
-                                                                        "$$item.total",
-                                                                        vatDecimal
-                                                                    ]
-                                                                }
-                                                            ]
-                                                        },
-                                                        3
-                                                    ]
-                                                }
-                                            }
-                                        ]
-                                    }
-                                }
-                            }
-                        }
-                    },
+                    // {
+                    //     $addFields: {
+                    //         labels: {
+                    //             $map: {
+                    //                 input: "$labels",
+                    //                 as: "item",
+                    //                 in: {
+                    //                     $mergeObjects: [
+                    //                         "$$item",
+                    //                         {
+                    //                             vat_amount: {
+                    //                                 $round: [
+                    //                                     {
+                    //                                         $multiply: [
+                    //                                             "$$item.total",
+                    //                                             vatDecimal
+                    //                                         ]
+                    //                                     },
+                    //                                     3
+                    //                                 ]
+                    //                             },
+                    //                             full_total: {
+                    //                                 $round: [
+                    //                                     {
+                    //                                         $add: [
+                    //                                             "$$item.total",
+                    //                                             {
+                    //                                                 $multiply: [
+                    //                                                     "$$item.total",
+                    //                                                     vatDecimal
+                    //                                                 ]
+                    //                                             }
+                    //                                         ]
+                    //                                     },
+                    //                                     3
+                    //                                 ]
+                    //                             }
+                    //                         }
+                    //                     ]
+                    //                 }
+                    //             }
+                    //         }
+                    //     }
+                    // },
                     {
                         $addFields: {
                             full_total: {
@@ -756,47 +756,49 @@ export class InvoiceService {
                                     3
                                 ]
                             },
-                            vat: {
-                                $round: [
-                                    {
-                                        $multiply: [
-                                            {
-                                                $sum: "$labels.total"
-                                            },
-                                            vatDecimal
-                                        ]
-                                    },
-                                    3
-                                ]
-                            },
-                            actual_total: {
-                                $round: [
-                                    {
-                                        $add: [
-                                            {
-                                                $sum: "$labels.total"
-                                            },
-                                            {
-                                                $multiply: [
-                                                    {
-                                                        $sum: "$labels.total"
-                                                    },
-                                                    vatDecimal
-                                                ]
-                                            }
-                                        ]
-                                    },
-                                    3
-                                ]
-                            }
+                            // vat: {
+                            //     $round: [
+                            //         {
+                            //             $multiply: [
+                            //                 {
+                            //                     $sum: "$labels.total"
+                            //                 },
+                            //                 vatDecimal
+                            //             ]
+                            //         },
+                            //         3
+                            //     ]
+                            // },
+                            // actual_total: {
+                            //     $round: [
+                            //         {
+                            //             $add: [
+                            //                 {
+                            //                     $sum: "$labels.total"
+                            //                 },
+                            //                 {
+                            //                     $multiply: [
+                            //                         {
+                            //                             $sum: "$labels.total"
+                            //                         },
+                            //                         vatDecimal
+                            //                     ]
+                            //                 }
+                            //             ]
+                            //         },
+                            //         3
+                            //     ]
+                            // }
                         }
                     }
                 ]
             )
-            const total = result.reduce((sum, item) => sum + item.category_total, 0);
+            const invoice_total = result.reduce((sum, item) => sum + item.category_total, 0);
+            const vat = invoice_total * vatDecimal;
 
-            const vat = total * 0.05;
+            const lfi_total = result_of_lfi.reduce((sum, item) => sum + item.full_total, 0);
 
+            const total = Number(invoice_total) + Number(lfi_total);
             const roundedTotal = Math.round(total * 100) / 100;
             const roundedVat = Math.round(vat * 100) / 100;
 
@@ -825,6 +827,8 @@ export class InvoiceService {
                 vat_percent: vatPercent, // Default 5 percent
                 vat_total: roundedVat,  // vat percent of invoice total
                 total_amount: roundedTotal,  // total of invoice array
+                invoice_total:invoice_total,
+                lfi_total:lfi_total,
                 status: 1,
                 notes: 'Invoice Added',
             }
@@ -834,7 +838,7 @@ export class InvoiceService {
 
             for (const obj of result_of_lfi) {
 
-                const tpp_id = tpp?.tpp_id; // replace with your actual ID
+                const tpp_id = tpp?.tpp_id; 
                 let collection_memo_data = await this.collectionMemoModel.findOne(
                     {
                         lfi_id: obj?._id,
@@ -851,8 +855,8 @@ export class InvoiceService {
                         collection_memo_subitem: obj.labels,
                         full_total: obj?.full_total,
                         vat_percent: vatPercent,
-                        vat: obj?.vat,
-                        actual_total: obj?.actual_total,
+                        // vat: obj?.vat,
+                        // actual_total: obj?.actual_total,
                         date: new Date()
                     };
 
@@ -861,12 +865,10 @@ export class InvoiceService {
                     if (!tppExists) {
                         console.log("LOG_ID3")
                         collection_memo_data.tpp.push(new_tpp_data);
-                        collection_memo_data.vat_total = collection_memo_data?.vat_total ?? 0 + obj?.vat
-                        collection_memo_data.total_amount = collection_memo_data?.total_amount ?? 0 + obj?.actual_total
+                        // collection_memo_data.vat_total = collection_memo_data?.vat_total ?? 0 + obj?.vat
+                        collection_memo_data.total_amount = collection_memo_data?.total_amount ?? 0 + obj?.full_total
                         await collection_memo_data.save();
-                    } else {
-                        console.log("LOG_ID4")
-                    }
+                    } 
                 } else {
                     console.log("LABELS", futureDate)
 
@@ -890,13 +892,13 @@ export class InvoiceService {
                             collection_memo_subitem: obj?.labels,
                             full_total: obj?.full_total,
                             vat_percent: 5,
-                            vat: obj?.vat,
-                            actual_total: obj?.actual_total,
+                            // vat: obj?.vat,
+                            // actual_total: obj?.actual_total,
                             date: new Date()
                         }],
                         vat_percent: 5, // Default 5 percent
-                        vat_total: obj?.vat,  // vat percent of invoice total
-                        total_amount: obj?.actual_total,  // total of invoice array
+                        // vat_total: obj?.vat,  // vat percent of invoice total
+                        total_amount: obj?.full_total,  // total of invoice array
                         status: 1,
                     })
                     await coll_memo_tpp.save();
@@ -1037,6 +1039,7 @@ export class InvoiceService {
                         'raw_api_log_data.tpp_id': tpp_id,
                         "chargeable": true,
                         "success": true,
+                        "volume": { $gt: 0 },
                         $and: [
                             startDate && endDate
                                 ? {
@@ -1282,6 +1285,7 @@ export class InvoiceService {
                         'raw_api_log_data.tpp_id': tpp_id,
                         "lfiChargable": true,
                         "success": true,
+                        "volume": { $gt: 0 },
                         $and: [
                             startDate && endDate
                                 ? {
@@ -1684,6 +1688,7 @@ export class InvoiceService {
                     'raw_api_log_data.lfi_id': lfi_id,
                     'lfiChargable': true,
                     "success": true,
+                    "volume": { $gt: 0 },
                     $and: [
                         startDate && endDate
                             ? {
@@ -3391,7 +3396,7 @@ export class InvoiceService {
                 
                 collection_memo += `
                     <tr>
-                      <td>${label.label}${label?.capped === true ? '**' : ''} </td>
+                      <td>${label.label} ${label?.capped === true ? '**' : ''} </td>
                       <td class="table-total">${label.quantity}</td>
                       <td class="table-total">${label.unit_price.toFixed(4)}</td>
                       <td class="table-total">${label.total.toFixed(2)}</td>
@@ -4248,7 +4253,7 @@ export class InvoiceService {
             for (const item of tpp_data.collection_memo_subitem || []) {
                 revenue_data += `
                 <tr>
-                    <td>${item.label}${item?.capped === true ? '**' : ''}</td>
+                    <td>${item.label} ${item?.capped === true ? '**' : ''}</td>
                     <td>${item.quantity}</td>
                     <td>${item.unit_price.toFixed(4)}</td>
                     <td>${item.total.toFixed(4)}</td>
