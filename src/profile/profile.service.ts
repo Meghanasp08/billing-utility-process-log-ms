@@ -42,7 +42,7 @@ export class ProfileService {
         { "raw_api_log_data.tpp_id": search },
         { "raw_api_log_data.tppName": searchRegex },
         { "raw_api_log_data.lfi_id": search },
-        { "raw_api_log_data.lfiName": searchRegex }
+        { "raw_api_log_data.lfi_name": searchRegex }
       ];
     }
     const total = await this.logModel.countDocuments(filter).exec();
@@ -390,7 +390,7 @@ export class ProfileService {
         { "raw_api_log_data.tpp_id": search },
         { "raw_api_log_data.tppName": searchRegex },
         { "raw_api_log_data.lfi_id": search },
-        { "raw_api_log_data.lfiName": searchRegex }
+        { "raw_api_log_data.lfi_name": searchRegex }
       ];
     }
     // const total = await this.logModel.countDocuments(filter).exec();
