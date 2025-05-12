@@ -26,6 +26,8 @@ export const InvoiceSchema = new mongoose.Schema(
     vat_percent: Number, // Default 5 percent
     vat_total: Number,  // vat percent of invoice total
     total_amount: Number,  // total of invoice array
+    invoice_total:Number,
+    lfi_total:Number,
     status: Number,
     notes: String,
   },
