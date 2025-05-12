@@ -57,8 +57,8 @@ export class AuthService {
 
     const expiresIn =
       tokenType === 'ACCESS'
-        ? this.config.get('ACCESS_TOKEN_EXPIRY')
-        : this.config.get('REFRESH_TOKEN_EXPIRY');
+        ? parseInt(this.config.get('ACCESS_TOKEN_EXPIRY') || '3600')
+        : parseInt(this.config.get('REFRESH_TOKEN_EXPIRY') || '604800');
 
     const payload = {
       userId: auth._id,
@@ -71,8 +71,8 @@ export class AuthService {
       expiresIn: expiresIn,
     });
   }
-  async getUserData(userId: string): Promise<User | null> {
-    return this.userModel.findById(userId).exec(); 
+  async getUserData(userId: string) {
+    return this.userModel.findById(userId).exec();
   }
   async getTokens(auth: any, userType: string) {
     const access_token = this.signPayload(auth, 'ACCESS', userType);
@@ -120,8 +120,12 @@ export class AuthService {
         HttpStatus.NOT_FOUND,
       );
     }
-
-    return this.getTokens(user, userType);
+    const token = await this.getTokens(user, userType);
+    await this.userModel.updateOne(
+      { _id: decoded.userId },
+      { refreshToken: token.refresh_token },
+    )
+    return token
   }
 
 }
