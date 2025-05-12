@@ -181,7 +181,7 @@ export class InvoiceService {
                                                     }
                                                 ]
                                             },
-                                            then: "Corporate Payment Data"
+                                            then: "Corporate Data"
                                         },
                                         {
                                             case: {
@@ -318,13 +318,13 @@ export class InvoiceService {
                                         $eq: ["$_id", "service_initiation"]
                                     },
                                     then: [
-                                        "Corporate Treasury",
+                                        "Corporate Payment",
                                         "Payment Initiation"
                                     ],
                                     else: [
                                         "Insurance",
                                         "Setup and Consent",
-                                        "Corporate Treasury Data",
+                                        "Corporate Data",
                                         "Confirmation of Payee",
                                         "Balance(Discounted)",
                                         "Bank Data Sharing"
