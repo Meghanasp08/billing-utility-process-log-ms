@@ -1037,6 +1037,7 @@ export class InvoiceService {
                         'raw_api_log_data.tpp_id': tpp_id,
                         "chargeable": true,
                         "success": true,
+                        "volume": { $gt: 0 },
                         $and: [
                             startDate && endDate
                                 ? {
@@ -1282,6 +1283,7 @@ export class InvoiceService {
                         'raw_api_log_data.tpp_id': tpp_id,
                         "lfiChargable": true,
                         "success": true,
+                        "volume": { $gt: 0 },
                         $and: [
                             startDate && endDate
                                 ? {
@@ -1684,6 +1686,7 @@ export class InvoiceService {
                     'raw_api_log_data.lfi_id': lfi_id,
                     'lfiChargable': true,
                     "success": true,
+                    "volume": { $gt: 0 },
                     $and: [
                         startDate && endDate
                             ? {
@@ -3391,7 +3394,7 @@ export class InvoiceService {
                 
                 collection_memo += `
                     <tr>
-                      <td>${label.label}${label?.capped === true ? '**' : ''} </td>
+                      <td>${label.label} ${label?.capped === true ? '**' : ''} </td>
                       <td class="table-total">${label.quantity}</td>
                       <td class="table-total">${label.unit_price.toFixed(4)}</td>
                       <td class="table-total">${label.total.toFixed(2)}</td>
@@ -4248,7 +4251,7 @@ export class InvoiceService {
             for (const item of tpp_data.collection_memo_subitem || []) {
                 revenue_data += `
                 <tr>
-                    <td>${item.label}${item?.capped === true ? '**' : ''}</td>
+                    <td>${item.label} ${item?.capped === true ? '**' : ''}</td>
                     <td>${item.quantity}</td>
                     <td>${item.unit_price.toFixed(4)}</td>
                     <td>${item.total.toFixed(4)}</td>
