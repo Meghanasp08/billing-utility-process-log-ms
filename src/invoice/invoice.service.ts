@@ -703,6 +703,18 @@ export class InvoiceService {
                         }
                     },
                     {
+                        '$lookup': {
+                            'from': 'lfi_data',
+                            'localField': '_id',
+                            'foreignField': 'lfi_id',
+                            'as': 'lfi_data'
+                        }
+                    }, {
+                        '$unwind': {
+                            'path': '$lfi_data'
+                        }
+                    },
+                    {
                         $addFields: {
                             labels: {
                                 $map: {
@@ -739,7 +751,7 @@ export class InvoiceService {
                                                             { case: { $eq: ["$$expectedLabel", "Large value collection"] }, then: nonBulkLargeValueCapMerchant},
                                                             { case: { $eq: ["$$expectedLabel", "Corporate Payments"] }, then: bulkLargeCorporatefee },
                                                             { case: { $eq: ["$$expectedLabel", "Corporate Treasury Data"] }, then:dataLargeCorporateMdp },
-                                                            { case: { $eq: ["$$expectedLabel", "Customer Data"] }, then: 0.025 }
+                                                            { case: { $eq: ["$$expectedLabel", "Customer Data"] }, then: "$lfi_data.mdp_rate" }
                                                         ],
                                                         default: 0.025
                                                     }
@@ -763,18 +775,7 @@ export class InvoiceService {
                             }
                         }
                     },
-                    {
-                        '$lookup': {
-                            'from': 'lfi_data',
-                            'localField': '_id',
-                            'foreignField': 'lfi_id',
-                            'as': 'lfi_data'
-                        }
-                    }, {
-                        '$unwind': {
-                            'path': '$lfi_data'
-                        }
-                    },
+                   
                     // {
                     //     $addFields: {
                     //         labels: {
@@ -3497,7 +3498,7 @@ export class InvoiceService {
                     </div>
                     <div class="invoice-total">
                         <span class="invoice-total-label">Total</span>
-                        <span class="invoice-total-amount">${(memo.full_total).toFixed(2) }</span>
+                        <span class="invoice-total-amount">AED ${(memo.full_total).toFixed(2) }</span>
                     </div>
                 </div>
               </div>
@@ -4141,7 +4142,7 @@ export class InvoiceService {
 
                 <div class="invoice-total">
                     <span class="invoice-total-label">Invoice Total</span>
-                    <span class="invoice-total-amount"> ${data?.invoice_total ?? 0}</span>
+                    <span class="invoice-total-amount"> AED ${data?.invoice_total ?? 0}</span>
                 </div>
 
 
