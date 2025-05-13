@@ -82,13 +82,25 @@ export class InvoiceService {
             invoice_month: month,
             invoice_year: year
         });
-        
+
         const vat = await this.globalModel.findOne({
             key: 'vatPercentageValue',
         });
+
+        const globalConfiData = await this.globalModel.find();
+        const paymentApiHubFee = globalConfiData.find(item => item.key === "paymentApiHubFee")?.value;
+        const insuranceApiHubFee = globalConfiData.find(item => item.key === "insuranceApiHubFee")?.value;
+        const discountApiHubFee = globalConfiData.find(item => item.key === "discountApiHubFee")?.value;
+        let nonLargeValueMerchantBps = globalConfiData.find(item => item.key === "nonLargeValueMerchantBps")?.value;
+        const paymentLargeValueFeePeer = globalConfiData.find(item => item.key === "paymentNonLargevalueFeePeer")?.value;
+        const paymentFeeMe2me = globalConfiData.find(item => item.key === "paymentFeeMe2me")?.value;
+        const nonBulkLargeValueCapMerchant = globalConfiData.find(item => item.key === "nonBulkLargeValueCapMerchant")?.value;
+        const bulkLargeCorporatefee = globalConfiData.find(item => item.key === "bulkLargeCorporatefee")?.value;
+        const dataLargeCorporateMdp = globalConfiData.find(item => item.key === "dataLargeCorporateMdp")?.value;
+        
         const vatPercent = vat?.value ?? 5
         const vatDecimal = vatPercent / 100;
-
+        nonLargeValueMerchantBps = Number(nonLargeValueMerchantBps)/10000
         const tppData = await this.tppDataModel.find();
 
         const startDate = new Date(year, month - 1, 1);
@@ -137,7 +149,7 @@ export class InvoiceService {
                                             case: {
                                                 $eq: ["$group", "payment-bulk"]
                                             },
-                                            then: "Corporate Payment"
+                                            then: "Corporate Payment"   //-- paymentApiHubFee
                                         },
                                         {
                                             case: {
@@ -146,13 +158,13 @@ export class InvoiceService {
                                                     "payment-non-bulk"
                                                 ]
                                             },
-                                            then: "Payment Initiation"
+                                            then: "Payment Initiation"    //--paymentApiHubFee
                                         },
                                         {
                                             case: {
                                                 $eq: ["$group", "insurance"]
                                             },
-                                            then: "Insurance"
+                                            then: "Insurance"    //-- insuranceApiHubFee
                                         },
                                         {
                                             case: {
@@ -168,7 +180,7 @@ export class InvoiceService {
                                                     }
                                                 ]
                                             },
-                                            then: "Setup and Consent"
+                                            then: "Setup and Consent"    //-- paymentApiHubFee
                                         },
                                         {
                                             case: {
@@ -181,7 +193,7 @@ export class InvoiceService {
                                                     }
                                                 ]
                                             },
-                                            then: "Corporate Data"
+                                            then: "Corporate Data"   //-- paymentApiHubFee
                                         },
                                         {
                                             case: {
@@ -194,7 +206,7 @@ export class InvoiceService {
                                                     }
                                                 ]
                                             },
-                                            then: "Confirmation of Payee(Discounted)"
+                                            then: "Confirmation of Payee(Discounted)"  //-- discountApiHubFee
                                         },
                                         {
                                             case: {
@@ -210,13 +222,13 @@ export class InvoiceService {
                                                     }
                                                 ]
                                             },
-                                            then: "Balance(Discounted)"
+                                            then: "Balance(Discounted)"  //-- discountApiHubFee
                                         },
                                         {
                                             case: {
                                                 $eq: ["$group", "data"]
                                             },
-                                            then: "Bank Data Sharing"
+                                            then: "Bank Data Sharing"   //--paymentApiHubFee
                                         }
                                     ],
                                     default: null
@@ -368,7 +380,45 @@ export class InvoiceService {
                                                 unit_price: {
                                                     $ifNull: [
                                                         "$$matchedItem.unit_price",
-                                                        0.25
+                                                        {
+                                                            $switch: {
+                                                                branches: [
+                                                                    {
+                                                                        case: { $eq: ["$$desc", "Corporate Payment"] },
+                                                                        then: paymentApiHubFee
+                                                                    },
+                                                                    {
+                                                                        case: { $eq: ["$$desc", "Payment Initiation"] },
+                                                                        then: paymentApiHubFee
+                                                                    },
+                                                                    {
+                                                                        case: { $eq: ["$$desc", "Insurance"] },
+                                                                        then: insuranceApiHubFee
+                                                                    },
+                                                                    {
+                                                                        case: { $eq: ["$$desc", "Setup and Consent"] },
+                                                                        then: paymentApiHubFee
+                                                                    },
+                                                                    {
+                                                                        case: { $eq: ["$$desc", "Corporate Data"] },
+                                                                        then: paymentApiHubFee
+                                                                    },
+                                                                    {
+                                                                        case: { $eq: ["$$desc", "Confirmation of Payee"] },
+                                                                        then: discountApiHubFee
+                                                                    },
+                                                                    {
+                                                                        case: { $eq: ["$$desc", "Balance(Discounted)"] },
+                                                                        then: discountApiHubFee
+                                                                    },
+                                                                    {
+                                                                        case: { $eq: ["$$desc", "Bank Data Sharing"] },
+                                                                        then: paymentApiHubFee
+                                                                    }
+                                                                ],
+                                                                default: 0.25 // Fallback if description doesn't match
+                                                            }
+                                                        }
                                                     ]
                                                 },
                                                 total: {
@@ -499,7 +549,7 @@ export class InvoiceService {
                                                     }
                                                 ]
                                             },
-                                            then: "Merchant Collection"
+                                            then: "Merchant Collection"   //-- nonLargeValueMerchantBps/10000
                                         },
                                         {
                                             case: {
@@ -524,7 +574,7 @@ export class InvoiceService {
                                                     }
                                                 ]
                                             },
-                                            then: "Peer-to-Peer"
+                                            then: "Peer-to-Peer"   //paymentNonLargevalueFeePeer
                                         },
                                         {
                                             case: {
@@ -549,7 +599,7 @@ export class InvoiceService {
                                                     }
                                                 ]
                                             },
-                                            then: "Me-to-Me Transfer"
+                                            then: "Me-to-Me Transfer"  //paymentFeeMe2me
                                         },
                                         {
                                             case: {
@@ -571,7 +621,7 @@ export class InvoiceService {
                                                     }
                                                 ]
                                             },
-                                            then: "Large Value Collections"
+                                            then: "Large Value Collections"  // nonBulkLargeValueCapMerchant
                                         },
                                         {
                                             case: {
@@ -587,7 +637,7 @@ export class InvoiceService {
                                                     }
                                                 ]
                                             },
-                                            then: "Corporate Payments"
+                                            then: "Corporate Payments" // bulkLargeCorporatefee
                                         },
                                         {
                                             case: {
@@ -600,13 +650,13 @@ export class InvoiceService {
                                                     }
                                                 ]
                                             },
-                                            then: "Corporate Treasury Data"
+                                            then: "Corporate Treasury Data" // dataLargeCorporateMdp
                                         },
                                         {
                                             case: {
                                                 $eq: ["$group", "data"]
                                             },
-                                            then: "Customer Data"
+                                            then: "Customer Data"       //Take mppRate from lfi
                                         }
                                     ],
                                     default: "Others"
@@ -675,12 +725,23 @@ export class InvoiceService {
                                                             input: "$labels",
                                                             as: "existing",
                                                             cond: {
-                                                                $eq: [
-                                                                    "$$existing.label",
-                                                                    "$$expectedLabel"
-                                                                ]
+                                                                $eq: ["$$existing.label", "$$expectedLabel"]
                                                             }
                                                         }
+                                                    }
+                                                },
+                                                defaultUnitPrice: {
+                                                    $switch: {
+                                                        branches: [
+                                                            { case: { $eq: ["$$expectedLabel", "Merchant Collection"] }, then: nonLargeValueMerchantBps },
+                                                            { case: { $eq: ["$$expectedLabel", "Peer-to-Peer"] }, then: paymentLargeValueFeePeer },
+                                                            { case: { $eq: ["$$expectedLabel", "Me-to-Me Transfer"] }, then:paymentFeeMe2me },
+                                                            { case: { $eq: ["$$expectedLabel", "Large value collection"] }, then: nonBulkLargeValueCapMerchant},
+                                                            { case: { $eq: ["$$expectedLabel", "Corporate Payments"] }, then: bulkLargeCorporatefee },
+                                                            { case: { $eq: ["$$expectedLabel", "Corporate Treasury Data"] }, then:dataLargeCorporateMdp },
+                                                            { case: { $eq: ["$$expectedLabel", "Customer Data"] }, then: 0.025 }
+                                                        ],
+                                                        default: 0.025
                                                     }
                                                 }
                                             },
@@ -691,7 +752,7 @@ export class InvoiceService {
                                                     else: {
                                                         label: "$$expectedLabel",
                                                         quantity: 0,
-                                                        unit_price: 0,
+                                                        unit_price: "$$defaultUnitPrice",
                                                         total: 0
                                                     }
                                                 }
@@ -700,6 +761,18 @@ export class InvoiceService {
                                     }
                                 }
                             }
+                        }
+                    },
+                    {
+                        '$lookup': {
+                            'from': 'lfi_data',
+                            'localField': '_id',
+                            'foreignField': 'lfi_id',
+                            'as': 'lfi_data'
+                        }
+                    }, {
+                        '$unwind': {
+                            'path': '$lfi_data'
                         }
                     },
                     // {
@@ -756,6 +829,7 @@ export class InvoiceService {
                                     3
                                 ]
                             },
+                            'lfi_name': '$lfi_data.lfi_name'
                             // vat: {
                             //     $round: [
                             //         {
@@ -803,6 +877,7 @@ export class InvoiceService {
             const roundedVat = Math.round(vat * 100) / 100;
 
             const updated_result = await this.ensureCategories(result);
+
             const invoice_data = {
                 invoice_number: await this.generateInvoiceNumber(),
                 tpp_id: tpp?.tpp_id,
@@ -827,18 +902,19 @@ export class InvoiceService {
                 vat_percent: vatPercent, // Default 5 percent
                 vat_total: roundedVat,  // vat percent of invoice total
                 total_amount: roundedTotal,  // total of invoice array
-                invoice_total:invoice_total,
-                lfi_total:lfi_total,
+                invoice_total: invoice_total,
+                lfi_total: lfi_total,
                 status: 1,
                 notes: 'Invoice Added',
             }
+            
             const invoice = new this.invoiceModel(invoice_data)
             await invoice.save();
 
 
             for (const obj of result_of_lfi) {
 
-                const tpp_id = tpp?.tpp_id; 
+                const tpp_id = tpp?.tpp_id;
                 let collection_memo_data = await this.collectionMemoModel.findOne(
                     {
                         lfi_id: obj?._id,
@@ -868,7 +944,7 @@ export class InvoiceService {
                         // collection_memo_data.vat_total = collection_memo_data?.vat_total ?? 0 + obj?.vat
                         collection_memo_data.total_amount = collection_memo_data?.total_amount ?? 0 + obj?.full_total
                         await collection_memo_data.save();
-                    } 
+                    }
                 } else {
                     console.log("LABELS", futureDate)
 
@@ -909,13 +985,17 @@ export class InvoiceService {
 
     async ensureCategories(inputArray) {
         // Define default values for each category
+        const globalConfiData = await this.globalModel.find();
+        const paymentApiHubFee = globalConfiData.find(item => item.key === "paymentApiHubFee")?.value;
+        const insuranceApiHubFee = globalConfiData.find(item => item.key === "insuranceApiHubFee")?.value;
+        const discountApiHubFee = globalConfiData.find(item => item.key === "discountApiHubFee")?.value;
         const categoryDefaults = {
             data_sharing: {
                 "items": [
                     {
                         "description": "Insurance",
                         "quantity": 0,
-                        "unit_price": 0.025,
+                        "unit_price": insuranceApiHubFee,
                         "total": 0,
                         "vat_amount": 0,
                         "full_total": 0
@@ -923,15 +1003,15 @@ export class InvoiceService {
                     {
                         "description": "Setup and Consent",
                         "quantity": 0,
-                        "unit_price": 0.25,
+                        "unit_price": paymentApiHubFee,
                         "total": 0,
                         "vat_amount": 0,
                         "full_total": 0
                     },
                     {
-                        "description": "Corporate Payment Data",
+                        "description": "Corporate Payment",
                         "quantity": 0,
-                        "unit_price": 0.025,
+                        "unit_price": paymentApiHubFee,
                         "total": 0,
                         "vat_amount": 0,
                         "full_total": 0
@@ -939,7 +1019,7 @@ export class InvoiceService {
                     {
                         "description": "Confirmation of Payee(Discounted)",
                         "quantity": 0,
-                        "unit_price": 0.25,
+                        "unit_price": discountApiHubFee,
                         "total": 0,
                         "vat_amount": 0,
                         "full_total": 0
@@ -947,7 +1027,7 @@ export class InvoiceService {
                     {
                         "description": "Balance(Discounted)",
                         "quantity": 0,
-                        "unit_price": 0.25,
+                        "unit_price": discountApiHubFee,
                         "total": 0,
                         "vat_amount": 0,
                         "full_total": 0
@@ -955,7 +1035,7 @@ export class InvoiceService {
                     {
                         "description": "Bank Data Sharing",
                         "quantity": 0,
-                        "unit_price": 0.025,
+                        "unit_price": paymentApiHubFee,
                         "total": 0,
                         "vat_amount": 0,
                         "full_total": 0
@@ -971,7 +1051,7 @@ export class InvoiceService {
                     {
                         "description": "Corporate Payment",
                         "quantity": 0,
-                        "unit_price": 0.025,
+                        "unit_price": paymentApiHubFee,
                         "total": 0.0,
                         "vat_amount": 0,
                         "full_total": 0
@@ -979,7 +1059,7 @@ export class InvoiceService {
                     {
                         "description": "Payment Initiation",
                         "quantity": 0,
-                        "unit_price": 0.025,
+                        "unit_price": paymentApiHubFee,
                         "total": 0.00,
                         "vat_amount": 0,
                         "full_total": 0
@@ -1297,7 +1377,7 @@ export class InvoiceService {
                                 : {}
                         ]
                     }
-                },{
+                }, {
                     $addFields: {
                         label: {
                             $switch: {
@@ -1565,8 +1645,8 @@ export class InvoiceService {
             tpp_name: tppData?.tpp_name,
             tpp_usage_per_lfi: result_of_lfi,
             invoice_items: result,
-            invoice_total:invoice_total,
-            lfi_total:lfi_total,
+            invoice_total: invoice_total,
+            lfi_total: lfi_total,
             // subtotal: 0, // vendaaaa
             // vat_percent: 5, // Default 5 percent
             // vat_total: roundedVat,  // vat percent of invoice total
@@ -1880,7 +1960,7 @@ export class InvoiceService {
                 }
             },
 
-             {
+            {
                 '$addFields': {
                     'labels': {
                         '$filter': {
@@ -3284,8 +3364,7 @@ export class InvoiceService {
         let lfi_list = ''
         let lfi_count = 2;
 
-        let lfi_total = data?.tpp_usage_per_lfi.reduce((sum, item) => sum + item.actual_total, 0);
-        let total_due = Number(lfi_total) + Number(data.total_amount);
+        let total_due = Number(data.total_amount);
 
         const monthName = moment().month(data.invoice_month - 1).format('MMMM');
 
@@ -3293,7 +3372,7 @@ export class InvoiceService {
             lfi_list += `<tr>
                         <td class="table-td">00${lfi_count}</td>
                         <td class="table-td">${item?._id} - ${monthName} ${data.invoice_year}</td>
-                        <td class="table-total">${item.actual_total} </td>
+                        <td class="table-total">${item.full_total} </td>
                     </tr>`
             lfi_count++
 
@@ -3368,7 +3447,7 @@ export class InvoiceService {
                         <div class="memo-number">Collection Memo # 00${displayIndex}</div>
                         <div class="date">${moment(data.generated_at).format('D MMMM YYYY')}</div>
                         <div class="lfi-info">
-                            <div>LFI Alpha</div>
+                            <div>LFI ${memo.lfi_name}</div>
                             <div class="lfi-info-space">LFI-${memo._id}</div>
                             <div class="lfi-info-space">4567 Business Park<br>Innovation City, IC 12345<br>United Arab
                                 Emirates</div>
@@ -3378,7 +3457,7 @@ export class InvoiceService {
                 </div>
 
                 <div class="collection-summary">
-                <div class="summary-title">LFI-${memo._id} Collection Summary:</div>
+                <div class="summary-title">LFI-${memo.lfi_name} Collection Summary:</div>
                 <div class="billing-period">Billing Period: ${moment(data.billing_period_start).format('D MMMM YYYY')} to ${moment(data.billing_period_end).format('Do MMMM YYYY')}</div>
                 <table>
                   <thead>
@@ -3393,7 +3472,7 @@ export class InvoiceService {
             `;
 
             for (const label of memo.labels || []) {
-                
+
                 collection_memo += `
                     <tr>
                       <td>${label.label} ${label?.capped === true ? '**' : ''} </td>
@@ -3412,15 +3491,16 @@ export class InvoiceService {
                   </tbody>
                 </table>
           
-                <div class="invoice-total">
-                  <span class="invoice-total-label"> Total <br></span>
-                  <span class="invoice-total-amount">${(memo.full_total).toFixed(2)}</span>
+                <div class="invoice-summary-wrapper">
+                    <div class="note">
+                        ** - Inclusive of capped amount
+                    </div>
+                    <div class="invoice-total">
+                        <span class="invoice-total-label">Total</span>
+                        <span class="invoice-total-amount">${(memo.full_total).toFixed(2) }</span>
+                    </div>
                 </div>
               </div>
-
-                <div class="note">
-                    ** - Inclusive of capped amount
-                </div>
 
                 <div class="note">
                     Note- This is a collection memo on behalf of the LFIs and Nebras is authorized to collect fees on behalf of the Licensed Financial Institutes.
@@ -3666,25 +3746,39 @@ export class InvoiceService {
             /* background-color: #f5f5f5; */
         }
 
-        .invoice-total {
-            text-align: right;
+       .invoice-summary-wrapper {            display: flex;
+            justify-content: space-between; /* pushes items to the edges */
+            align-items: center; /* vertical alignment */
             margin-top: 30px;
             margin-bottom: 50px;
-        }
-
+            }
+            
+        .invoice-total {
+            text-align: right;
+            }
+            
         .invoice-total-label {
             font-weight: bold;
             color: #1b194f;
             display: inline-block;
             margin-right: 20px;
-        }
-
+            }
+            
         .invoice-total-amount {
             font-weight: bold;
             font-size: 18px;
             color: #1b194f;
-        }
+            }
+            
+        .note {
+            font-size: 12px;
+            color: #555;
+            margin-left: 20px;
+            white-space: nowrap; /* keep in one line */
+            }
+            lor: #1b194f;
 
+        }
 
         .table-total {
             text-align: right;
@@ -3900,7 +3994,7 @@ export class InvoiceService {
                         <td class="table-td table-total">${nebras_taxable_amount}</td>
                         <td class="table-td table-total">${data.vat_percent}</td>
                         <td class="table-td table-total">${data.vat_total}</td>
-                        <td class="table-total">${data.total_amount}</td>
+                        <td class="table-total">${data.invoice_total}</td>
                     </tr>
                   
                 </tbody>
@@ -4047,7 +4141,7 @@ export class InvoiceService {
 
                 <div class="invoice-total">
                     <span class="invoice-total-label">Invoice Total</span>
-                    <span class="invoice-total-amount"> ${data?.total_amount ?? 0}</span>
+                    <span class="invoice-total-amount"> ${data?.invoice_total ?? 0}</span>
                 </div>
 
 
@@ -4245,7 +4339,7 @@ export class InvoiceService {
 
         for (const tpp_data of data.tpp || []) {
             revenue_data += `<tr class="tpp-name">
-                <td rowspan="${(tpp_data.collection_memo_subitem?.length || 0) + 3}">
+                <td rowspan="${(tpp_data.collection_memo_subitem?.length || 0) + 2}">
                 ${tpp_data.tpp_id}  (${tpp_data.tpp_name})
                 </td>
             </tr>`;
@@ -4255,19 +4349,15 @@ export class InvoiceService {
                 <tr>
                     <td>${item.label} ${item?.capped === true ? '**' : ''}</td>
                     <td>${item.quantity}</td>
-                    <td>${item.unit_price.toFixed(4)}</td>
-                    <td>${item.total.toFixed(4)}</td>
+                    <td>${item.unit_price}</td>
+                    <td>${item.total}</td>
                 </tr>`;
             }
 
             revenue_data += `
                 <tr class="sub-total">
                 <td colspan="3">Sub Total</td>
-                <td class="table-total">${tpp_data.full_total.toFixed(4)}</td>
-                </tr>
-                <tr class="vat">
-                <td colspan="3">VAT</td>
-                <td class="table-total">${tpp_data.vat.toFixed(4)}</td>
+                <td class="table-total">${tpp_data?.full_total}</td>
                 </tr>`;
         }
 
@@ -4366,8 +4456,8 @@ export class InvoiceService {
             color: #444;
         }
         .lif-details{
-            color: #6c5c98;
-    font-weight: 500;
+            color: #1b194f;
+    font-weight: 600;
         }
         .date{
             font-weight: 600;  
@@ -4395,7 +4485,7 @@ export class InvoiceService {
         <div class="header">
             <div>
                 <h1>LFI STATEMENT OF REVENUE</h1>
-                <p><strong>Revenue Statement #001</strong><br><strong>${moment(data.createdAt).format('DD MMMM YYYY')}</strong> </p>
+                <p style="color: #1b194f;"><strong>Revenue Statement #001</strong><br><strong>${moment(data.createdAt).format('DD MMMM YYYY')}</strong> </p>
                 <p class="lif-details"><br>${data.lfi_id}<br>Address1</p>
                 <p class="lif-details">Invoice Currency : AED</p>
             </div>
@@ -4419,10 +4509,6 @@ export class InvoiceService {
             </thead>
             <tbody>
                 ${revenue_data}
-                <tr class="vat">
-                    <td colspan="4">Total VAT</td>
-                    <td class="table-total">${total_vat}</td>
-                </tr>
                 <tr class="sub-total">
                     <td class="" colspan="4">Grand Total</td>
                     <td class="table-total">${grand_total}</td>
