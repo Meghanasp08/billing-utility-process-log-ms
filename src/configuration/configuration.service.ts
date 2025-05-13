@@ -43,9 +43,15 @@ export class ConfigurationService {
     }
     async getGlobalData(limit: number = 10, offset: number = 0) {
         try {
-            const total = await this.globalModel.countDocuments().exec();
+            const total = await this.globalModel.countDocuments({
+                type: { $ne: "BPS" },
+                Description: { $not: /Mdp rate/i },
+            }).exec();
 
-            const globalData = await this.globalModel.find().skip(offset)
+            const globalData = await this.globalModel.find({
+                type: { $ne: "BPS" },
+                Description: { $not: /Mdp rate/i }, // Exclude objects where Description contains "non large value" (case-insensitive)
+            }).skip(offset)
                 .limit(limit).exec();
             // return globalData;
             return {
