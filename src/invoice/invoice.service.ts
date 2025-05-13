@@ -46,9 +46,10 @@ export class InvoiceService {
         const month = Number(PaginationDTO?.month) ?? 0;
         const year = Number(PaginationDTO?.year) ?? 0;
 
-        if (month && year && month !== 0) {
-
+        if (month && month !== 0) {
             options.invoice_month = month
+        }
+        if(year){
             options.invoice_year = year
         }
 
@@ -4102,7 +4103,7 @@ export class InvoiceService {
                             ${service_initiation}
                             <tr class="">
                                 <td class="sub-total-row " colspan="6">SUB TOTAL</td>
-                                <td class="table-total">${serviceInitiationItem?.sub_total ?? 0}</td>
+                                <td class="table-total">${serviceInitiationItem?.category_total ?? 0}</td>
                             </tr>
                         </tbody>
                     </table>
