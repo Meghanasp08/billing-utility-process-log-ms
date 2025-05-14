@@ -98,7 +98,13 @@ export class ProfileService {
       const numericLimit = Number(limit);
       // const total = await this.logModel.countDocuments(filter).exec();
       const aggregateQuery = [
-        { $match: filter },
+        {
+          $match: {
+            ...filter, // Existing filter conditions
+            chargeable: true,
+            success: true,
+          },
+        },
         {
           $group: {
             _id: group === 'lfi' ? "$raw_api_log_data.lfi_id" : "$raw_api_log_data.tpp_id",
@@ -113,9 +119,9 @@ export class ProfileService {
             total_applicable_fee: { $sum: "$applicableFee" },
           },
         },
-        // { $sort: { _id: 1 as 1 | -1 } }, // Sort by _id (can customize if needed)
-        { $skip: numericOffset }, // Skip records for pagination
-        { $limit: numericLimit }, // Limit the number of records returned
+        { $sort: { _id: 1 as 1 | -1 } },
+        { $skip: numericOffset },
+        { $limit: numericLimit },
       ];
 
       const result = await this.logModel.aggregate(aggregateQuery).exec();

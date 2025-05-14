@@ -1,16 +1,18 @@
 import { Module } from '@nestjs/common';
-import { InvoiceService } from './invoice.service';
-import { InvoiceController } from './invoice.controller';
 import { MongooseModule } from '@nestjs/mongoose';
-import { InvoiceSchema } from './schemas/invoice.schema';
+import { AuthModule } from 'src/auth/auth.module';
+import { GlobalConfiguration, GlobalConfigurationSchema } from 'src/configuration/schema/global_config.schema';
+import { MailModule } from 'src/mail/mail.module';
 import { LogSchema } from 'src/upload/schemas/billing-log.schema';
-import { TppDataSchema } from 'src/upload/schemas/tpp-data.schema';
 import { LfiDataSchema } from 'src/upload/schemas/lfi-data.schema';
+import { TppDataSchema } from 'src/upload/schemas/tpp-data.schema';
+import { InvoiceController } from './invoice.controller';
+import { InvoiceService } from './invoice.service';
 import { CollectionMemoSchema } from './schemas/collection-memo.schems';
+import { CounterSchema } from './schemas/counter.schema';
+import { InvoiceSchema } from './schemas/invoice.schema';
 import { SingleDayTppInvoiceSchema } from './schemas/single-day-invoice-tpp.schems';
 import { SingleDayCollectionMemoSchema } from './schemas/single_day_collection-memo.schems';
-import { GlobalConfiguration, GlobalConfigurationSchema } from 'src/configuration/schema/global_config.schema';
-import { CounterSchema } from './schemas/counter.schema';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { CounterSchema } from './schemas/counter.schema';
       { name: 'Counter', schema: CounterSchema },
 
     ]),
+    MailModule,
+    AuthModule,
   ],
   controllers: [InvoiceController],
   providers: [InvoiceService],

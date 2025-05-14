@@ -1,14 +1,19 @@
-import { Body, Controller, Get, HttpStatus, Param, Post, Query, Res, ValidationPipe } from '@nestjs/common';
-import { InvoiceService } from './invoice.service';
-import { PaginationDTO } from 'src/common/dto/common.dto';
-import * as path from 'path';
+import { Body, Controller, Get, HttpStatus, Param, Post, Query, Res, UseGuards, ValidationPipe } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import * as fs from 'fs';
+import * as path from 'path';
+import { JwtAuthGuard } from 'src/auth/guard/jwt-auth-guard';
+import { PaginationDTO } from 'src/common/dto/common.dto';
+import { InvoiceLfiEmailDto, InvoiceTppEmailDto } from './dto/invoice.dto';
+import { InvoiceService } from './invoice.service';
 
 @Controller('invoice')
 export class InvoiceController {
   constructor(private readonly invoiceService: InvoiceService) { }
 
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Get()
   async findAllInvoices(@Query(ValidationPipe) PaginationDTO: PaginationDTO) {
     try {
@@ -24,7 +29,8 @@ export class InvoiceController {
       throw error;
     }
   }
-
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Get('collection-memo')
   async findAllCollectionMemo(@Query(ValidationPipe) PaginationDTO: PaginationDTO) {
     try {
@@ -40,7 +46,8 @@ export class InvoiceController {
       throw error;
     }
   }
-
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Get('collection-memo/:id')
   async findCollectionMemoById(@Param('id') id: string) {
     try {
@@ -55,7 +62,8 @@ export class InvoiceController {
       throw error;
     }
   }
-
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Post()
   async invoiceCreation(@Body(ValidationPipe) invoiceDto: any,): Promise<any> {
     try {
@@ -70,7 +78,8 @@ export class InvoiceController {
       throw error;
     }
   }
-
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Post('single-day-creation')
   async invoiceCreationSingleDay(@Body(ValidationPipe) invoiceDto: any,): Promise<any> {
     try {
@@ -85,7 +94,8 @@ export class InvoiceController {
       throw error;
     }
   }
-
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Post('monthly-creation')
   async invoiceCreationMonthlyTpp(@Body(ValidationPipe) invoiceDto: any,): Promise<any> {
     try {
@@ -100,7 +110,8 @@ export class InvoiceController {
       throw error;
     }
   }
-
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Get(':id')
   async getInvoiceDetails(@Param('id') id: string): Promise<any> {
     try {
@@ -115,7 +126,8 @@ export class InvoiceController {
       throw error;
     }
   }
-
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Get('billing-tpp/:tpp_id')
   async getbillingTpps(@Param('tpp_id') tpp_id: string, @Query(ValidationPipe) invoiceDto: any): Promise<any> {
     try {
@@ -130,7 +142,8 @@ export class InvoiceController {
       throw error;
     }
   }
-
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Get('billing-lfi/:lf_id')
   async getbillingLfis(@Param('lf_id') lf_id: string, @Query(ValidationPipe) invoiceDto: any): Promise<any> {
     try {
@@ -145,7 +158,8 @@ export class InvoiceController {
       throw error;
     }
   }
-
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Post('pdf-generate-tpp')
   async generateInvoicePDFTpp(@Body(ValidationPipe) invoiceDto: any, @Res() res: Response
   ): Promise<any> {
@@ -175,13 +189,14 @@ export class InvoiceController {
       });
     }
   }
-
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Post('pdf-generate-lfi')
   async generateInvoicePDFLfi(@Body(ValidationPipe) invoiceDto: any, @Res() res: Response
   ): Promise<any> {
     try {
       const filePath = await this.invoiceService.generateInvoicePDFLfi(invoiceDto);
-      const fileName = path.basename(filePath); 
+      const fileName = path.basename(filePath);
 
       return res.download(filePath, fileName, (err) => {
         if (err) {
@@ -203,6 +218,37 @@ export class InvoiceController {
         message: 'Failed to generate invoice PDF',
         error: error.message,
       });
+    }
+  }
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Post('send-tpp-invoice')
+  async sendInvoiceTppEmail(
+    @Body(ValidationPipe) emailDto: InvoiceTppEmailDto,
+  ): Promise<any> {
+    try {
+      let mail = true;
+      const result = await this.invoiceService.generateInvoicePDFTpp(emailDto, mail);
+      return { message: 'Email sent successfully', result };
+    } catch (error) {
+      console.error('Error sending email:', error);
+      throw new Error('Failed to send email');
+    }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Post('send-lfi-invoice')
+  async sendInvoiceLfiEmail(
+    @Body(ValidationPipe) emailDto: InvoiceLfiEmailDto,
+  ): Promise<any> {
+    try {
+      let mail = true;
+      const result = await this.invoiceService.generateInvoicePDFLfi(emailDto, mail);
+      return { message: 'Email sent successfully', result };
+    } catch (error) {
+      console.error('Error sending email:', error);
+      throw new Error('Failed to send email');
     }
   }
 }

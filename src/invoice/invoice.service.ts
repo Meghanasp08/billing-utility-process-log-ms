@@ -7,6 +7,7 @@ import { PaginationEnum, } from 'src/common/constants/constants.enum';
 import { PaginationDTO } from 'src/common/dto/common.dto';
 import { collection_memo_config, invoice_config } from 'src/config/app.config';
 import { GlobalConfiguration, GlobalConfigurationDocument } from 'src/configuration/schema/global_config.schema';
+import { MailService } from 'src/mail/mail.service';
 const puppeteer = require('puppeteer')
 @Injectable()
 export class InvoiceService {
@@ -19,7 +20,8 @@ export class InvoiceService {
         @InjectModel('SingleDayTppInvoice') private readonly singleDayTppInvoiceModel: Model<any>,
         @InjectModel('SingleDayCollectionMemo') private readonly singleDayCollectionMemoModel: Model<any>,
         @InjectModel('Counter') private readonly CounterModel: Model<any>,
-        @InjectModel(GlobalConfiguration.name) private globalModel: Model<GlobalConfigurationDocument>
+        @InjectModel(GlobalConfiguration.name) private globalModel: Model<GlobalConfigurationDocument>,
+        private readonly mailService: MailService,
     ) { }
 
     async findAllInvoices(PaginationDTO: PaginationDTO): Promise<any> {
@@ -3320,7 +3322,7 @@ export class InvoiceService {
         return result
     }
 
-    async generateInvoicePDFTpp(data) {
+    async generateInvoicePDFTpp(data: any, mail: boolean = false) {
         if (!fs.existsSync(`./temp`)) {
             fs.mkdirSync(`./temp`)
         }
@@ -3359,9 +3361,28 @@ export class InvoiceService {
             }
         });
         await browser.close();
+        let result;
+        if (mail) {
+            try {
+                const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath); // Ensure mailservi.sendmail returns a response
+                // Optionally delete the PDF after sending
+                fs.unlink(attachmentPath, (unlinkErr) => {
+                    if (unlinkErr) {
+                        console.error('Error deleting PDF file:', unlinkErr);
+                    } else {
+                        console.log(`Deleted temp PDF: ${attachmentPath}`);
+                    }
+                });
+                result = mailResponse
+            } catch (error) {
+                console.error('Error sending mail:', error);
+                throw new Error('Failed to send mail with the PDF attachment');
+            }
+        } else {
+            result = attachmentPath
+        }
 
-        return attachmentPath
-
+        return result;
     }
 
     async invoiceTemplate(data: any): Promise<any> {
@@ -4168,7 +4189,7 @@ export class InvoiceService {
 
     }
 
-    async generateInvoicePDFLfi(data: any) {
+    async generateInvoicePDFLfi(data: any, mail: boolean = false) {
         if (!fs.existsSync(`./temp`)) {
             fs.mkdirSync(`./temp`)
         }

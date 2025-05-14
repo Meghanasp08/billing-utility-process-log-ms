@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import * as nodemailer from 'nodemailer';
 const fs = require('fs')
-import * as nodemailer from 'nodemailer'
 
 @Injectable()
 export class MailService {
@@ -110,5 +110,10 @@ export class MailService {
             html: body_html,
             attachments: null
         }
+    }
+
+    async sendInvoiceEmail(data: any) {
+        console.log('iam data', data)
+
     }
 }
