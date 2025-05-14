@@ -36,8 +36,8 @@ export class UploadService {
     nonLargeValueCapMerchant?: any; //50 aed
     nonLargeValueFreeLimitMerchant?: any; //200 aed
     bulkLargeCorporatefee?: any; // 2.5
-    nonBulkLargeValueCapMerchant?: any; //4 aed
-    paymentLargeValueFeePeer?: any; //4 aed
+    // nonBulkLargeValueCapMerchant?: any; //4 aed
+    paymentLargeValueFee?: any; //4 aed
     paymentFeeMe2me?: any; // 0.2 aed
     bulkMe2meCap?: any; //2.5 aed
     paymentNonLargevalueFeePeer?: any; //0.25 aed
@@ -66,11 +66,8 @@ export class UploadService {
           case 'nonLargeValueFreeLimitMerchant':
             this.variables.nonLargeValueFreeLimitMerchant = obj;
             break;
-          case 'nonBulkLargeValueCapMerchant':
-            this.variables.nonBulkLargeValueCapMerchant = obj;
-            break;
-          case 'paymentLargeValueFeePeer':
-            this.variables.paymentLargeValueFeePeer = obj;
+          case 'paymentLargeValueFee':
+            this.variables.paymentLargeValueFee = obj;
             break;
           case 'bulkLargeCorporatefee':
             this.variables.bulkLargeCorporatefee = obj;
@@ -524,6 +521,7 @@ export class UploadService {
           "discounted",
           "api_hub_fee",
           "applicableApiHubFee",
+          "apiHubVolume",
           "calculatedFee",
           "applicableFee",
           "unit_price",
@@ -967,14 +965,14 @@ export class UploadService {
 
             if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
               if (record.group == 'payment-non-bulk') {
-                calculatedFee = this.variables.nonBulkLargeValueCapMerchant.value
+                calculatedFee = this.variables.paymentLargeValueFee.value
                 applicableFee = calculatedFee
-                unit_price = this.variables.nonBulkLargeValueCapMerchant.value;
+                unit_price = this.variables.paymentLargeValueFee.value;
                 volume = 1;
               } else if (record.group == 'payment-bulk') {
-                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * this.variables.nonBulkLargeValueCapMerchant.value).toFixed(3));
+                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * this.variables.paymentLargeValueFee.value).toFixed(3));
                 applicableFee = calculatedFee
-                unit_price = this.variables.nonBulkLargeValueCapMerchant.value;
+                unit_price = this.variables.paymentLargeValueFee.value;
                 volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0);
               }
 
@@ -1014,9 +1012,9 @@ export class UploadService {
           else if (record.type === 'peer-2-peer') {
             if (record.group === 'payment-bulk') {
               if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
-                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * this.variables.paymentLargeValueFeePeer.value).toFixed(3));
+                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * this.variables.paymentLargeValueFee.value).toFixed(3));
                 applicableFee = calculatedFee
-                unit_price = this.variables.paymentLargeValueFeePeer.value;
+                unit_price = this.variables.paymentLargeValueFee.value;
                 volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0);
 
               } else {
@@ -1031,9 +1029,9 @@ export class UploadService {
             }
             else if (record.group === 'payment-non-bulk') {
               if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
-                calculatedFee = parseFloat((this.variables.paymentLargeValueFeePeer.value).toFixed(3));
+                calculatedFee = parseFloat((this.variables.paymentLargeValueFee.value).toFixed(3));
                 applicableFee = calculatedFee
-                unit_price = this.variables.paymentLargeValueFeePeer.value;
+                unit_price = this.variables.paymentLargeValueFee.value;
                 volume = 1;
 
               } else {

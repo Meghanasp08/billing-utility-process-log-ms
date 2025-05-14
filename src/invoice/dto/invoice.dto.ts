@@ -59,5 +59,5 @@ export class InvoiceLfiEmailDto {
     })
     @IsString()
     @IsNotEmpty()
-    tpp_id: string;
+    lfi_id: string;
 }
