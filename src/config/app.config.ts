@@ -25,20 +25,20 @@ export const AppConfig = {
 
 export const invoice_config = {
     startNumber: 1000,
-    minDigits: 6,
+    minDigits: 7,
     leadingChar: "0",
     prefix: "INV",
-    prefixSeparator: "-",
+    prefixSeparator: "",
     suffix: "",
     suffixSeparator: ""
 };
 
 export const collection_memo_config = {
     startNumber: 4000,
-    minDigits: 6,
+    minDigits: 7,
     leadingChar: "0",
     prefix: "CM",
-    prefixSeparator: "-",
+    prefixSeparator: "",
     suffix: "",
     suffixSeparator: ""
 };

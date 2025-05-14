@@ -1123,7 +1123,7 @@ export class InvoiceService {
                         'raw_api_log_data.tpp_id': tpp_id,
                         "chargeable": true,
                         "success": true,
-                        "volume": { $gt: 0 },
+                        "apiHubVolume": { $gt: 0 },
                         $and: [
                             startDate && endDate
                                 ? {
@@ -1690,6 +1690,8 @@ export class InvoiceService {
                 },
             );
         }
+        const year = moment().format('YY');   // "25"
+        const month = moment().format('MM');  // "05"
         let startNumber = counter?.lastInvoiceNumber ?? config.startNumber
         const nextNumber = startNumber + 1;
         const paddedNumber = String(nextNumber).padStart(config.minDigits, config.leadingChar);
@@ -1697,7 +1699,7 @@ export class InvoiceService {
         const prefixPart = config.prefix ? config.prefix + config.prefixSeparator : "";
         const suffixPart = config.suffix ? config.suffixSeparator + config.suffix : "";
 
-        return `${prefixPart}${paddedNumber}${suffixPart}`;
+        return `${prefixPart}${year}${month}${paddedNumber}${suffixPart}`;
     }
 
     async generateCollectionMemoInvNumber(): Promise<string> {
@@ -1722,6 +1724,8 @@ export class InvoiceService {
             );
         }
 
+        const year = moment().format('YY');   // "25"
+        const month = moment().format('MM');  // "05"
         let startNumber = counter?.lastcollectionMemoNumber ?? config.startNumber
         const nextNumber = startNumber + 1;
         const paddedNumber = String(nextNumber).padStart(config.minDigits, config.leadingChar);
@@ -1729,7 +1733,7 @@ export class InvoiceService {
         const prefixPart = config.prefix ? config.prefix + config.prefixSeparator : "";
         const suffixPart = config.suffix ? config.suffixSeparator + config.suffix : "";
 
-        return `${prefixPart}${paddedNumber}${suffixPart}`;
+        return `${prefixPart}${year}${month}${paddedNumber}${suffixPart}`;
     }
 
     async getInvoiceDetails(id: string): Promise<any> {
