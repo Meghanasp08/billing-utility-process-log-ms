@@ -453,6 +453,7 @@ export class ProfileService {
       discounted: entry.discounted,
       api_hub_fee: entry.api_hub_fee,
       applicableApiHubFee: entry.applicableApiHubFee,
+      apiHubVolume: entry.apiHubVolume,
       calculatedFee: entry.calculatedFee,
       applicableFee: entry.applicableFee,
       unit_price: entry.unit_price,
