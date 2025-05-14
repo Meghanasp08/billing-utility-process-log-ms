@@ -49,7 +49,7 @@ export class InvoiceService {
         if (month && month !== 0) {
             options.invoice_month = month
         }
-        if(year){
+        if (year) {
             options.invoice_year = year
         }
 
@@ -98,10 +98,10 @@ export class InvoiceService {
         const nonBulkLargeValueCapMerchant = globalConfiData.find(item => item.key === "nonBulkLargeValueCapMerchant")?.value;
         const bulkLargeCorporatefee = globalConfiData.find(item => item.key === "bulkLargeCorporatefee")?.value;
         const dataLargeCorporateMdp = globalConfiData.find(item => item.key === "dataLargeCorporateMdp")?.value;
-        
+
         const vatPercent = vat?.value ?? 5
         const vatDecimal = vatPercent / 100;
-        nonLargeValueMerchantBps = Number(nonLargeValueMerchantBps)/10000
+        nonLargeValueMerchantBps = Number(nonLargeValueMerchantBps) / 10000
         const tppData = await this.tppDataModel.find();
 
         const startDate = new Date(year, month - 1, 1);
@@ -748,10 +748,10 @@ export class InvoiceService {
                                                         branches: [
                                                             { case: { $eq: ["$$expectedLabel", "Merchant Collection"] }, then: nonLargeValueMerchantBps },
                                                             { case: { $eq: ["$$expectedLabel", "Peer-to-Peer"] }, then: paymentLargeValueFeePeer },
-                                                            { case: { $eq: ["$$expectedLabel", "Me-to-Me Transfer"] }, then:paymentFeeMe2me },
-                                                            { case: { $eq: ["$$expectedLabel", "Large value collection"] }, then: nonBulkLargeValueCapMerchant},
+                                                            { case: { $eq: ["$$expectedLabel", "Me-to-Me Transfer"] }, then: paymentFeeMe2me },
+                                                            { case: { $eq: ["$$expectedLabel", "Large value collection"] }, then: nonBulkLargeValueCapMerchant },
                                                             { case: { $eq: ["$$expectedLabel", "Corporate Payments"] }, then: bulkLargeCorporatefee },
-                                                            { case: { $eq: ["$$expectedLabel", "Corporate Treasury Data"] }, then:dataLargeCorporateMdp },
+                                                            { case: { $eq: ["$$expectedLabel", "Corporate Treasury Data"] }, then: dataLargeCorporateMdp },
                                                             { case: { $eq: ["$$expectedLabel", "Customer Data"] }, then: "$lfi_data.mdp_rate" }
                                                         ],
                                                         default: 0.025
@@ -776,7 +776,7 @@ export class InvoiceService {
                             }
                         }
                     },
-                   
+
                     // {
                     //     $addFields: {
                     //         labels: {
@@ -909,7 +909,7 @@ export class InvoiceService {
                 status: 1,
                 notes: 'Invoice Added',
             }
-            
+
             const invoice = new this.invoiceModel(invoice_data)
             await invoice.save();
 
@@ -1121,7 +1121,7 @@ export class InvoiceService {
                         'raw_api_log_data.tpp_id': tpp_id,
                         "chargeable": true,
                         "success": true,
-                        "volume": { $gt: 0 },
+                        "apiHubVolume": { $gt: 0 },
                         $and: [
                             startDate && endDate
                                 ? {
@@ -1688,6 +1688,8 @@ export class InvoiceService {
                 },
             );
         }
+        const year = moment().format('YY');   // "25"
+        const month = moment().format('MM');  // "05"
         let startNumber = counter?.lastInvoiceNumber ?? config.startNumber
         const nextNumber = startNumber + 1;
         const paddedNumber = String(nextNumber).padStart(config.minDigits, config.leadingChar);
@@ -1695,7 +1697,7 @@ export class InvoiceService {
         const prefixPart = config.prefix ? config.prefix + config.prefixSeparator : "";
         const suffixPart = config.suffix ? config.suffixSeparator + config.suffix : "";
 
-        return `${prefixPart}${paddedNumber}${suffixPart}`;
+        return `${prefixPart}${year}${month}${paddedNumber}${suffixPart}`;
     }
 
     async generateCollectionMemoInvNumber(): Promise<string> {
@@ -1720,6 +1722,8 @@ export class InvoiceService {
             );
         }
 
+        const year = moment().format('YY');   // "25"
+        const month = moment().format('MM');  // "05"
         let startNumber = counter?.lastcollectionMemoNumber ?? config.startNumber
         const nextNumber = startNumber + 1;
         const paddedNumber = String(nextNumber).padStart(config.minDigits, config.leadingChar);
@@ -1727,7 +1731,7 @@ export class InvoiceService {
         const prefixPart = config.prefix ? config.prefix + config.prefixSeparator : "";
         const suffixPart = config.suffix ? config.suffixSeparator + config.suffix : "";
 
-        return `${prefixPart}${paddedNumber}${suffixPart}`;
+        return `${prefixPart}${year}${month}${paddedNumber}${suffixPart}`;
     }
 
     async getInvoiceDetails(id: string): Promise<any> {
@@ -3499,7 +3503,7 @@ export class InvoiceService {
                     </div>
                     <div class="invoice-total">
                         <span class="invoice-total-label">Total</span>
-                        <span class="invoice-total-amount">AED ${(memo.full_total).toFixed(2) }</span>
+                        <span class="invoice-total-amount">AED ${(memo.full_total).toFixed(2)}</span>
                     </div>
                 </div>
               </div>
