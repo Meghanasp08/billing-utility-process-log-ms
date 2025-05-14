@@ -112,8 +112,60 @@ export class MailService {
         }
     }
 
-    async sendInvoiceEmail(data: any) {
-        console.log('iam data', data)
+    async sendInvoiceEmail(attachmentPath: any, email: string,) {
+        if (!fs.existsSync(attachmentPath)) {
+            throw new Error('Attachment file not found');
+        }
+
+        const credentials = {
+            "host": "mail.trade-hub.ae",
+            "password": "Tradehub1202$",
+            "username": "ops@trade-hub.ae",
+            "reply_to": "ops@trade-hub.ae",
+            "sender_name": "TradeHub",
+            "port": "465",
+            "secure_flag": true
+        }
+        // console.log('MAIL_INFO', data)
+
+        const transporter = nodemailer.createTransport({
+            host: credentials?.host,
+            port: Number(credentials?.port),
+            secure: credentials?.secure_flag, // true for 465, false for other ports
+            auth: {
+                user: credentials?.username,
+                pass: credentials?.password
+            }
+        })
+
+        // Email options
+        const mailOptions = {
+            from: `"${'customName'}" <${process.env.EMAIL_USER}>`, // Custom name and email
+            to: email,
+            // cc: cc || undefined, // Add CC if provided
+            subject: "Monthly Invoice",
+            text: "Please find attached your monthly invoice for services provided ",
+            attachments: [
+                {
+                    filename: 'invoice.pdf',
+                    path: attachmentPath,
+                },
+            ],
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+
+        // Optionally delete the attachment after sending
+        // fs.unlink(attachmentPath, (err) => {
+        //     if (err) {
+        //         console.error('Error deleting file:', err);
+        //     } else {
+        //         console.log(`Deleted attachment: ${attachmentPath}`);
+        //     }
+        // });
+
+        return info;
+
 
     }
 }

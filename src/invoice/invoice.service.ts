@@ -3364,7 +3364,7 @@ export class InvoiceService {
         let result;
         if (mail) {
             try {
-                const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath); // Ensure mailservi.sendmail returns a response
+                const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath, invoice_data?.email); // Ensure mailservi.sendmail returns a response
                 // Optionally delete the PDF after sending
                 fs.unlink(attachmentPath, (unlinkErr) => {
                     if (unlinkErr) {
@@ -4230,7 +4230,28 @@ export class InvoiceService {
         await browser.close();
         console.log("PDF Generation Completed");
 
-        return attachmentPath
+        let result;
+        if (mail) {
+            try {
+                const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath, invoice_data?.email); // Ensure mailservi.sendmail returns a response
+                // Optionally delete the PDF after sending
+                fs.unlink(attachmentPath, (unlinkErr) => {
+                    if (unlinkErr) {
+                        console.error('Error deleting PDF file:', unlinkErr);
+                    } else {
+                        console.log(`Deleted temp PDF: ${attachmentPath}`);
+                    }
+                });
+                result = mailResponse
+            } catch (error) {
+                console.error('Error sending mail:', error);
+                throw new Error('Failed to send mail with the PDF attachment');
+            }
+        } else {
+            result = attachmentPath
+        }
+
+        return result;
     }
     async header_template() {
         return `
