@@ -10,6 +10,8 @@ export class UpdateglobalValueDto {
     @IsNumber()
     @IsNotEmpty()
     value: number;
+
+    data:any
 }
 
 export class GetglobalValueDto {

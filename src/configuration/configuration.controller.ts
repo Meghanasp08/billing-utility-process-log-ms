@@ -44,8 +44,8 @@ export class ConfigurationController {
         }
     }
 
-    // @UseGuards(JwtAuthGuard)
-    // @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
     @ApiOperation({ summary: 'Update Lfi details like MDP rate and Attended unattended calls.' })
     @Get('global')
     async GetGlobalData(@Req() req: any, @Query('limit') limit: number = 10,
