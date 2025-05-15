@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as nodemailer from 'nodemailer';
 import { GlobalConfiguration, GlobalConfigurationDocument } from 'src/configuration/schema/global_config.schema';
+import { SmtpConfigDto } from './dto/mail.dto';
 const fs = require('fs')
 
 @Injectable()
@@ -65,7 +66,7 @@ export class MailService {
             throw error;
         }
     }
-    async getEmailCredentials(){
+    async getEmailCredentials() {
         let options = {
             key: 'email'
         }
@@ -145,5 +146,32 @@ export class MailService {
         return info;
 
 
+    }
+
+    async testSmtp(config: SmtpConfigDto): Promise<any> {
+        const transporter = nodemailer.createTransport({
+            host: config.host,
+            port: Number(config.port),
+            secure: config.secure_flag, // true for 465, false for 587
+            auth: {
+                user: config.username,
+                pass: config.password,
+            },
+        });
+
+        const testEmail = {
+            from: `"${config.sender_name}" <${config.username}>`,
+            to: config.username, // send to self if test_receiver not given
+            subject: 'SMTP Test Email',
+            text: 'This is a test email to verify SMTP configuration.',
+            replyTo: config.reply_to,
+        };
+
+        try {
+            const info = await transporter.sendMail(testEmail);
+            return { success: true, message: 'Test email sent', info };
+        } catch (error) {
+            return { success: false, message: 'Failed to send email', error };
+        }
     }
 }
