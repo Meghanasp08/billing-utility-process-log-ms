@@ -688,6 +688,11 @@ export class InvoiceService {
                         }
                     },
                     {
+                        $match: {
+                            total: { $ne: 0 }
+                        }
+                    },
+                    {
                         $group: {
                             _id: "$_id.lfi_id",
                             labels: {
