@@ -7,7 +7,10 @@ import { ConfigurationService } from './configuration.service';
 import { GlobalConfiguration, GlobalConfigurationSchema } from './schema/global_config.schema';
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: LfiData.name, schema: LfiDataSchema }, { name: GlobalConfiguration.name, schema: GlobalConfigurationSchema },]),
+  imports: [MongooseModule.forFeature([
+    { name: LfiData.name, schema: LfiDataSchema },
+    { name: GlobalConfiguration.name, schema: GlobalConfigurationSchema },
+  ]),
     AuthModule],
   providers: [ConfigurationService],
   controllers: [ConfigurationController]

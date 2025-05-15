@@ -1,42 +1,20 @@
 import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import * as nodemailer from 'nodemailer';
+import { GlobalConfiguration, GlobalConfigurationDocument } from 'src/configuration/schema/global_config.schema';
 const fs = require('fs')
 
 @Injectable()
 export class MailService {
+    constructor(
+        @InjectModel(GlobalConfiguration.name) private globalModel: Model<GlobalConfigurationDocument>,
+    ) { }
 
     async sendEmail(data: any) {
         try {
-            // const aggregation = [
-            //     {
-            //         $match: {
-            //             name: 'notifications'
-            //         }
-            //     },
-            //     {
-            //         $unwind: {
-            //             path: '$values'
-            //         }
-            //     },
-            //     {
-            //         $match: {
-            //             'values.type': 'EMAIL'
-            //         }
-            //     }
-            // ]
-            // let email_creds = await this.appSettingsModel.aggregate(aggregation);
-            // const credentials = email_creds[0]?.values?.credentials
 
-            const credentials = {
-                "host": "mail.trade-hub.ae",
-                "password": "Tradehub1202$",
-                "username": "ops@trade-hub.ae",
-                "reply_to": "ops@trade-hub.ae",
-                "sender_name": "TradeHub",
-                "port": "465",
-                "secure_flag": true
-            }
-            // console.log('MAIL_INFO', data)
+            const credentials = await this.getEmailCredentials();
 
             const transporter = nodemailer.createTransport({
                 host: credentials?.host,
@@ -87,6 +65,14 @@ export class MailService {
             throw error;
         }
     }
+    async getEmailCredentials(){
+        let options = {
+            key: 'email'
+        }
+        const globalData = await this.globalModel.findOne(options)
+        return globalData?.data;
+    }
+
     async welcomeMail(data: any) {
         let subject = 'WELCOME';
         let from = `TradeHub`
@@ -117,15 +103,7 @@ export class MailService {
             throw new Error('Attachment file not found');
         }
 
-        const credentials = {
-            "host": "mail.trade-hub.ae",
-            "password": "Tradehub1202$",
-            "username": "ops@trade-hub.ae",
-            "reply_to": "ops@trade-hub.ae",
-            "sender_name": "TradeHub",
-            "port": "465",
-            "secure_flag": true
-        }
+        const credentials = await this.getEmailCredentials();
         // console.log('MAIL_INFO', data)
 
         const transporter = nodemailer.createTransport({

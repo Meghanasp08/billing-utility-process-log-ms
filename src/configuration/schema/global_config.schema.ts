@@ -14,9 +14,14 @@ export class GlobalConfiguration {
     @Prop({ required: true })
     value: number;
 
+    @Prop({ type: Object, required: false })
+    data: Record<string, any>;
+
     @Prop({ required: false })
     type: string; // Example: "50 AED", "250 fils"
 
+    @Prop({ type: Boolean, default: false })
+    single_update: boolean;
 }
 
 export const GlobalConfigurationSchema = SchemaFactory.createForClass(GlobalConfiguration);
