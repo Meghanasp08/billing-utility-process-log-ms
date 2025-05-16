@@ -97,10 +97,36 @@ export class ProfileService {
       const numericOffset = Number(offset);
       const numericLimit = Number(limit);
       // const total = await this.logModel.countDocuments(filter).exec();
+      // const aggregateQuery = [
+      //   {
+      //     $match: {
+      //       ...filter, // Existing filter conditions
+      //       chargeable: true,
+      //       success: true,
+      //     },
+      //   },
+      //   {
+      //     $group: {
+      //       _id: group === 'lfi' ? "$raw_api_log_data.lfi_id" : "$raw_api_log_data.tpp_id",
+      //       ...(group === 'tpp' && {
+      //         tpp_name: { $first: "$raw_api_log_data.tpp_name" },
+      //       }),
+      //       ...(group === 'lfi' && {
+      //         lfi_name: { $first: "$raw_api_log_data.lfi_name" },
+      //       }),
+      //       total_api_hub_fee: { $sum: "$applicableApiHubFee" },
+      //       total_calculated_fee: { $sum: "$calculatedFee" },
+      //       total_applicable_fee: { $sum: "$applicableFee" },
+      //     },
+      //   },
+      //   { $sort: { _id: 1 as 1 | -1 } },
+      //   { $skip: numericOffset },
+      //   { $limit: numericLimit },
+      // ];
       const aggregateQuery = [
         {
           $match: {
-            ...filter, // Existing filter conditions
+            ...filter,
             chargeable: true,
             success: true,
           },
@@ -120,18 +146,17 @@ export class ProfileService {
           },
         },
         { $sort: { _id: 1 as 1 | -1 } },
-        { $skip: numericOffset },
-        { $limit: numericLimit },
       ];
-
-      const result = await this.logModel.aggregate(aggregateQuery).exec();
+      const paginatedQuery = [...aggregateQuery, { $skip: numericOffset }, { $limit: numericLimit }];
+      const result = await this.logModel.aggregate(paginatedQuery).exec();
+      const total = await this.logModel.aggregate(aggregateQuery).exec();
       // return result;
       return {
         result,
         pagination: {
           offset: offset,
           limit: limit,
-          total: result.length
+          total: total.length,
         }
       }
     } catch (error) {
