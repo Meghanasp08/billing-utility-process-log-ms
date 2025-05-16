@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsPositive, IsString, Max, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsNumber, IsPositive, IsString, Max, Min } from 'class-validator';
 
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -60,4 +60,38 @@ export class InvoiceLfiEmailDto {
     @IsString()
     @IsNotEmpty()
     lfi_id: string;
+}
+
+export class UpdateInvoiceValueDto {
+    @ApiProperty({
+        description: 'status update to PAID/UNPAID',
+        example: 1,
+        required: true,
+    })
+    @IsNumber()
+    @IsNotEmpty()
+    value: number;
+
+}
+
+export class UpdateManyDto {
+
+    @ApiProperty({
+        description: 'Invoice ID',
+        example: 'id',
+        required: true,
+    })
+    @IsString()
+    @IsNotEmpty()
+    _id: string;
+
+    @ApiProperty({
+        description: 'status for invoice data.',
+        example: 1,
+        required: true,
+    })
+    @IsNumber()
+    @IsNotEmpty()
+    staus: number;
+
 }

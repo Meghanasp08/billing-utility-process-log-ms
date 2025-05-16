@@ -1,11 +1,11 @@
-import { Body, Controller, Get, HttpStatus, Param, Post, Query, Res, UseGuards, ValidationPipe } from '@nestjs/common';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { Body, Controller, Get, HttpStatus, Param, Patch, Post, Put, Query, Req, Res, UseGuards, ValidationPipe } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Response } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth-guard';
 import { PaginationDTO } from 'src/common/dto/common.dto';
-import { InvoiceLfiEmailDto, InvoiceTppEmailDto } from './dto/invoice.dto';
+import { InvoiceLfiEmailDto, InvoiceTppEmailDto, UpdateInvoiceValueDto, UpdateManyDto } from './dto/invoice.dto';
 import { InvoiceService } from './invoice.service';
 
 @Controller('invoice')
@@ -62,6 +62,37 @@ export class InvoiceController {
       throw error;
     }
   }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update invoice status to PAID/UNPAID' })
+  @Patch('update-invoice/:id')
+  async updateInvoiceData(@Req() req: any, @Param('id') id: string, @Body() updateInvoiceValueDto: UpdateInvoiceValueDto,) {
+    try {
+      const invoiceData = await this.invoiceService.updateInvoiceData(id, updateInvoiceValueDto);
+      return {
+        message: 'Invoice data updated successfully',
+        result: invoiceData,
+        statusCode: HttpStatus.OK
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Bulk Update for InvoiceData' })
+  @Put('bulk-update')
+  async bulkUpdate(@Body() data: UpdateManyDto[]) {
+    const invoiceData = await this.invoiceService.bulkUpdate(data);
+    return {
+      message: 'Invoice Data Updates successfully',
+      result: invoiceData,
+      statusCode: HttpStatus.OK
+    }
+  }
+
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Post()

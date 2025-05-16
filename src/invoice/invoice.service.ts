@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as fs from "fs";
 import * as moment from 'moment';
@@ -8,6 +8,7 @@ import { PaginationDTO } from 'src/common/dto/common.dto';
 import { collection_memo_config, invoice_config } from 'src/config/app.config';
 import { GlobalConfiguration, GlobalConfigurationDocument } from 'src/configuration/schema/global_config.schema';
 import { MailService } from 'src/mail/mail.service';
+import { UpdateInvoiceValueDto } from './dto/invoice.dto';
 const puppeteer = require('puppeteer')
 @Injectable()
 export class InvoiceService {
@@ -97,7 +98,7 @@ export class InvoiceService {
         let nonLargeValueMerchantBps = globalConfiData.find(item => item.key === "nonLargeValueMerchantBps")?.value;
         const paymentLargeValueFeePeer = globalConfiData.find(item => item.key === "paymentNonLargevalueFeePeer")?.value;
         const paymentFeeMe2me = globalConfiData.find(item => item.key === "paymentFeeMe2me")?.value;
-        const nonBulkLargeValueCapMerchant = globalConfiData.find(item => item.key === "nonBulkLargeValueCapMerchant")?.value;
+        const paymentLargeValueFee = globalConfiData.find(item => item.key === "paymentLargeValueFee")?.value;
         const bulkLargeCorporatefee = globalConfiData.find(item => item.key === "bulkLargeCorporatefee")?.value;
         const dataLargeCorporateMdp = globalConfiData.find(item => item.key === "dataLargeCorporateMdp")?.value;
 
@@ -624,7 +625,7 @@ export class InvoiceService {
                                                     }
                                                 ]
                                             },
-                                            then: "Large Value Collections"  // nonBulkLargeValueCapMerchant
+                                            then: "Large Value Collections"  // paymentLargeValueFee
                                         },
                                         {
                                             case: {
@@ -756,7 +757,7 @@ export class InvoiceService {
                                                             { case: { $eq: ["$$expectedLabel", "Merchant Collection"] }, then: nonLargeValueMerchantBps },
                                                             { case: { $eq: ["$$expectedLabel", "Peer-to-Peer"] }, then: paymentLargeValueFeePeer },
                                                             { case: { $eq: ["$$expectedLabel", "Me-to-Me Transfer"] }, then: paymentFeeMe2me },
-                                                            { case: { $eq: ["$$expectedLabel", "Large value collection"] }, then: nonBulkLargeValueCapMerchant },
+                                                            { case: { $eq: ["$$expectedLabel", "Large value collection"] }, then: paymentLargeValueFee },
                                                             { case: { $eq: ["$$expectedLabel", "Corporate Payments"] }, then: bulkLargeCorporatefee },
                                                             { case: { $eq: ["$$expectedLabel", "Corporate Treasury Data"] }, then: dataLargeCorporateMdp },
                                                             { case: { $eq: ["$$expectedLabel", "Customer Data"] }, then: "$lfi_data.mdp_rate" }
@@ -1098,6 +1099,33 @@ export class InvoiceService {
         });
 
         return inputArray;
+    }
+
+    async updateInvoiceData(id: string, updateInvoiceValueDto: UpdateInvoiceValueDto) {
+
+        const existingInvoice = await this.invoiceModel.findById(id);
+        if (!existingInvoice) {
+            throw new NotFoundException(`Invoice data with ID ${id} not found.`);
+        }
+
+        const updatedInvoiceData = await this.invoiceModel.findByIdAndUpdate(
+            id,
+            { $set: updateInvoiceValueDto },
+            { new: true }
+        );
+
+        return updatedInvoiceData;
+    }
+
+    async bulkUpdate(data: Array<{ _id: string, [key: string]: any }>) {
+        const operations = data.map(item => ({
+            updateOne: {
+                filter: { _id: new Types.ObjectId(item._id) },
+                update: { $set: item }
+            }
+        }));
+
+        return await this.invoiceModel.bulkWrite(operations);
     }
 
     async billingTpp(
@@ -4240,7 +4268,7 @@ export class InvoiceService {
         if (mail) {
             try {
                 let tpp = false;
-                const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath, invoice_data?.email,invoice_data?.lfi_name,invoice_data?.invoice_number, tpp); // Ensure mailservi.sendmail returns a response
+                const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath, invoice_data?.email, invoice_data?.lfi_name, invoice_data?.invoice_number, tpp); // Ensure mailservi.sendmail returns a response
                 // Optionally delete the PDF after sending
                 fs.unlink(attachmentPath, (unlinkErr) => {
                     if (unlinkErr) {

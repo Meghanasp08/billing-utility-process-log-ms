@@ -1,5 +1,6 @@
 
 import * as mongoose from 'mongoose'
+import { InvoiceStatus } from 'src/common/constants/constants.enum';
 
 export const InvoiceSchema = new mongoose.Schema(
   {
@@ -16,8 +17,8 @@ export const InvoiceSchema = new mongoose.Schema(
     billing_period_end: Date,   // Month Last
     issued_date: Date,        // Generate Date
     due_date: Date,
-    invoice_month:Number,
-    invoice_year:Number,
+    invoice_month: Number,
+    invoice_year: Number,
     generated_at: Date,        // Generate Date
     currency: String,         //AED default
     tpp_usage_per_lfi: Array,
@@ -26,9 +27,10 @@ export const InvoiceSchema = new mongoose.Schema(
     vat_percent: Number, // Default 5 percent
     vat_total: Number,  // vat percent of invoice total
     total_amount: Number,  // total of invoice array
-    invoice_total:Number,
-    lfi_total:Number,
-    status: Number,
+    invoice_total: Number,
+    lfi_total: Number,
+    status: { type: Number, default: InvoiceStatus.PAID },
+    status_description:String,
     notes: String,
   },
   {
