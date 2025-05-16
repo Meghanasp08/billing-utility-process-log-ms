@@ -21,6 +21,7 @@ export const AppConfig = {
     ],
     discount: 200,
     aedConstant: 100,
+    highValueMerchantcapCheck: 20000,
 };
 
 export const invoice_config = {

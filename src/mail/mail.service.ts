@@ -99,7 +99,7 @@ export class MailService {
         }
     }
 
-    async sendInvoiceEmail(attachmentPath: any, email: string,) {
+    async sendInvoiceEmail(attachmentPath: any, email: string, clientName: string, invNumber: string, tpp: boolean) {
         if (!fs.existsSync(attachmentPath)) {
             throw new Error('Attachment file not found');
         }
@@ -122,8 +122,30 @@ export class MailService {
             from: `${credentials?.sender_name} <${credentials?.username}>`, // Custom name and email
             to: 'firoskhansha@gmail.com',
             // cc: cc || undefined, // Add CC if provided
-            subject: "Monthly Invoice",
-            text: "Please find attached your monthly invoice for services provided ",
+            subject: `Invoice and Statement of Account for ${clientName}`,
+            text: `Dear ${clientName},
+            Reference: ${invNumber}
+
+            Please find attached herewith the following accounting documents. Kindly ensure the payable amounts are duly made to the accounting details shown on the invoice.
+
+            The attachment contains:
+            
+            ${tpp?`
+            - TPP Monthly Billing Summary
+            - Tax Invoice
+            - Collection Memo for each LFI involved in the statement of account`:
+            `- LFI Statement Of Revenue`}
+
+            Thank you for your cooperation.
+
+            Thanks and Regards,
+            For Nebras
+            Web Admin
+
+            ------------------------------------------------------------------------------------
+            This is a computer-generated statement.
+
+            IMPORTANT: The contents of this email and any attachments are confidential. They are intended for the named recipient(s) only. If you have received this email by mistake, please notify the sender immediately and do not disclose the contents to anyone or make copies thereof.`,
             attachments: [
                 {
                     filename: 'invoice.pdf',

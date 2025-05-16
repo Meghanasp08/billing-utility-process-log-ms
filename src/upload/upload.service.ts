@@ -31,6 +31,7 @@ export class UploadService {
   ) { }
 
   private readonly peer_to_peer_types = AppConfig.peerToPeerTypes;
+  private readonly nonLargeValueCapMerchantCheck = AppConfig.highValueMerchantcapCheck;
 
   private variables: {
     nonLargeValueCapMerchant?: any; //50 aed
@@ -43,7 +44,7 @@ export class UploadService {
     paymentNonLargevalueFeePeer?: any; //0.25 aed
     attendedCallFreeLimit?: any; // 15 count
     unAttendedCallFreeLimit?: any; // 5 count
-    nonLargeValueCapMerchantCheck?: any; //20000 aed
+    // nonLargeValueCapMerchantCheck?: any; //20000 aed
     nonLargeValueMerchantBps?: any; //0.0038 aed
     bulkPeernonLargeValueCap?: any; //2.5 aed
     dataLargeCorporateMdp?: any; // 0.4 aed
@@ -86,9 +87,6 @@ export class UploadService {
             break;
           case 'unAttendedCallFreeLimit':
             this.variables.unAttendedCallFreeLimit = obj;
-            break;
-          case 'nonLargeValueCapMerchantCheck':
-            this.variables.nonLargeValueCapMerchantCheck = obj;
             break;
           case 'nonLargeValueMerchantBps':
             this.variables.nonLargeValueMerchantBps = obj;
@@ -994,12 +992,12 @@ export class UploadService {
 
                 if (filteredTransaction) {
                   calculatedFee = parseFloat((filteredTransaction.chargeableAmount * (this.variables.nonLargeValueMerchantBps.value / 10000)).toFixed(3));
-                  applicableFee = parseFloat((parseInt(record["payment_logs.amount"]) > this.variables.nonLargeValueCapMerchantCheck.value ? this.variables.nonLargeValueCapMerchant.value : calculatedFee).toFixed(3));
+                  applicableFee = parseFloat((parseInt(record["payment_logs.amount"]) > this.nonLargeValueCapMerchantCheck ? this.variables.nonLargeValueCapMerchant.value : calculatedFee).toFixed(3));
                   unit_price = (this.variables.nonLargeValueMerchantBps.value / 10000);
                   volume = filteredTransaction.chargeableAmount ?? 0;
                   appliedLimit = filteredTransaction.appliedLimit;
                   limitApplied = filteredTransaction.appliedLimit > 0;
-                  isCapped = parseInt(record["payment_logs.amount"]) > this.variables.nonLargeValueCapMerchantCheck.value; // Assign boolean value
+                  isCapped = parseInt(record["payment_logs.amount"]) > this.nonLargeValueCapMerchantCheck; // Assign boolean value
                   cappedAt = isCapped ? this.variables.nonLargeValueCapMerchant.value : 0;
 
                 }

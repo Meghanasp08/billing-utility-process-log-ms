@@ -3369,7 +3369,8 @@ export class InvoiceService {
         let result;
         if (mail) {
             try {
-                const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath, invoice_data?.email); // Ensure mailservi.sendmail returns a response
+                let tpp = true;
+                const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath, invoice_data?.email, invoice_data?.tpp_name, invoice_data?.invoice_number, tpp); // Ensure mailservi.sendmail returns a response
                 // Optionally delete the PDF after sending
                 fs.unlink(attachmentPath, (unlinkErr) => {
                     if (unlinkErr) {
@@ -4238,7 +4239,8 @@ export class InvoiceService {
         let result;
         if (mail) {
             try {
-                const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath, invoice_data?.email); // Ensure mailservi.sendmail returns a response
+                let tpp = false;
+                const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath, invoice_data?.email,invoice_data?.lfi_name,invoice_data?.invoice_number, tpp); // Ensure mailservi.sendmail returns a response
                 // Optionally delete the PDF after sending
                 fs.unlink(attachmentPath, (unlinkErr) => {
                     if (unlinkErr) {
