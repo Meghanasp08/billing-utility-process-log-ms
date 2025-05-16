@@ -1,11 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { LfiData, LfiDataDocument } from 'src/upload/schemas/lfi-data.schema';
 import { GetglobalValueDto, UpdateglobalValueDto } from './dto/global_value.dto';
 import { UpdateLfiDataDto } from './dto/lfi_update.dto';
 import { GlobalConfiguration, GlobalConfigurationDocument } from './schema/global_config.schema';
-import { Types } from 'mongoose';
 @Injectable()
 export class ConfigurationService {
     constructor(
@@ -48,17 +47,15 @@ export class ConfigurationService {
         try {
 
             let options = {
-                value: { $ne: 20000 },
-                key:{$ne:'email'},
-                Description: { $not: /Mdp rate/i },
+                key: { $ne: 'email' },
             }
 
             const total = await this.globalModel.countDocuments(options).exec();
 
             const globalData = await this.globalModel.find(options)
-            .skip(offset)
-            .limit(limit)
-            .exec();
+                .skip(offset)
+                .limit(limit)
+                .exec();
 
             return {
                 globalData,
