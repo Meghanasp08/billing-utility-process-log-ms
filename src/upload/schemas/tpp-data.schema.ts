@@ -15,6 +15,8 @@ export class TppData {
     @Prop({ required: true })
     tpp_client_id: string;
 
+    @Prop({ required: true })
+    email: string;
 }
 
 export const TppDataSchema = SchemaFactory.createForClass(TppData);
