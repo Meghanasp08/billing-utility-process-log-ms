@@ -3333,6 +3333,10 @@ export class InvoiceService {
         let tpp_id = data.tpp_id
         let month = data.month
         let year = data.year
+        const tppData = await this.tppDataModel.findOne({ tpp_id: data.tpp_id }).lean<any>();
+        if (!tppData)
+            throw new Error('Invalid Tpp-ID');
+        console.log(tppData)
 
         const result = await this.invoiceModel.findOne({
             tpp_id: tpp_id,
@@ -3345,8 +3349,12 @@ export class InvoiceService {
     async invoiceLfi_PDF_Aggregation(data: any) {
         let lfi_id = data.lfi_id
         let month = data.month
-        let year = data.year
+        let year = data.year; 
 
+        const lfiData = await this.lfiDataModel.findOne({ lfi_id: lfi_id }).lean<any>();
+        if (!lfiData)
+            throw new Error('Invalid Lfi-ID');
+        
         const result = await this.collectionMemoModel.findOne({
             lfi_id: lfi_id,
             invoice_month: month,
@@ -3360,6 +3368,12 @@ export class InvoiceService {
         if (!fs.existsSync(`./temp`)) {
             fs.mkdirSync(`./temp`)
         }
+
+        const tppData = await this.tppDataModel.findOne({ tpp_id: data.tpp_id }).lean<any>();
+        if (!tppData)
+            throw new Error('Invalid Tpp-ID');
+
+        let email = tppData?.email ?? 'rahulmanikandan0298@gmail.com'
 
         const currentDate = new Date();
         const timestamp = currentDate.getTime();
@@ -3399,7 +3413,7 @@ export class InvoiceService {
         if (mail) {
             try {
                 let tpp = true;
-                const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath, invoice_data?.email, invoice_data?.tpp_name, invoice_data?.invoice_number, tpp); // Ensure mailservi.sendmail returns a response
+                const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath, email, invoice_data?.tpp_name, invoice_data?.invoice_number, tpp); // Ensure mailservi.sendmail returns a response
                 // Optionally delete the PDF after sending
                 fs.unlink(attachmentPath, (unlinkErr) => {
                     if (unlinkErr) {
@@ -4229,6 +4243,12 @@ export class InvoiceService {
             fs.mkdirSync(`./temp`)
         }
 
+        const lfiData = await this.lfiDataModel.findOne({ lfi_id: data.lfi_id }).lean<any>();
+        if (!lfiData)
+            throw new Error('Invalid Lfi-ID');
+
+        let email = lfiData?.email ?? 'rahulmanikandan0298@gmail.com'
+
         const currentDate = new Date();
         const timestamp = currentDate.getTime();
         const invoice_data = await this.invoiceLfi_PDF_Aggregation(data)
@@ -4269,7 +4289,7 @@ export class InvoiceService {
         if (mail) {
             try {
                 let tpp = false;
-                const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath, invoice_data?.email, invoice_data?.lfi_name, invoice_data?.invoice_number, tpp); // Ensure mailservi.sendmail returns a response
+                const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath, email, invoice_data?.lfi_name, invoice_data?.invoice_number, tpp); // Ensure mailservi.sendmail returns a response
                 // Optionally delete the PDF after sending
                 fs.unlink(attachmentPath, (unlinkErr) => {
                     if (unlinkErr) {

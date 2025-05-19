@@ -120,7 +120,7 @@ export class MailService {
         // Email options
         const mailOptions = {
             from: `${credentials?.sender_name} <${credentials?.username}>`, // Custom name and email
-            to: 'firoskhansha@gmail.com',
+            to: email,
             // cc: cc || undefined, // Add CC if provided
             subject: `Invoice and Statement of Account for ${clientName}`,
             html: `

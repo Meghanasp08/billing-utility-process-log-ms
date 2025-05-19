@@ -37,6 +37,9 @@ export class LfiData {
     @Prop({ required: true })
     free_limit_unattended: number;
 
+    @Prop({ required: true })
+    email: string;
+
 }
 
 export const LfiDataSchema = SchemaFactory.createForClass(LfiData);
