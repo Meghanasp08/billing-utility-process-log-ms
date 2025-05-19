@@ -98,6 +98,20 @@ export class InvoiceController {
     }
   }
 
+  
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: ' Update Many  for InvoiceData' })
+  @Patch('update-many')
+  async updateManyInvoices(@Body() body: any) {
+    const invoiceData = await this.invoiceService.updateManyInvoices(body);
+    return {
+      message: 'Invoice Data Updates successfully',
+      result: invoiceData,
+      statusCode: HttpStatus.OK
+    }
+  }
+
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Generate invoices from logs' })
