@@ -6,6 +6,7 @@ export const CollectionMemoSchema = new mongoose.Schema(
         invoice_number: String,
         lfi_id: String,
         lfi_name: String,
+        lfi_email:String,
         billing_period_start: Date,  // Month First
         billing_period_end: Date,   // Month Last
         invoice_month:Number,

@@ -7,6 +7,7 @@ export const InvoiceSchema = new mongoose.Schema(
     invoice_number: String,
     tpp_id: String,
     tpp_name: String,
+    tpp_email:String,
     billing_address_line1: String,
     billing_address_line2: String,
     billing_address_city: String,

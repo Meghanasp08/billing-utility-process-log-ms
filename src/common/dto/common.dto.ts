@@ -42,4 +42,5 @@ export class PaginationDTO {
     toDate: Date
     month:Number
     year:Number
+    invoice_status:Number
 }

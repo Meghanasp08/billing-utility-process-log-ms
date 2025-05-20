@@ -35,8 +35,8 @@ export class InvoiceService {
 
         const options: any = {};
         const status =
-            PaginationDTO.status != null && PaginationDTO.status != 'all'
-                ? PaginationDTO.status
+            PaginationDTO.invoice_status != null && Number(PaginationDTO.invoice_status) !=0
+                ? Number(PaginationDTO.invoice_status)
                 : null;
         Object.assign(options, {
             ...(status === null ? { status: { $ne: null } } : { status: status }),
@@ -56,7 +56,7 @@ export class InvoiceService {
         if (year) {
             options.invoice_year = year
         }
-
+        console.log(options)
         const count = await this.invoiceModel.find(options).countDocuments();
         const result = await this.invoiceModel.find(options).skip(offset).limit(limit).sort({ createdAt: -1 }).lean<any>()
 
@@ -893,6 +893,7 @@ export class InvoiceService {
                 invoice_number: await this.generateInvoiceNumber(),
                 tpp_id: tpp?.tpp_id,
                 tpp_name: tpp?.tpp_name,
+                tpp_email:tpp?.email,
                 billing_address_line1: 'billing_address_line1',
                 billing_address_line2: 'billing_address_line2',
                 billing_address_city: 'billing_address_city',
@@ -966,6 +967,7 @@ export class InvoiceService {
                         invoice_number: await this.generateCollectionMemoInvNumber(),
                         lfi_id: obj?._id,
                         lfi_name: lfiData?.lfi_name,
+                        lfi_email: lfiData?.email,
                         billing_period_start: startDate,  // Month First
                         billing_period_end: endDate,   // Month Last
                         generated_at: new Date(),        // Generate Date
