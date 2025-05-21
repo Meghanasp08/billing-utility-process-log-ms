@@ -4,7 +4,7 @@ import { Model, Types } from 'mongoose';
 import { PaginationEnum } from 'src/common/constants/constants.enum';
 import { PaginationDTO } from 'src/common/dto/common.dto';
 import { LfiData, LfiDataDocument } from 'src/upload/schemas/lfi-data.schema';
-import { GetglobalValueDto, UpdateglobalValueDto } from './dto/global_value.dto';
+import { GetglobalValueDto, UpdateApiDto, UpdateglobalValueDto } from './dto/global_value.dto';
 import { UpdateLfiDataDto } from './dto/lfi_update.dto';
 import { ApiDataConfiguration, ApiDataConfigurationDocument } from './schema/api_data.schema';
 import { GlobalConfiguration, GlobalConfigurationDocument } from './schema/global_config.schema';
@@ -118,6 +118,22 @@ export class ConfigurationService {
                     total: total
                 }
             }
+        } catch (error) {
+            throw new Error(`Error retrieving api data: ${error.message}`);
+        }
+    }
+    async updateApidatas(updateApiDto: UpdateApiDto) {
+        try {
+            const existingApi = await this.apiDataModel.findById(updateApiDto._id);
+            if (!existingApi) {
+                throw new NotFoundException(`API data with ID ${updateApiDto._id} not found.`);
+            }
+            const updatedApi = await this.apiDataModel.findByIdAndUpdate(
+                updateApiDto._id,
+                { $set: updateApiDto },
+                { new: true }
+            );
+            return updatedApi;
         } catch (error) {
             throw new Error(`Error retrieving api data: ${error.message}`);
         }

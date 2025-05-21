@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth-guard';
 import { PaginationDTO } from 'src/common/dto/common.dto';
 import { ConfigurationService } from './configuration.service';
-import { GetglobalValueDto, UpdateglobalValueDto, UpdateManyDto } from './dto/global_value.dto';
+import { GetglobalValueDto, UpdateApiDto, UpdateglobalValueDto, UpdateManyDto } from './dto/global_value.dto';
 import { UpdateLfiDataDto } from './dto/lfi_update.dto';
 
 
@@ -109,12 +109,12 @@ export class ConfigurationController {
 
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'List details Of Api Data' })
-    @Get('api-data')
-    async updateApidata(@Query(ValidationPipe) PaginationDTO: PaginationDTO) {
-        const apiData = await this.configService.getApiData(PaginationDTO);
+    @ApiOperation({ summary: 'Update the Api Data' })
+    @Put('api-data')
+    async updateApidata(@Body(ValidationPipe) updateApiDto: UpdateApiDto) {
+        const apiData = await this.configService.updateApidatas(updateApiDto);
         return {
-            message: 'Api Data List',
+            message: 'Api Data Updated successfully',
             result: apiData,
             statusCode: HttpStatus.OK
         }
