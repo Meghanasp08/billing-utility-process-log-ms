@@ -1129,11 +1129,11 @@ export class UploadService {
   async determineChargeableAndSuccess(data: any[], apiData: any[]) {
     const chargableUrls = apiData
       .filter(api => api.chargeable_api_hub_fee === true)
-      .map(api => `${api.api_spec}${api.api_endpoint}:${api.api_operation.toUpperCase()}`);
+      .map(api => `${api.url}:${api.api_operation.toUpperCase()}`);
 
     const lfiChargableUrls = apiData
       .filter(api => api.chargeable_LFI_TPP_fee === true)
-      .map(api => `${api.api_spec}${api.api_endpoint}:${api.api_operation.toUpperCase()}`);
+      .map(api => `${api.url}:${api.api_operation.toUpperCase()}`);
 
     return data.map(record => {
       const isChargeable = chargableUrls.includes(`${record["raw_api_log_data.url"]}:${record["raw_api_log_data.http_method"]}`);
@@ -1158,7 +1158,7 @@ export class UploadService {
 
 
       const groupData = apiData.find(api =>
-        `${api.api_spec}${api.api_endpoint}:${api.api_operation.toUpperCase()}`
+        `${api.url}:${api.api_operation.toUpperCase()}`
           .replace(/\s+/g, '') ===
         `${record["raw_api_log_data.url"]}:${record["raw_api_log_data.http_method"].toUpperCase()}`
           .replace(/\s+/g, '')

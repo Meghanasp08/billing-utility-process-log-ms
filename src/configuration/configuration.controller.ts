@@ -1,9 +1,11 @@
 import { Body, Controller, Get, HttpStatus, Param, Patch, Put, Query, Req, UseGuards, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth-guard';
+import { PaginationDTO } from 'src/common/dto/common.dto';
 import { ConfigurationService } from './configuration.service';
 import { GetglobalValueDto, UpdateglobalValueDto, UpdateManyDto } from './dto/global_value.dto';
 import { UpdateLfiDataDto } from './dto/lfi_update.dto';
+
 
 @ApiTags('configuration')
 @Controller('configuration')
@@ -88,6 +90,32 @@ export class ConfigurationController {
         return {
             message: 'Global Data Updates successfully',
             result: globalData,
+            statusCode: HttpStatus.OK
+        }
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'List details Of Api Data' })
+    @Get('api-data')
+    async getApiData(@Query(ValidationPipe) PaginationDTO: PaginationDTO) {
+        const apiData = await this.configService.getApiData(PaginationDTO);
+        return {
+            message: 'Api Data List',
+            result: apiData,
+            statusCode: HttpStatus.OK
+        }
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'List details Of Api Data' })
+    @Get('api-data')
+    async updateApidata(@Query(ValidationPipe) PaginationDTO: PaginationDTO) {
+        const apiData = await this.configService.getApiData(PaginationDTO);
+        return {
+            message: 'Api Data List',
+            result: apiData,
             statusCode: HttpStatus.OK
         }
     }
