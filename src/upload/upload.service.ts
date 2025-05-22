@@ -569,7 +569,6 @@ export class UploadService {
   }
 
   async calculateTotalApiHubFee(data: any) {
-    console.log('iam inside total hub fee')
     return data.map((record: any) => {
       let totalApiHubFee = record.api_hub_fee ?? 0;
       let apiHubVolume = 1;
@@ -578,7 +577,6 @@ export class UploadService {
         totalApiHubFee *= apiHubVolume;
       } else if (record.group === "data" && record.success && record.chargeable) {
         if (!record.lfiChargable) {
-          console.log(record["raw_api_log_data.records"], 'iam record value')
           const records = parseInt(record["raw_api_log_data.records"] ?? "0", 10);
           record.numberOfPages = Math.ceil(records / 100) || 1;
           // record.volume = record.numberOfPages;
@@ -1126,18 +1124,67 @@ export class UploadService {
   }
 
 
+  // async determineChargeableAndSuccess(data: any[], apiData: any[]) {
+  //   const chargableUrls = apiData
+  //     .filter(api => api.chargeable_api_hub_fee === true)
+  //     .map(api => `${api.api_endpoint}:${api.api_operation.toUpperCase()}`);
+
+  //   const lfiChargableUrls = apiData
+  //     .filter(api => api.chargeable_LFI_TPP_fee === true)
+  //     .map(api => `${api.api_endpoint}:${api.api_operation.toUpperCase()}`);
+
+  //   return data.map(record => {
+  //     let rawDataEndpoint = this.matchTemplateVersionUrl([record["raw_api_log_data.url"]]);
+  //     const isChargeable = chargableUrls.includes(`${rawDataEndpoint}:${record["raw_api_log_data.http_method"]}`);
+  //     const islfiChargable = lfiChargableUrls.includes(`${rawDataEndpoint}:${record["raw_api_log_data.http_method"]}`);
+  //     const success = /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.tpp_response_code_group"]) &&
+  //       /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.lfi_response_code_group"]);
+
+  //     return {
+  //       ...record,
+  //       chargeable: isChargeable,
+  //       lfiChargable: islfiChargable,
+  //       success,
+  //     };
+  //   });
+  // }
+
   async determineChargeableAndSuccess(data: any[], apiData: any[]) {
+    // Convert API data into lists of chargeable URLs with their methods
     const chargableUrls = apiData
       .filter(api => api.chargeable_api_hub_fee === true)
-      .map(api => `${api.url}:${api.api_operation.toUpperCase()}`);
+      .map(api => ({ endpoint: api.api_endpoint, method: api.api_operation.toUpperCase() }));
 
     const lfiChargableUrls = apiData
       .filter(api => api.chargeable_LFI_TPP_fee === true)
-      .map(api => `${api.url}:${api.api_operation.toUpperCase()}`);
+      .map(api => ({ endpoint: api.api_endpoint, method: api.api_operation.toUpperCase() }));
 
-    return data.map(record => {
-      const isChargeable = chargableUrls.includes(`${record["raw_api_log_data.url"]}:${record["raw_api_log_data.http_method"]}`);
-      const islfiChargable = lfiChargableUrls.includes(`${record["raw_api_log_data.url"]}:${record["raw_api_log_data.http_method"]}`);
+    console.log('iam chargeable urls', chargableUrls)
+    console.log('iam lfi chargeable urls', lfiChargableUrls)
+
+    return await Promise.all(data.map(async record => {
+      const rawDataEndpoint = await this.matchTemplateVersionUrl(record["raw_api_log_data.url"]);
+      const rawDataMethod = record["raw_api_log_data.http_method"];
+      console.log(rawDataMethod, ':', rawDataEndpoint, 'rawDataMethod')
+
+
+      // Match the raw URL and method against chargeable API data
+      const isChargeable = await Promise.all(
+        chargableUrls.map(async (api) => {
+          const urlMatch = await this.matchTemplateUrl(api.endpoint, rawDataEndpoint);
+          const methodMatch = api.method.toUpperCase() === rawDataMethod.toUpperCase();
+          return urlMatch && methodMatch;
+        })
+      ).then((results) => results.some((result) => result)); // If any result is true, isChargeable is true
+
+      const islfiChargable = await Promise.all(
+        lfiChargableUrls.map(async (api) => {
+          const urlMatch = await this.matchTemplateUrl(api.endpoint, rawDataEndpoint);
+          const methodMatch = api.method.toUpperCase() === rawDataMethod.toUpperCase();
+          return urlMatch && methodMatch;
+        })
+      ).then((results) => results.some((result) => result));
+      // Determine if the record is successful based on response codes
       const success = /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.tpp_response_code_group"]) &&
         /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.lfi_response_code_group"]);
 
@@ -1147,7 +1194,7 @@ export class UploadService {
         lfiChargable: islfiChargable,
         success,
       };
-    });
+    }));
   }
 
   async calculateApiHubFee(processedData: any[], apiData: any[],) {
@@ -1157,13 +1204,13 @@ export class UploadService {
       let api_hub_fee = this.variables.paymentApiHubFee.value;
 
 
-      const groupData = apiData.find(api =>
-        `${api.url}:${api.api_operation.toUpperCase()}`
-          .replace(/\s+/g, '') ===
-        `${record["raw_api_log_data.url"]}:${record["raw_api_log_data.http_method"].toUpperCase()}`
-          .replace(/\s+/g, '')
-      );
-
+      // const groupData = apiData.find(api =>
+      //   `${api.url}:${api.api_operation.toUpperCase()}`
+      //     .replace(/\s+/g, '') ===
+      //   `${record["raw_api_log_data.url"]}:${record["raw_api_log_data.http_method"].toUpperCase()}`
+      //     .replace(/\s+/g, '')
+      // );
+      const groupData = await this.findGroupData(record, apiData);
       let group = groupData?.key_name || "Other";
 
       if (groupData?.key_name === 'balance' || groupData?.key_name === 'confirmation') {
@@ -1209,6 +1256,21 @@ export class UploadService {
     }));
   }
 
+  private async findGroupData(record: any, apiData: any[]): Promise<any> {
+    console.log('---------------------------------------------------------------------')
+    const endPointurl = await this.matchTemplateVersionUrl(record["raw_api_log_data.url"]);
+    const httpMethod = record["raw_api_log_data.http_method"]
+
+    for (const api of apiData) {
+      const isUrlMatch = await this.matchTemplateUrl(api.api_endpoint, endPointurl);
+      if (isUrlMatch && api.api_operation.toUpperCase() === httpMethod.toUpperCase()) {
+        return api; // Return the first matching object
+      }
+    }
+
+    return null; // Return null if no match is found
+  }
+
   async chargableConvertion(data: any) {
     try {
       // console.log(globalData)
@@ -1242,8 +1304,26 @@ export class UploadService {
     }
     return type;
   }
+  async matchTemplateVersionUrl(url: string): Promise<string> {
+    try {
+      const versionRegex = /\/v\d+\.\d+/;
 
+      const parts = url.split(versionRegex);
+      return parts[1] || ''; // Return the remaining path after the version
+    } catch (error) {
+      console.error('Error:', error);
+      return ''; // Return an empty string in case of an error
+    }
+  }
 
+  async matchTemplateUrl(templateUrl: string, realUrl: string) {
+    // Convert the template URL to a regular expression
+    const regexString = templateUrl.replace(/{[^}]+}/g, '[^/]+');
+    const regex = new RegExp(`^${regexString}$`);
+
+    console.log('iam regex', regex.test(realUrl))
+    return regex.test(realUrl);
+  }
 
   async getRawLogCsv(batchId: string) {
     try {

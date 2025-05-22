@@ -37,7 +37,7 @@ export class LfiData {
     @Prop({ required: true })
     free_limit_unattended: number;
 
-    @Prop({ required: true })
+    @Prop({ required: false })
     email: string;
 
 }

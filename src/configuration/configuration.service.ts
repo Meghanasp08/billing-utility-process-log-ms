@@ -141,9 +141,9 @@ export class ConfigurationService {
 
     async createApidatas(createApiDto: CreateApiDto) {
         try {
-            const existingApi = await this.apiDataModel.findOne({ url: createApiDto.url, api_operation: createApiDto.api_operation });
+            const existingApi = await this.apiDataModel.findOne({ url: createApiDto.api_endpoint, api_operation: createApiDto.api_operation });
             if (existingApi) {
-                throw new NotFoundException(`API data with key ${createApiDto.key} already exists.`);
+                throw new NotFoundException(`API data with url and api operation ${createApiDto.api_endpoint} ${createApiDto.api_operation} already exists.`);
             }
             const newApi = await this.apiDataModel.create(createApiDto);
             return newApi;

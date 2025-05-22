@@ -6,8 +6,8 @@ export type ApiDataDocument = ApiData & Document;
 @Schema({ timestamps: true, collection: 'api_data' })
 export class ApiData {
 
-    @Prop({ required: true })
-    api_spec: string;
+    // @Prop({ required: true })
+    // api_spec: string;
 
     @Prop({ required: true })
     api_endpoint: string;

@@ -60,13 +60,13 @@ export class UpdateApiDto {
     _id: string;
 
     @ApiProperty({
-        description: 'The full URL constructed from api_spec and api_endpoint.',
-        example: '/open-finance/payment/v1.0/payment-consents/{ConsentId}',
+        description: 'The constructed api_endpoint.',
+        example: '/payment-consents/{ConsentId}',
         required: true,
     })
     @IsString()
     @IsNotEmpty()
-    url: string;
+    api_endpoint: string;
 
     @ApiProperty({
         description: 'The operation type for the API (e.g., GET, POST).',
@@ -131,13 +131,13 @@ export class UpdateApiDto {
 
 export class CreateApiDto {
     @ApiProperty({
-        description: 'The full URL constructed from api_spec and api_endpoint.',
-        example: '/open-finance/payment/v1.0/payment-consents/{ConsentId}',
+        description: 'The constructed api_endpoint.',
+        example: '/payment-consents/{ConsentId}',
         required: true,
     })
     @IsString()
     @IsNotEmpty()
-    url: string;
+    api_endpoint: string;
 
     @ApiProperty({
         description: 'The operation type for the API (e.g., GET, POST).',
