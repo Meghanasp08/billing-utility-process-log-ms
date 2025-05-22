@@ -9,6 +9,8 @@ import { InvoiceModule } from './invoice/invoice.module';
 import { MailModule } from './mail/mail.module';
 import { ProfileModule } from './profile/profile.module';
 import { UploadModule } from './upload/upload.module';
+import { UsersModule } from './users/users.module';
+import { RoleModule } from './role/role.module';
 
 @Module({
   imports: [
@@ -19,7 +21,9 @@ import { UploadModule } from './upload/upload.module';
     MailModule,
     InvoiceModule,
     ConfigurationModule,
-    DashboardModule],
+    DashboardModule,
+    UsersModule,
+    RoleModule],
   controllers: [AppController],
   providers: [AppService],
 })
