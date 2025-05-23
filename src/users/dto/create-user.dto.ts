@@ -52,6 +52,7 @@ export class CreateUserDto {
 
     
     role:any
+    status:number;
 
     createdBy: any
 
