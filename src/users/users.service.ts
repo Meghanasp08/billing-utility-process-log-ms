@@ -36,6 +36,7 @@ export class UsersService {
 
   async sendActivationEmail(data: any) {
 
+    console.log(data)
     const user = await this.userModel.findById(data.user_id);
     if (!user) {
       throw new BadRequestException('User with this Id doesnt exists');
@@ -93,7 +94,9 @@ export class UsersService {
     return result
   }
 
-  // async changePassword()
+  async changePassword(){
+
+  }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
     const existingUser = await this.userModel.findById(id);

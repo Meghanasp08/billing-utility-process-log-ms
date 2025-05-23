@@ -1,4 +1,4 @@
-import { BadRequestException, HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
@@ -39,6 +39,22 @@ export class AuthService {
       throw new BadRequestException('Invalid credentials');
     }
 
+    if (!user.isVerified) {
+      throw new BadRequestException('Please activate your account first.');
+    }
+
+    if (user?.status == 3) {
+      throw new BadRequestException('Please activate your account first.');
+    }
+
+    if (user?.status == 5) {
+      throw new BadRequestException('User is revoked by the Admin.Please contact your admin');
+    }
+
+    if (user?.status == 2) {
+      throw new BadRequestException('User is In-Active.');
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       throw new BadRequestException('Invalid credentials');
@@ -63,7 +79,7 @@ export class AuthService {
     const payload = {
       userId: auth._id,
       email: auth.email,
-      role:auth?.role,
+      role: auth?.role,
       userType: userType,
     };
 
@@ -127,6 +143,36 @@ export class AuthService {
       { refreshToken: token.refresh_token },
     )
     return token
+  }
+
+  async createPassword(data: any) {
+
+    const user_info = await this.userModel.findOne({ activationToken: data?.token });
+    if (!user_info) {
+      throw new NotFoundException('Invalid or expired activation link');
+    }
+    let payload: any
+    try {
+      payload = await this.jwtService.verifyAsync(data?.token, {
+        secret: process.env.JWT_ACTIVATION_SECRET || 'yourVerySecureActivationSecret',
+      });
+
+    } catch (err) {
+      throw new NotFoundException(`JWT verification failed: ${err.message}`);
+    }
+
+    console.log(payload.userId)
+    const user = await this.userModel.findById(payload.userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    user.activationToken = '';
+    user.password = data.password;
+    await user.save();
+
+    return { message: 'Password updated successfully' };
+
   }
 
 }

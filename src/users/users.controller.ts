@@ -97,7 +97,7 @@ export class UsersController {
 
   @ApiOperation({ summary: 'Send Activatiom Mail for the User' })
   @Post('/send-activation-mail')
-  async sendActivationEmail(data:any) {
+  async sendActivationEmail(@Body() data:any) {
     try {
       const result = await this.usersService.sendActivationEmail(data);
       return {
