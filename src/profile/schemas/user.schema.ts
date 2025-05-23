@@ -27,24 +27,32 @@ export class User {
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Role' }) // ✅ Must match MongooseModule registration name
   role: mongoose.Schema.Types.ObjectId;
 
+  @Prop({ required: false, default: 3 })// 1-Active,2-InActive,3-Invited,4-Expired,5-Revoked
+  status: number; 
+
+  @Prop({ required: false, default: false })
+  isVerified: boolean;
+
+  @Prop()
+  activationToken?: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
 UserSchema.pre('save', async function (next) {
-    const user = this as any;
+  const user = this as any;
 
-    // Check if the password field has been modified
-    if (!user.isModified('password')) {
-        return next();
-    }
+  // Check if the password field has been modified
+  if (!user.isModified('password')) {
+    return next();
+  }
 
-    try {
-        // Generate a salt
-        const salt = await bcrypt.genSalt(10);
-        // Hash the password using the salt
-        user.password = await bcrypt.hash(user.password, salt);
-        next();
-    } catch (err) {
-        next(err);
-    }
+  try {
+    // Generate a salt
+    const salt = await bcrypt.genSalt(10);
+    // Hash the password using the salt
+    user.password = await bcrypt.hash(user.password, salt);
+    next();
+  } catch (err) {
+    next(err);
+  }
 });

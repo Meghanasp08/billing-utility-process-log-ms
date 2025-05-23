@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDTO } from 'src/common/dto/common.dto';
@@ -8,6 +8,7 @@ import { User } from './entities/user.entity';
 import { Model } from 'mongoose';
 import { UserDocument } from 'src/profile/schemas/user.schema';
 import { ObjectId } from 'mongodb';
+import { MailService } from 'src/mail/mail.service';
 
 
 @Injectable()
@@ -15,12 +16,33 @@ export class UsersService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel('Role') private readonly rolesModel: Model<any>,
-
+    private readonly mailService: MailService,
   ) { }
 
   async create(createUserDto: CreateUserDto) {
+    const { email } = createUserDto;
+
+    const existingUser = await this.userModel.findOne({ email });
+    if (existingUser) {
+      throw new BadRequestException('User with this email already exists');
+    }
+
     const users = new this.userModel(createUserDto)
-    return await users.save();
+    const userData = await users.save();
+
+    await this.mailService.sendActivationEmail(userData);
+    return userData;
+  }
+
+  async sendActivationEmail(data: any) {
+
+    const user = await this.userModel.findById(data.user_id);
+    if (!user) {
+      throw new BadRequestException('User with this Id doesnt exists');
+    }
+
+    await this.mailService.sendActivationEmail(user);
+
   }
 
   async findAll(PaginationDTO: PaginationDTO): Promise<any> {
@@ -32,13 +54,12 @@ export class UsersService {
       : PaginationEnum.LIMIT;
 
     const options: any = {};
-    // const status =
-    //   PaginationDTO.invoice_status != null && Number(PaginationDTO.invoice_status) != 0
-    //     ? Number(PaginationDTO.invoice_status)
-    //     : null;
-    // Object.assign(options, {
-    //   ...(status === null ? { status: { $ne: null } } : { status: status }),
-    // });
+    const status = PaginationDTO.status != null ? Number(PaginationDTO.status) : null;
+
+    if (Number(status)) {
+      options.status = status
+    }
+    console.log(options)
     const search = PaginationDTO.search ? PaginationDTO.search.trim() : null;
     if (search) {
       const searchRegex = new RegExp(search, "i");
@@ -48,10 +69,10 @@ export class UsersService {
     console.log(options)
     const count = await this.userModel.find(options).countDocuments();
     const result = await this.userModel.find(options)
-    .populate({ path: 'role', select: 'name' })
-    .skip(offset).limit(limit)
-    .sort({ createdAt: -1 })
-    .lean<any>()
+      .populate({ path: 'role', select: 'name' })
+      .skip(offset).limit(limit)
+      .sort({ createdAt: -1 })
+      .lean<any>()
 
     return {
       result,
@@ -72,6 +93,8 @@ export class UsersService {
     return result
   }
 
+  // async changePassword()
+
   async update(id: string, updateUserDto: UpdateUserDto) {
     const existingUser = await this.userModel.findById(id);
     if (!existingUser) {
@@ -89,7 +112,7 @@ export class UsersService {
 
   async getPermissionsUsingAccessToken(ID: any) {
     try {
-     const user = await this.userModel.findById('67dbc1d822ab7b13fdf71a4b')
+      const user = await this.userModel.findById(ID)
       if (!user) {
         throw new HttpException(
           'User with this id does not exist',
@@ -100,7 +123,7 @@ export class UsersService {
         _id: user.role,
         isActive: true
       })
-      console.log(user.role)
+
       // If roles not active the array becomes empty.
       if (!roles) {
         return []

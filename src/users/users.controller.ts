@@ -3,15 +3,17 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDTO } from 'src/common/dto/common.dto';
-import { ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { JwtAuthGuard } from 'src/auth/guard/jwt-auth-guard';
 
-
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 
 
-  @ApiOperation({ summary: 'Create Users' })
+  @ApiOperation({ summary: 'Create a User' })
   @Post()
   async create(@Body() createUserDto: CreateUserDto) {
     try {
@@ -77,11 +79,11 @@ export class UsersController {
   }
 
   @Post('/web-permissions')
+  @ApiOperation({ summary: 'Get permissions for a user' })
   async webPermissions(@Req() request: any) {
     try {
-      // const users_id = request.user._id
-      // console.log(users_id)
-      const result = await this.usersService.getPermissionsUsingAccessToken('users_id')
+      const users_id = request.user.userId
+      const result = await this.usersService.getPermissionsUsingAccessToken(users_id)
       return {
         message: 'Web Permission List',
         result: result,
@@ -92,6 +94,23 @@ export class UsersController {
       throw err;
     }
   }
+
+  @ApiOperation({ summary: 'Send Activatiom Mail for the User' })
+  @Post('/send-activation-mail')
+  async sendActivationEmail(data:any) {
+    try {
+      const result = await this.usersService.sendActivationEmail(data);
+      return {
+        message: 'Mail successfully',
+        result: result,
+        statusCode: HttpStatus.OK,
+      };
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
+  }
+  
 
 }
 
