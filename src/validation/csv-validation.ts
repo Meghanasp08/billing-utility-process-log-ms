@@ -36,6 +36,11 @@ export const file2HeadersIncludeSchema = [
     'isLargeCorporate', 'numberOfSuccessfulTransactions', 'internationalPayment'
 ];
 
+export const lfiTppHeaderSchema = [
+    'OrganisationId', 'OrganisationName', 'RegisteredName', 'AddressLine2', 'Size', 'Country',
+    'Postcode', 'Org Status', 'ContactType', 'EmailAddress',
+    'FirstName', 'LastName', 'User Status'
+];
 // Function to validate headers
 export function validateHeaders(normalizedHeaders: string[], expectedHeaders: string[]) {
     const missingHeaders = expectedHeaders.filter(header => !normalizedHeaders.includes(header));
@@ -45,6 +50,6 @@ export function validateHeaders(normalizedHeaders: string[], expectedHeaders: st
             `Validation failed. Missing required headers: ${missingHeaders.join(', ')}`
         );
     }
-
+    return null
     // Extra columns are ignored, so no need to handle them.
 }

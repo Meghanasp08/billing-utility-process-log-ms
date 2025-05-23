@@ -223,5 +223,64 @@ export class UploadController {
             );
         }
     }
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @Post('lfi-tpp')
+    @UseInterceptors(FileFieldsInterceptor([
+        { name: 'organization_data', maxCount: 1 },]))
+    @ApiConsumes('multipart/form-data')
+    @ApiOperation({
+        summary: 'Upload and Update LFI TPP',
+        description: 'This endpoint accepts Organization file:  The files are validated, processed, and the result will be updated in the database.',
+    })
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                organization_data: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'Organization Detail Data file',
+                },
+            },
+            required: ['organization_data'],
+        },
+    })
+    async uploadLfiTpp(@UploadedFiles() files: { organization_data?: Express.Multer.File[]; }, @Req() req: any) {
+        try {
+            // console.log('Uploaded files:', req.user.email);
+            if (!files?.organization_data) {
+                throw new HttpException('file is required', HttpStatus.BAD_REQUEST);
+            }
+
+            const [organization_data] = [
+                files.organization_data[0].path,
+            ];
+
+            const tppLfi = await this.uploadService.updateTppAndLfi('req.user.email', organization_data,);
+
+            return {
+                message: 'Organization data processed successfully.',
+                result: tppLfi,
+                statusCode: HttpStatus.OK
+            }
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error; // Re-throw expected errors with proper status codes
+            }
+
+            const statusCode = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
+            const errorMessage = error.message || 'Internal server error';
+
+            throw new HttpException(
+                {
+                    message: errorMessage,
+                    status: statusCode,
+                    details: error.details || 'An unexpected error occurred.',
+                },
+                statusCode,
+            );
+        }
+    }
 
 }

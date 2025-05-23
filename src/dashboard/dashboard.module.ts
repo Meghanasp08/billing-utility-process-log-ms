@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
-import { DashboardService } from './dashboard.service';
-import { DashboardController } from './dashboard.controller';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AuthModule } from 'src/auth/auth.module';
 import { InvoiceSchema } from 'src/invoice/schemas/invoice.schema';
-import { TppDataSchema } from 'src/upload/schemas/tpp-data.schema';
 import { LfiDataSchema } from 'src/upload/schemas/lfi-data.schema';
+import { TppDataSchema } from 'src/upload/schemas/tpp-data.schema';
+import { DashboardController } from './dashboard.controller';
+import { DashboardService } from './dashboard.service';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { LfiDataSchema } from 'src/upload/schemas/lfi-data.schema';
       { name: 'TppData', schema: TppDataSchema },
       { name: 'LfiData', schema: LfiDataSchema },
     ]),
+    AuthModule,
   ],
   controllers: [DashboardController],
   providers: [DashboardService],

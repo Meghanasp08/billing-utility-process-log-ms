@@ -7,7 +7,7 @@ import { PaginationEnum, StatusEnum } from 'src/common/constants/constants.enum'
 import { PaginationDTO } from 'src/common/dto/common.dto';
 import { AppConfig } from 'src/config/app.config';
 import { GlobalConfiguration, GlobalConfigurationDocument } from 'src/configuration/schema/global_config.schema';
-import { file1HeadersIncludeSchema, file2HeadersIncludeSchema, validateHeaders } from 'src/validation/csv-validation';
+import { file1HeadersIncludeSchema, file2HeadersIncludeSchema, lfiTppHeaderSchema, validateHeaders } from 'src/validation/csv-validation';
 import { Log, LogDocument } from './schemas/billing-log.schema';
 import { ApiData, ApiDataDocument } from './schemas/endpoint.schema';
 import { LfiData, LfiDataDocument } from './schemas/lfi-data.schema';
@@ -688,10 +688,10 @@ export class UploadService {
       rawData.forEach(data => {
         const tpp_id = data["raw_api_log_data.tpp_id"];
         const tpp_name = data["raw_api_log_data.tpp_name"];
-        const tpp_client_id = data["raw_api_log_data.tpp_client_id"];
+        // const tpp_client_id = data["raw_api_log_data.tpp_client_id"];
 
         if (tpp_id && !tppMap.has(tpp_id)) {
-          tppMap.set(tpp_id, { tpp_id, tpp_name, tpp_client_id });
+          tppMap.set(tpp_id, { tpp_id, tpp_name });
         }
       });
 
@@ -1398,6 +1398,138 @@ export class UploadService {
       throw new Error("Failed to retrieve upload log data");
 
     }
+  }
+
+  async updateTppAndLfi(userEmail: string, organizationPath: string,) {
+    try {
+      const organizationData: any[] = [];
+      await new Promise((resolve, reject) => {
+        fs.createReadStream(organizationPath)
+          .pipe(csv())
+          .on('headers', async (headers) => {
+            const normalizedHeaders = headers.map((header) =>
+              header.replace(/^\ufeff/, '').trim()
+            );
+            try {
+              const data1Error = validateHeaders(normalizedHeaders, lfiTppHeaderSchema);
+              // console.log('iam data1Error', data1Error)
+            } catch (error) {
+              console.error('Validation failed for Organization data headers:', error.message);
+              reject(new HttpException(
+                {
+                  message: error.message,
+                  status: 400,
+                },
+                HttpStatus.BAD_REQUEST, // Use the appropriate status code constant
+              ));
+            }
+          })
+          .on('data', (row) => {
+            const normalizedRow: any = {};
+            let isEmptyRow = true;
+
+            for (const key in row) {
+              const normalizedKey = key.replace(/^\ufeff/, '').trim();
+              const value = row[key]?.trim();
+
+              normalizedRow[normalizedKey] = value;
+              if (value) isEmptyRow = false;
+            }
+
+            if (!isEmptyRow) {
+              organizationData.push(normalizedRow);
+            }
+          })
+          .on('end', resolve)
+          .on('error', reject);
+      });
+      console.log('iam organizationData', organizationData)
+
+      const lfiData = organizationData.filter(record => record.Size === 'LFI' && record['Org Status'] === 'Active' && record['User Status'] === 'Active' && record.ContactType === 'Business');
+      const tppData = organizationData.filter(record => record.Size === 'TPP' && record['Org Status'] === 'Active' && record['User Status'] === 'Active' && record.ContactType === 'Business');
+
+      if (lfiData.length > 0) {
+        await this.bulkCreateOrUpdateLFI(lfiData);
+      }
+      if (tppData.length > 0) {
+        await this.bulkCreateOrUpdateTPP(tppData);
+      }
+      return {
+        lfiData: lfiData.length,
+        tppData: tppData.length,
+      };
+    } catch (error) {
+      console.error('Error reading organization data:', error);
+      throw new HttpException(
+        {
+          message: error.message || 'Failed to read organization data.',
+          status: 500,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  async bulkCreateOrUpdateLFI(records: any[]) {
+    let globalData = await this.globalModel.find({ key: { $in: ['attendedCallFreeLimit', 'unAttendedCallFreeLimit'] } });
+    let attendedCallFreeLimit = globalData.find(item => item.key === 'attendedCallFreeLimit')?.value;
+    let unAttendedCallFreeLimit = globalData.find(item => item.key === 'unAttendedCallFreeLimit')?.value;
+
+    console.log('iam global data', globalData)
+    const bulkOps = records.map(record => ({
+      updateOne: {
+        filter: { lfi_id: record.OrganisationId },
+        update: {
+          $set: {
+            lfi_name: record.OrganisationName,
+            free_limit_attended: attendedCallFreeLimit,
+            free_limit_unattended: unAttendedCallFreeLimit,
+            registered_name: record.RegisteredName,
+            addressLine_2: record.AddressLine2,
+            size: record.Size,
+            country: record.Country,
+            post_code: record.Postcode,
+            org_status: record['Org Status'],
+            contact_type: record.ContactType,
+            first_name: record.FirstName,
+            last_name: record.LastName,
+            user_status: record['User Status'],
+          },
+          $addToSet: { email_address: record.EmailAddress }, // Ensure unique email addresses
+        },
+        upsert: true, // Create if not exists
+      },
+    }));
+
+    await this.lfiModel.bulkWrite(bulkOps);
+  }
+
+
+  async bulkCreateOrUpdateTPP(records: any[]) {
+    const bulkOps = records.map(record => ({
+      updateOne: {
+        filter: { tpp_id: record.OrganisationId },
+        update: {
+          $set: {
+            tpp_name: record.OrganisationName,
+            registered_name: record.RegisteredName,
+            addressLine_2: record.AddressLine2,
+            size: record.Size,
+            country: record.Country,
+            post_code: record.Postcode,
+            org_status: record['Org Status'],
+            contact_type: record.ContactType,
+            first_name: record.FirstName,
+            last_name: record.LastName,
+            user_status: record['User Status'],
+          },
+          $addToSet: { email_address: record.EmailAddress }, // Ensure unique email addresses
+        },
+        upsert: true, // Create if not exists
+      },
+    }));
+
+    await this.TppModel.bulkWrite(bulkOps);
   }
 }
 
