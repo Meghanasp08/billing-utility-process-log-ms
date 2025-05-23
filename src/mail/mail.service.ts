@@ -286,7 +286,6 @@ export class MailService {
 
         user.status = 1;
         user.isVerified = true;
-        user.activationToken = '';
         await user.save();
 
         return { message: 'Account activated successfully' };

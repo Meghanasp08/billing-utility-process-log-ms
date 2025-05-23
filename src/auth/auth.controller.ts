@@ -70,4 +70,22 @@ export class AuthController {
       throw error;
     }
   }
+
+  @Post('/create-password')
+  async createPassword(
+    @Body(ValidationPipe) data: any,
+    @Request() req: any,
+  ) {
+    try {
+      const result = await this.authService.createPassword(data);
+      return {
+        message: 'Password updated successfully',
+        result: result,
+        statusCode: HttpStatus.OK,
+      };
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
+  }
 }
