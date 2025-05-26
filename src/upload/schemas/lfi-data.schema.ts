@@ -44,9 +44,6 @@ export class LfiData {
     addressLine_2: string;
 
     @Prop({ required: false })
-    size: string;
-
-    @Prop({ required: false })
     country: string;
 
     @Prop({ required: false })
@@ -58,6 +55,18 @@ export class LfiData {
     @Prop({ required: false })
     contact_type: string;
 
+    // @Prop({
+    //     type: [
+    //         {
+    //             email: { type: String, required: true },
+    //             status: { type: String, required: true },
+    //         },
+    //     ],
+    //     required: false,
+    //     default: [],
+    // })
+    // contact: { email: string; status: string }[];
+
     @Prop({ required: false, type: [String] }) // Store emails as an array
     email_address: string[];
 
@@ -67,8 +76,6 @@ export class LfiData {
     @Prop({ required: false })
     last_name: string;
 
-    @Prop({ required: false })
-    user_status: string;
 
 }
 
