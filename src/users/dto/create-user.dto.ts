@@ -32,23 +32,15 @@ export class CreateUserDto {
     @IsOptional()
     readonly email: string = ''
 
-    @ApiProperty({
-        description: ' username',
-        type: String,
-        required: false
-    })
-    @IsString()
-    @IsOptional()
-    readonly username: string = ''
 
-    @ApiProperty({
-        description: 'mobile',
-        type: String,
-        required: false
-    })
-    @IsString()
-    @IsOptional()
-    readonly mobile: string = ''
+    // @ApiProperty({
+    //     description: 'mobile',
+    //     type: String,
+    //     required: false
+    // })
+    // @IsString()
+    // @IsOptional()
+    // readonly mobile: string = ''
 
     
     role:any
