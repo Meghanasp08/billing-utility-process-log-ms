@@ -19,6 +19,7 @@ import { Response } from 'express';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth-guard';
 import { PaginationDTO } from 'src/common/dto/common.dto';
 
+import { unlink } from 'fs';
 import { UploadService } from './upload.service';
 
 
@@ -58,7 +59,6 @@ export class UploadController {
     })
     async uploadFiles(@UploadedFiles() files: { raw_data?: Express.Multer.File[]; payment_data?: Express.Multer.File[]; }, @Req() req: any) {
         try {
-            // console.log('Uploaded files:', req.user.email);
             if (!files?.raw_data || !files?.payment_data) {
                 throw new HttpException('Both files are required', HttpStatus.BAD_REQUEST);
             }
@@ -66,7 +66,6 @@ export class UploadController {
             const [raw_dataPath, payment_dataPath] = [
                 files.raw_data[0].path,
                 files.payment_data[0].path,
-                // files.file3[0].path,
             ];
 
             const mergedFilePath = await this.uploadService.mergeCsvFiles(req.user.email, raw_dataPath, payment_dataPath,);
@@ -139,11 +138,6 @@ export class UploadController {
 
             const mergedFilePath = await this.uploadService.mergeCsvFiles('byPass', raw_dataPath, payment_dataPath, downloadCsv);
 
-            // return {
-            //     message: 'Merged CCV File generated Successfully',
-            //     result: mergedFilePath,
-            //     statusCode: HttpStatus.OK
-            // }
             return res.download('./output/data.csv', 'merged-data.csv', (err) => {
                 if (err) {
                     console.error('Error while downloading file:', err);
@@ -248,17 +242,21 @@ export class UploadController {
     })
     async uploadLfiTpp(@UploadedFiles() files: { organization_data?: Express.Multer.File[]; }, @Req() req: any) {
         try {
-            // console.log('Uploaded files:', req.user.email);
             if (!files?.organization_data) {
                 throw new HttpException('file is required', HttpStatus.BAD_REQUEST);
             }
 
-            const [organization_data] = [
-                files.organization_data[0].path,
-            ];
+            const organizationFilePath = files.organization_data[0].path;
 
-            const tppLfi = await this.uploadService.updateTppAndLfi('req.user.email', organization_data,);
+            const tppLfi = await this.uploadService.updateTppAndLfi(organizationFilePath,);
 
+            unlink(organizationFilePath, (unlinkErr) => {
+                if (unlinkErr) {
+                    console.error('Error deleting organization data file:', unlinkErr);
+                } else {
+                    console.log(`Deleted temp organization data file: ${organizationFilePath}`);
+                }
+            });
             return {
                 message: 'Organization data processed successfully.',
                 result: tppLfi,

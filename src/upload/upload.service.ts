@@ -37,14 +37,12 @@ export class UploadService {
     nonLargeValueCapMerchant?: any; //50 aed
     nonLargeValueFreeLimitMerchant?: any; //200 aed
     bulkLargeCorporatefee?: any; // 2.5
-    // nonBulkLargeValueCapMerchant?: any; //4 aed
     paymentLargeValueFee?: any; //4 aed
     paymentFeeMe2me?: any; // 0.2 aed
     bulkMe2meCap?: any; //2.5 aed
     paymentNonLargevalueFeePeer?: any; //0.25 aed
     attendedCallFreeLimit?: any; // 15 count
     unAttendedCallFreeLimit?: any; // 5 count
-    // nonLargeValueCapMerchantCheck?: any; //20000 aed
     nonLargeValueMerchantBps?: any; //0.0038 aed
     bulkPeernonLargeValueCap?: any; //2.5 aed
     dataLargeCorporateMdp?: any; // 0.4 aed
@@ -180,36 +178,6 @@ export class UploadService {
           const normalizedHeaders = headers.map((header) =>
             header.replace(/^\ufeff/, '').trim()
           );
-          //   const { error } = file1HeadersSchema.validate(normalizedHeaders);
-          //   if (error) {
-
-          //     console.error('Validation error for raw log data headers:', error.details[0]);
-          //     reject(new HttpException(
-          //       {
-          //         message: 'Validation failed for raw API log data headers.',
-          //         status: 400,
-          //       },
-          //       HttpStatus.BAD_REQUEST, // Use the appropriate status code constant
-          //     ));
-
-          //     await this.uploadLog.findByIdAndUpdate(
-          //       logUpdate._id,
-          //       {
-          //         $set: {
-          //           status: 'Failed',
-          //           remarks: 'Failed to validate raw log headers',
-          //         },
-          //         $push: {
-          //           log: {
-          //             description: `Validation error for raw log data headers occurred in column ${error.details[0].context.key + 1} with incorrect header value ${error.details[0].context.value}`,
-          //             status: 'Failed',
-          //             errorDetail: `Header value: ${error.details[0].context.value}. Error details: ${JSON.stringify(error.details[0])}`,
-          //           },
-          //         },
-          //       }
-          //     );
-          //   }
-          // })
           try {
             const data1Error = validateHeaders(normalizedHeaders, file1HeadersIncludeSchema);
             // console.log('iam data1Error', data1Error)
@@ -276,38 +244,8 @@ export class UploadService {
           const normalizedHeaders = headers.map((header) =>
             header.replace(/^\ufeff/, '').trim()
           );
-          //   const { error } = file2HeadersSchema.validate(normalizedHeaders);
-
-          //   if (error) {
-
-          //     console.error('Validation error for payment log headers:', error.details);
-          //     reject(new HttpException(
-          //       {
-          //         message: 'Validation failed for payment API log data headers.',
-          //         status: 400,
-          //       },
-          //       HttpStatus.BAD_REQUEST, // Use the appropriate status code constant
-          //     ));
-          //     await this.uploadLog.findByIdAndUpdate(
-          //       logUpdate._id,
-          //       {
-          //         $set: {
-          //           status: 'Failed',
-          //           remarks: 'Failed to validate payment log headers',
-          //         },
-          //         $push: {
-          //           log: {
-          //             description: `Validation error for payment log data headers occurred in column ${error.details[0].context.key + 1} with incorrect header value ${error.details[0].context.value}`,
-          //             status: 'Failed',
-          //             errorDetail: `Header value: ${error.details[0].context.value}. Error details: ${JSON.stringify(error.details[0])}`,
-          //           },
-          //         }
-          //       });
-          //   }
-          // })
           try {
             const dataError = validateHeaders(normalizedHeaders, file2HeadersIncludeSchema);
-            // console.log('iam data error', dataError)
           } catch (error) {
             console.error('Validation error for payment log data headers:', error.message);
             reject(new HttpException(
@@ -579,7 +517,6 @@ export class UploadService {
         if (!record.lfiChargable) {
           const records = parseInt(record["raw_api_log_data.records"] ?? "0", 10);
           record.numberOfPages = Math.ceil(records / 100) || 1;
-          // record.volume = record.numberOfPages;
           apiHubVolume = record.numberOfPages;
           totalApiHubFee *= apiHubVolume;
         } else {
@@ -598,7 +535,6 @@ export class UploadService {
   }
   async attendedUpdateOnNumberOfPage(data: any) {
     let lfiPageDataArray: any[] = [];
-    // console.log('iam data', data)
     const updatedData = data.map((record: any) => {
       if (record.lfiResult && record.lfiResult.length > 0) {
         const outerData = record.lfiResult.find(txn => txn.paymentId == record['payment_logs.payment_id']);
@@ -613,7 +549,6 @@ export class UploadService {
           appliedLimit: outerData.appliedLimit,
           volume: outerData.chargeableAmount,
           limitApplied: outerData.appliedLimit > 0,
-          // charge: outerData.charge,
           unit_price: record['raw_api_log_data.is_large_corporate'] ? this.variables.dataLargeCorporateMdp.value : outerData.mdp_rate,
         };
       }
@@ -627,7 +562,6 @@ export class UploadService {
         "summary.psuId": uniqueLfiPageData.summary.psuId,
         'summary.date': uniqueLfiPageData.summary.date
       });
-      // console.log('iam unique data', uniqueLfiPageData)
       if (!existingMulti) {
         const lfiPageData = await this.pageMultiplier.insertMany(uniqueLfiPageData);
       }
@@ -688,7 +622,6 @@ export class UploadService {
       rawData.forEach(data => {
         const tpp_id = data["raw_api_log_data.tpp_id"];
         const tpp_name = data["raw_api_log_data.tpp_name"];
-        // const tpp_client_id = data["raw_api_log_data.tpp_client_id"];
 
         if (tpp_id && !tppMap.has(tpp_id)) {
           tppMap.set(tpp_id, { tpp_id, tpp_name });
@@ -721,7 +654,6 @@ export class UploadService {
 
   async feeCalculationForLfi(data: any) {
     try {
-      // Step 1: Preprocess -> group by psuId + date + is_attended
       const psuGroupedMap: Record<
         string,
         { psuId: string; date: string; isAttended: string; totalPages: number; tpp_id: string; transactions: any[] }
@@ -944,8 +876,6 @@ export class UploadService {
 
             return {
               ...record,
-              // calculatedFee: parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * 250 / this.aedConstant).toFixed(3)),
-              // applicableFee: parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * 250 / this.aedConstant).toFixed(3)), // Ensure `applicableFee` is also set
               calculatedFee: parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * this.variables.bulkLargeCorporatefee.value).toFixed(3)),
               applicableFee: parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * this.variables.bulkLargeCorporatefee.value).toFixed(3)), // Ensure 
               type: "corporate",
@@ -1124,31 +1054,6 @@ export class UploadService {
   }
 
 
-  // async determineChargeableAndSuccess(data: any[], apiData: any[]) {
-  //   const chargableUrls = apiData
-  //     .filter(api => api.chargeable_api_hub_fee === true)
-  //     .map(api => `${api.api_endpoint}:${api.api_operation.toUpperCase()}`);
-
-  //   const lfiChargableUrls = apiData
-  //     .filter(api => api.chargeable_LFI_TPP_fee === true)
-  //     .map(api => `${api.api_endpoint}:${api.api_operation.toUpperCase()}`);
-
-  //   return data.map(record => {
-  //     let rawDataEndpoint = this.matchTemplateVersionUrl([record["raw_api_log_data.url"]]);
-  //     const isChargeable = chargableUrls.includes(`${rawDataEndpoint}:${record["raw_api_log_data.http_method"]}`);
-  //     const islfiChargable = lfiChargableUrls.includes(`${rawDataEndpoint}:${record["raw_api_log_data.http_method"]}`);
-  //     const success = /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.tpp_response_code_group"]) &&
-  //       /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.lfi_response_code_group"]);
-
-  //     return {
-  //       ...record,
-  //       chargeable: isChargeable,
-  //       lfiChargable: islfiChargable,
-  //       success,
-  //     };
-  //   });
-  // }
-
   async determineChargeableAndSuccess(data: any[], apiData: any[]) {
     // Convert API data into lists of chargeable URLs with their methods
     const chargableUrls = apiData
@@ -1204,12 +1109,6 @@ export class UploadService {
       let api_hub_fee = this.variables.paymentApiHubFee.value;
 
 
-      // const groupData = apiData.find(api =>
-      //   `${api.url}:${api.api_operation.toUpperCase()}`
-      //     .replace(/\s+/g, '') ===
-      //   `${record["raw_api_log_data.url"]}:${record["raw_api_log_data.http_method"].toUpperCase()}`
-      //     .replace(/\s+/g, '')
-      // );
       const groupData = await this.findGroupData(record, apiData);
       let group = groupData?.key_name || "Other";
 
@@ -1400,7 +1299,7 @@ export class UploadService {
     }
   }
 
-  async updateTppAndLfi(userEmail: string, organizationPath: string,) {
+  async updateTppAndLfi(organizationPath: string,) {
     try {
       const organizationData: any[] = [];
       await new Promise((resolve, reject) => {
@@ -1445,8 +1344,8 @@ export class UploadService {
       });
       console.log('iam organizationData', organizationData)
 
-      const lfiData = organizationData.filter(record => record.Size === 'LFI' && record['Org Status'] === 'Active' && record['User Status'] === 'Active' && record.ContactType === 'Business');
-      const tppData = organizationData.filter(record => record.Size === 'TPP' && record['Org Status'] === 'Active' && record['User Status'] === 'Active' && record.ContactType === 'Business');
+      const lfiData = organizationData.filter(record => record.Size === 'LFI' && record['Org Status'] === 'Active' && record.ContactType === 'Business');
+      const tppData = organizationData.filter(record => record.Size === 'TPP' && record['Org Status'] === 'Active' && record.ContactType === 'Business');
 
       if (lfiData.length > 0) {
         await this.bulkCreateOrUpdateLFI(lfiData);
@@ -1474,60 +1373,102 @@ export class UploadService {
     let globalData = await this.globalModel.find({ key: { $in: ['attendedCallFreeLimit', 'unAttendedCallFreeLimit'] } });
     let attendedCallFreeLimit = globalData.find(item => item.key === 'attendedCallFreeLimit')?.value;
     let unAttendedCallFreeLimit = globalData.find(item => item.key === 'unAttendedCallFreeLimit')?.value;
-
-    console.log('iam global data', globalData)
-    const bulkOps = records.map(record => ({
-      updateOne: {
-        filter: { lfi_id: record.OrganisationId },
-        update: {
-          $set: {
-            lfi_name: record.OrganisationName,
-            free_limit_attended: attendedCallFreeLimit,
-            free_limit_unattended: unAttendedCallFreeLimit,
-            registered_name: record.RegisteredName,
-            addressLine_2: record.AddressLine2,
-            size: record.Size,
-            country: record.Country,
-            post_code: record.Postcode,
-            org_status: record['Org Status'],
-            contact_type: record.ContactType,
-            first_name: record.FirstName,
-            last_name: record.LastName,
-            user_status: record['User Status'],
-          },
-          $addToSet: { email_address: record.EmailAddress }, // Ensure unique email addresses
+    const lfiIds = records.map(record => record.OrganisationId);
+    await this.lfiModel.updateMany(
+      { lfi_id: { $in: lfiIds } },
+      { $set: { email_address: [] } }
+    );
+    const bulkOps = records.map(record => {
+      const update: any = {
+        $set: {
+          lfi_name: record.OrganisationName,
+          free_limit_attended: attendedCallFreeLimit,
+          free_limit_unattended: unAttendedCallFreeLimit,
+          registered_name: record.RegisteredName,
+          addressLine_2: record.AddressLine2,
+          country: record.Country,
+          post_code: record.Postcode,
+          org_status: record['Org Status'],
+          contact_type: record.ContactType,
+          first_name: record.FirstName,
+          last_name: record.LastName,
         },
-        upsert: true, // Create if not exists
-      },
-    }));
+      };
 
+      // Conditionally add email_address if UserStatus is active
+      if (record['User Status'] === 'Active') {
+        update.$addToSet = { email_address: record.EmailAddress };
+      }
+
+      return {
+        updateOne: {
+          filter: { lfi_id: record.OrganisationId },
+          update,
+          upsert: true, // Create if not exists
+        },
+      };
+    });
+
+    // Execute the bulkWrite
     await this.lfiModel.bulkWrite(bulkOps);
   }
 
 
   async bulkCreateOrUpdateTPP(records: any[]) {
-    const bulkOps = records.map(record => ({
-      updateOne: {
-        filter: { tpp_id: record.OrganisationId },
-        update: {
-          $set: {
-            tpp_name: record.OrganisationName,
-            registered_name: record.RegisteredName,
-            addressLine_2: record.AddressLine2,
-            size: record.Size,
-            country: record.Country,
-            post_code: record.Postcode,
-            org_status: record['Org Status'],
-            contact_type: record.ContactType,
-            first_name: record.FirstName,
-            last_name: record.LastName,
-            user_status: record['User Status'],
-          },
-          $addToSet: { email_address: record.EmailAddress }, // Ensure unique email addresses
+    const tppIds = records.map(record => record.OrganisationId);
+    await this.TppModel.updateMany(
+      { tpp_id: { $in: tppIds } },
+      { $set: { email_address: [] } }
+    );
+
+    // const bulkOps = records.map(record => ({
+    //   updateOne: {
+    //     filter: { tpp_id: record.OrganisationId },
+    //     update: {
+    //       $set: {
+    //         tpp_name: record.OrganisationName,
+    //         registered_name: record.RegisteredName,
+    //         addressLine_2: record.AddressLine2,
+    //         country: record.Country,
+    //         post_code: record.Postcode,
+    //         org_status: record['Org Status'],
+    //         contact_type: record.ContactType,
+    //         first_name: record.FirstName,
+    //         last_name: record.LastName,
+    //       },
+    //       $addToSet: { email_address: record.EmailAddress },
+    //     },
+    //     upsert: true, // Create if not exists
+    //   },
+    // }));
+    const bulkOps = records.map(record => {
+      const update: any = {
+        $set: {
+          tpp_name: record.OrganisationName,
+          registered_name: record.RegisteredName,
+          addressLine_2: record.AddressLine2,
+          country: record.Country,
+          post_code: record.Postcode,
+          org_status: record['Org Status'],
+          contact_type: record.ContactType,
+          first_name: record.FirstName,
+          last_name: record.LastName,
         },
-        upsert: true, // Create if not exists
-      },
-    }));
+      };
+
+      // Conditionally add email_address if UserStatus is active
+      if (record['User Status'] === 'Active') {
+        update.$addToSet = { email_address: record.EmailAddress };
+      }
+
+      return {
+        updateOne: {
+          filter: { tpp_id: record.OrganisationId },
+          update,
+          upsert: true, // Create if not exists
+        },
+      };
+    });
 
     await this.TppModel.bulkWrite(bulkOps);
   }
