@@ -1344,8 +1344,8 @@ export class UploadService {
       });
       console.log('iam organizationData', organizationData)
 
-      const lfiData = organizationData.filter(record => record.Size === 'LFI' && record['Org Status'] === 'Active' && record.ContactType === 'Business');
-      const tppData = organizationData.filter(record => record.Size === 'TPP' && record['Org Status'] === 'Active' && record.ContactType === 'Business');
+      const lfiData = organizationData.filter(record => record.Size === 'LFI' && record.ContactType === 'Business');
+      const tppData = organizationData.filter(record => record.Size === 'TPP' && record.ContactType === 'Business');
 
       if (lfiData.length > 0) {
         await this.bulkCreateOrUpdateLFI(lfiData);
@@ -1408,7 +1408,6 @@ export class UploadService {
         },
       };
     });
-
     // Execute the bulkWrite
     await this.lfiModel.bulkWrite(bulkOps);
   }
@@ -1421,26 +1420,6 @@ export class UploadService {
       { $set: { email_address: [] } }
     );
 
-    // const bulkOps = records.map(record => ({
-    //   updateOne: {
-    //     filter: { tpp_id: record.OrganisationId },
-    //     update: {
-    //       $set: {
-    //         tpp_name: record.OrganisationName,
-    //         registered_name: record.RegisteredName,
-    //         addressLine_2: record.AddressLine2,
-    //         country: record.Country,
-    //         post_code: record.Postcode,
-    //         org_status: record['Org Status'],
-    //         contact_type: record.ContactType,
-    //         first_name: record.FirstName,
-    //         last_name: record.LastName,
-    //       },
-    //       $addToSet: { email_address: record.EmailAddress },
-    //     },
-    //     upsert: true, // Create if not exists
-    //   },
-    // }));
     const bulkOps = records.map(record => {
       const update: any = {
         $set: {
@@ -1465,11 +1444,10 @@ export class UploadService {
         updateOne: {
           filter: { tpp_id: record.OrganisationId },
           update,
-          upsert: true, // Create if not exists
+          upsert: true,
         },
       };
     });
-
     await this.TppModel.bulkWrite(bulkOps);
   }
 }

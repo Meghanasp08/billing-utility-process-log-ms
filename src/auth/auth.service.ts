@@ -99,6 +99,7 @@ export class AuthService {
     const refresh_expires_in = parseInt(this.config.get('REFRESH_TOKEN_EXPIRY') || '604800');
 
     return {
+      userId: auth._id,
       access_token,
       refresh_token,
       expires_in,
@@ -166,13 +167,9 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    if (user.isVerified == true) {
-      throw new NotFoundException('Account already activated');
-    }
 
     user.activationToken = '';
     user.password = data.password;
-    user.isVerified = true;
     await user.save();
 
     return { message: 'Password updated successfully' };
