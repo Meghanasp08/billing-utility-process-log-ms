@@ -77,7 +77,7 @@ export class InvoiceService {
         let month = invoiceDto?.month;
         let year = invoiceDto?.year;
         if (month < 1 || month > 12)
-            throw new Error('Invalid month (1-12)');
+            throw new NotFoundException('Invalid month (1-12)');
 
         await this.invoiceModel.deleteMany({
             invoice_month: month,
@@ -1175,8 +1175,8 @@ export class InvoiceService {
 
         const tppData = await this.tppDataModel.findOne({ tpp_id: tpp_id });
         if (!tppData)
-            throw new Error('Invalid TppID');
-        console.log(invoiceDto?.startDate, invoiceDto.endDate)
+            throw new NotFoundException(`TppID ${tpp_id} not found.`);
+
         const startDate = invoiceDto?.startDate
             ? new Date(
                 moment(invoiceDto.startDate.toString()).startOf('day').format()
@@ -1824,7 +1824,7 @@ export class InvoiceService {
 
         const lfiData = await this.lfiDataModel.findOne({ lfi_id: lfi_id }).lean<any>()
         if (!lfiData)
-            throw new Error('Invalid Lfi-ID');
+            throw new NotFoundException(`Lfi-ID ${lfi_id} not found.`);
 
         const startDate = invoiceDto?.startDate
             ? new Date(
@@ -3496,7 +3496,7 @@ export class InvoiceService {
         let year = data.year
         const tppData = await this.tppDataModel.findOne({ tpp_id: data.tpp_id }).lean<any>();
         if (!tppData)
-            throw new Error('Invalid Tpp-ID');
+            throw new NotFoundException('Invalid Tpp-ID');
         console.log(tppData)
 
         const result = await this.invoiceModel.findOne({
@@ -3514,7 +3514,7 @@ export class InvoiceService {
 
         const lfiData = await this.lfiDataModel.findOne({ lfi_id: lfi_id }).lean<any>();
         if (!lfiData)
-            throw new Error('Invalid Lfi-ID');
+            throw new NotFoundException('Invalid Lfi-ID');
 
         const result = await this.collectionMemoModel.findOne({
             lfi_id: lfi_id,
@@ -3532,7 +3532,7 @@ export class InvoiceService {
 
         const tppData = await this.tppDataModel.findOne({ tpp_id: data.tpp_id }).lean<any>();
         if (!tppData)
-            throw new Error('Invalid Tpp-ID');
+            throw new NotFoundException('Invalid Tpp-ID');
 
         let email = tppData?.email_address ?? 'rahulmanikandan0298@gmail.com'
 
@@ -3574,7 +3574,7 @@ export class InvoiceService {
         if (mail) {
             try {
                 if (!Array.isArray(email) || email.length === 0) {
-                    throw new Error('No valid recipient email addresses provided.');
+                    throw new NotFoundException('No valid recipient email addresses provided.');
                 }
                 let tpp = true;
                 const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath, email, invoice_data?.tpp_name, invoice_data?.invoice_number, tpp); // Ensure mailservi.sendmail returns a response
@@ -3589,7 +3589,7 @@ export class InvoiceService {
                 result = mailResponse
             } catch (error) {
                 console.error('Error sending mail:', error);
-                throw new Error('Failed to send mail with the PDF attachment');
+                throw new NotFoundException('Failed to send mail with the PDF attachment');
             }
         } else {
             result = attachmentPath
@@ -4409,9 +4409,9 @@ export class InvoiceService {
 
         const lfiData = await this.lfiDataModel.findOne({ lfi_id: data.lfi_id }).lean<any>();
         if (!lfiData)
-            throw new Error('Invalid Lfi-ID');
+            throw new NotFoundException('Invalid Lfi-ID');
 
-        let email = lfiData?.email_address 
+        let email = lfiData?.email_address
 
         const currentDate = new Date();
         const timestamp = currentDate.getTime();
@@ -4454,7 +4454,7 @@ export class InvoiceService {
             try {
                 let tpp = false;
                 if (!Array.isArray(email) || email.length === 0) {
-                    throw new Error('No valid recipient email addresses provided.');
+                    throw new NotFoundException('No valid recipient email addresses provided.');
                 }
                 const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath, email, invoice_data?.lfi_name, invoice_data?.invoice_number, tpp); // Ensure mailservi.sendmail returns a response
                 // Optionally delete the PDF after sending
@@ -4468,7 +4468,7 @@ export class InvoiceService {
                 result = mailResponse
             } catch (error) {
                 console.error('Error sending mail:', error);
-                throw new Error('Failed to send mail with the PDF attachment');
+                throw new NotFoundException('Failed to send mail with the PDF attachment');
             }
         } else {
             result = attachmentPath

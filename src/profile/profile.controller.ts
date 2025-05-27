@@ -36,9 +36,12 @@ export class ProfileController {
   @Get('log')
   async getLogData(@Req() req: any, @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string, @Query('search') search?: string, @Query('limit') limit: number = 100,
-    @Query('offset') offset: number = 0) {
+    @Query('offset') offset: number = 0, @Query('group') group?: string, @Query('type') type?: string,
+    @Query('lfiChargable') lfiChargable?: boolean,) {
     try {
-      const logData = await this.profileService.getLogData(startDate, endDate, search, limit, offset);
+      const logData = await this.profileService.getLogData(
+        startDate, endDate, search, limit, offset, group, type, lfiChargable
+      );
       return {
         message: 'List of Logs',
         result: logData,
@@ -225,7 +228,7 @@ export class ProfileController {
     }
   }
 
-  
+
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Post('change-password')

@@ -41,7 +41,7 @@ export class ProfileService {
   }
 
   async getLogData(startDate?: string, endDate?: string, search?: string, limit: number = 100,
-    offset: number = 0) {
+    offset: number = 0, group?: string, type?: string, lfiChargable?: boolean) {
     const filter: any = {};
     let timezone: string = moment.tz.guess();
 
@@ -55,6 +55,16 @@ export class ProfileService {
     } else if (endDate) {
       filter["raw_api_log_data.timestamp"] = { $lte: moment.tz(endDate, timezone).utc().toDate(), };
     }
+    if (group) {
+      filter["group"] = group
+    }
+    if (type) {
+      filter["type"] = type
+    }
+    if (lfiChargable) {
+      filter["lfiChargable"] = lfiChargable
+    }
+    
     if (search) {
       const searchRegex = new RegExp(search, "i");
       filter["$or"] = [

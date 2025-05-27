@@ -5,7 +5,7 @@ import { PaginationDTO } from 'src/common/dto/common.dto';
 import { PaginationEnum } from 'src/common/constants/constants.enum';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from './entities/user.entity';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { UserDocument } from 'src/profile/schemas/user.schema';
 import { ObjectId } from 'mongodb';
 import { MailService } from 'src/mail/mail.service';
@@ -57,14 +57,30 @@ export class UsersService {
     const options: any = {};
     const status = PaginationDTO.status != null ? Number(PaginationDTO.status) : null;
 
-    if (Number(status)) {
-      options.status = status
+    if (Number(status) === 0) {
+      options.status = { $in: [1, 2] };
+    } else if (Number(status)) {
+      options.status = Number(status);
     }
-    console.log(options)
+
     const search = PaginationDTO.search ? PaginationDTO.search.trim() : null;
     if (search) {
       const searchRegex = new RegExp(search, "i");
-      options.$or = [{ "firstName": searchRegex }, { "lastName": searchRegex }, { "email": searchRegex },];
+      options.$or = options.$or = [
+        { firstName: searchRegex }, { lastName: searchRegex }, { email: searchRegex },
+        {
+          $expr: {
+            $regexMatch: {
+              input: { $concat: ["$firstName", " ", "$lastName"] },
+              regex: search,
+              options: "i"
+            }
+          }
+        }
+      ];
+    }
+    if (PaginationDTO?.role) {
+      options.role = new Types.ObjectId(PaginationDTO?.role)
     }
 
     console.log(options)
@@ -94,7 +110,7 @@ export class UsersService {
     return result
   }
 
-  async changePassword(){
+  async changePassword() {
 
   }
 

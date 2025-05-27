@@ -43,4 +43,5 @@ export class PaginationDTO {
     month:Number
     year:Number
     invoice_status:Number
+    role:string
 }
