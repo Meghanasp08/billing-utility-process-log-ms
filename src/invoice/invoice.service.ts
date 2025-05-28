@@ -3573,11 +3573,12 @@ export class InvoiceService {
         let result;
         if (mail) {
             try {
+                console.log("EMAIL",email)
                 if (!Array.isArray(email) || email.length === 0) {
                     throw new NotFoundException('No valid recipient email addresses provided.');
                 }
                 let tpp = true;
-                const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath, email, invoice_data?.tpp_name, invoice_data?.invoice_number, tpp); // Ensure mailservi.sendmail returns a response
+                const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath, email, invoice_data?.tpp_name, invoice_data?.invoice_number, tpp, invoice_data); // Ensure mailservi.sendmail returns a response
                 // Optionally delete the PDF after sending
                 fs.unlink(attachmentPath, (unlinkErr) => {
                     if (unlinkErr) {
@@ -3589,7 +3590,7 @@ export class InvoiceService {
                 result = mailResponse
             } catch (error) {
                 console.error('Error sending mail:', error);
-                throw new NotFoundException('Failed to send mail with the PDF attachment');
+                throw error;
             }
         } else {
             result = attachmentPath
@@ -4456,7 +4457,7 @@ export class InvoiceService {
                 if (!Array.isArray(email) || email.length === 0) {
                     throw new NotFoundException('No valid recipient email addresses provided.');
                 }
-                const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath, email, invoice_data?.lfi_name, invoice_data?.invoice_number, tpp); // Ensure mailservi.sendmail returns a response
+                const mailResponse = await this.mailService.sendInvoiceEmail(attachmentPath, email, invoice_data?.lfi_name, invoice_data?.invoice_number, tpp, invoice_data); // Ensure mailservi.sendmail returns a response
                 // Optionally delete the PDF after sending
                 fs.unlink(attachmentPath, (unlinkErr) => {
                     if (unlinkErr) {
@@ -4468,7 +4469,7 @@ export class InvoiceService {
                 result = mailResponse
             } catch (error) {
                 console.error('Error sending mail:', error);
-                throw new NotFoundException('Failed to send mail with the PDF attachment');
+                throw error;
             }
         } else {
             result = attachmentPath
