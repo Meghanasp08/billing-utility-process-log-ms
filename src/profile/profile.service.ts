@@ -41,7 +41,7 @@ export class ProfileService {
   }
 
   async getLogData(startDate?: string, endDate?: string, search?: string, limit: number = 100,
-    offset: number = 0, group?: string, type?: string, lfiChargable?: boolean) {
+    offset: number = 0, group?: string, type?: string, lfiChargable?: boolean, apiChargeable?: boolean) {
     const filter: any = {};
     let timezone: string = moment.tz.guess();
 
@@ -63,6 +63,9 @@ export class ProfileService {
     }
     if (lfiChargable) {
       filter["lfiChargable"] = lfiChargable
+    }
+    if (apiChargeable) {
+      filter["chargeable"] = apiChargeable
     }
     
     if (search) {

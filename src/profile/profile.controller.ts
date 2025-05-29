@@ -37,10 +37,10 @@ export class ProfileController {
   async getLogData(@Req() req: any, @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string, @Query('search') search?: string, @Query('limit') limit: number = 100,
     @Query('offset') offset: number = 0, @Query('group') group?: string, @Query('type') type?: string,
-    @Query('lfiChargable') lfiChargable?: boolean,) {
+    @Query('lfiChargable') lfiChargable?: boolean,@Query('apiChargeable') apiChargeable?: boolean,) {
     try {
       const logData = await this.profileService.getLogData(
-        startDate, endDate, search, limit, offset, group, type, lfiChargable
+        startDate, endDate, search, limit, offset, group, type, lfiChargable, apiChargeable
       );
       return {
         message: 'List of Logs',
