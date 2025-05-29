@@ -35,7 +35,7 @@ export class UsersController {
     try {
       const result = await this.usersService.findAll(PaginationDTO);
       return {
-        message: 'List of all users',
+        message: 'The list of users',
         result: result?.result,
         statusCode: HttpStatus.OK,
         pagination: result?.pagination,
