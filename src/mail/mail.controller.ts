@@ -17,7 +17,7 @@ export class MailController {
       console.log("MAIL CHECKING")
       let mail_data = {
         event: "WELCOME",
-        to_mail: "rahulmanikandan0298@gmail.com",
+        to_mail: "rahulmm@activelobby.net",
       }
       const result = await this.mailService.sendEmail(mail_data);
       return {
