@@ -4,6 +4,8 @@ import { Response } from 'express';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth-guard';
 import { ProfileService } from './profile.service';
 import { ChangePasswordDto } from './dto/profile.dto';
+import { Claims } from 'src/common/claims/claims.decorator';
+import { Claim } from 'src/common/claims/claim.enum';
 
 @ApiTags('profile')
 @Controller('profile')
@@ -12,6 +14,7 @@ export class ProfileController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
+  @Claims(Claim.USER_VIEW)
   @ApiOperation({ summary: 'Retrieve the profile of the logged-in user.' })
   @Get()
   async getProfile(@Req() request: any) {
@@ -27,6 +30,7 @@ export class ProfileController {
       throw error;
     }
   }
+
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Retrieve log data based on date range and search query.' })
@@ -34,6 +38,7 @@ export class ProfileController {
   @ApiQuery({ name: 'endDate', required: false, description: 'End date of the logs (YYYY-MM-DD).' })
   @ApiQuery({ name: 'search', required: false, description: 'Search keyword for filtering logs (TPP id, LFI Id, TPP Name , LFI Name).' })
   @Get('log')
+  @Claims(Claim.LOG_VIEW)
   async getLogData(@Req() req: any, @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string, @Query('search') search?: string, @Query('limit') limit: number = 100,
     @Query('offset') offset: number = 0, @Query('group') group?: string, @Query('type') type?: string,
@@ -58,6 +63,7 @@ export class ProfileController {
   @ApiQuery({ name: 'endDate', required: false, description: 'End date for billing data (YYYY-MM-DD).' })
   @ApiQuery({ name: 'search', required: false, description: 'Search keyword for filtering billing data (TPP id, LFI Id, TPP Name , LFI Name).' })
   @Get('billing/lfi')
+  @Claims(Claim.BILLING_LFI_VIEW)
   async getBillingLfiData(@Req() req: any, @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string, @Query('search') search?: string, @Query('limit') limit: number = 10,
     @Query('offset') offset: number = 0) {
@@ -81,6 +87,7 @@ export class ProfileController {
   @ApiQuery({ name: 'endDate', required: false, description: 'End date for billing data (YYYY-MM-DD).' })
   @ApiQuery({ name: 'search', required: false, description: 'Search keyword for filtering billing data (TPP id, LFI Id, TPP Name , LFI Name).' })
   @Get('billing/tpp')
+  @Claims(Claim.BILLING_TPP_VIEW)
   async getBillingTppData(@Req() req: any, @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string, @Query('search') search?: string, @Query('limit') limit: number = 10,
     @Query('offset') offset: number = 0) {
@@ -104,6 +111,7 @@ export class ProfileController {
   @ApiQuery({ name: 'startDate', required: false, description: 'Start date for billing details (YYYY-MM-DD).' })
   @ApiQuery({ name: 'endDate', required: false, description: 'End date for billing details (YYYY-MM-DD).' })
   @Get('billingdetail/lfi/:id')
+  @Claims(Claim.BILLING_LFI_VIEW)
   async getBillingDetailsLfi(@Param('id') id: string, @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string) {
     try {
@@ -126,6 +134,7 @@ export class ProfileController {
   @ApiQuery({ name: 'startDate', required: false, description: 'Start date for billing details (YYYY-MM-DD).' })
   @ApiQuery({ name: 'endDate', required: false, description: 'End date for billing details (YYYY-MM-DD).' })
   @Get('billingdetail/tpp/:id')
+  @Claims(Claim.BILLING_TPP_VIEW)
   async getBillingDetailsTpp(@Param('id') id: string, @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string) {
     try {
@@ -169,6 +178,7 @@ export class ProfileController {
   @ApiOperation({ summary: 'Retrieve details of LFI.' })
   @ApiQuery({ name: 'search', required: false, description: 'Search keyword for LFI details (LFI Id , LFI Name).' })
   @Get('lfidetails')
+  @Claims(Claim.LFI_DIRECTORY_VIEW)
   async getLfiDetails(@Query('search') search?: string, @Query('limit') limit: number = 10,
     @Query('offset') offset: number = 0) {
     try {
@@ -187,6 +197,7 @@ export class ProfileController {
   @ApiOperation({ summary: 'Retrieve details of TPP.' })
   @ApiQuery({ name: 'search', required: false, description: 'Search keyword for TPP details (TTP Id , TPP Name).' })
   @Get('tppdetails')
+  @Claims(Claim.TPP_CONFIGURATION_VIEW)
   async getTppDetails(@Query('search') search?: string, @Query('limit') limit: number = 10,
     @Query('offset') offset: number = 0) {
     try {
@@ -208,6 +219,7 @@ export class ProfileController {
   @ApiQuery({ name: 'endDate', required: false, description: 'End date of the logs (YYYY-MM-DD).' })
   @ApiQuery({ name: 'search', required: false, description: 'Search keyword for filtering logs (TPP id, LFI Id, TPP Name , LFI Name).' })
   @Get('log/csv')
+  @Claims(Claim.LOG_DOWNLOAD)
   async getLogDataToCsv(@Req() req: any, @Res() res: Response, @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string, @Query('search') search?: string) {
     try {

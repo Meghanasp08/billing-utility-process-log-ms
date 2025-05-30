@@ -8,24 +8,28 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guard/jwt-auth-guard';
 import { JwtStrategy } from './jwt.strategy/jwt.strategy';
+import { RoleSchema } from 'src/role/schemas.ts/roles.schema';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true, 
+      isGlobal: true,
       envFilePath: '.env', // Path to your .env file
     }),
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema },
+      { name: 'Role', schema: RoleSchema },
+    ]),
     PassportModule,
     JwtModule.registerAsync({
       useFactory: () => ({
-        secret: process.env.JWT_SECRET || 'defaultSecret', 
-        signOptions: { expiresIn: '1h' }, 
+        secret: process.env.JWT_SECRET || 'defaultSecret',
+        signOptions: { expiresIn: '1h' },
       }),
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy,JwtAuthGuard],
-  exports: [JwtModule,AuthService],
+  providers: [AuthService, JwtStrategy, JwtAuthGuard],
+  exports: [JwtModule, AuthService],
 })
-export class AuthModule {}
+export class AuthModule { }

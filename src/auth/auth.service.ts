@@ -14,6 +14,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel('Role') private readonly rolesModel: Model<any>,
   ) { }
 
   async signup(createUserDto: CreateUserDto): Promise<User> {
@@ -61,7 +62,6 @@ export class AuthService {
     }
     let token = await this.getTokens(user, "user");
     await this.userModel.updateOne({ email: email }, { refreshToken: token.refresh_token });
-    console.log('token', token);
     return token;
   }
 
@@ -239,7 +239,7 @@ export class AuthService {
     } catch (err) {
       throw new NotFoundException(`JWT verification failed: ${err.message}`);
     }
-   const user = await this.userModel.findById(payload._id);
+    const user = await this.userModel.findById(payload._id);
 
     if (!(user && user._id)) {
       throw new HttpException(
@@ -252,6 +252,103 @@ export class AuthService {
     user.password = changePasswordByOtp.password;
     return await user.save();
 
+  }
+  async findUserWithPermissions(data: any, userId: string): Promise<any> {
+    const user = await this.userModel.findById(userId)
+    if (!user) {
+      throw new HttpException(
+        'User with this id does not exist',
+        HttpStatus.NOT_FOUND
+      )
+    }
+    const roles = await this.rolesModel.findOne({
+      _id: user.role,
+      isActive: true
+    })
+
+    // If roles not active the array becomes empty.
+    if (!roles) {
+      return []
+    }
+    const aggregateOptions = [
+      {
+        $match: {
+          _id: user.role
+        }
+      },
+      {
+        $project: {
+          permissions: 1,
+          name: 1
+        }
+      },
+      {
+        $addFields: {
+          roles: {
+            $map: {
+              input: '$permissions',
+              as: 'el',
+              in: {
+                $map: {
+                  input: {
+                    $objectToArray: '$$el'
+                  },
+                  as: 'item',
+                  in: {
+                    $cond: {
+                      if: {
+                        $eq: ['$$item.v', true]
+                      },
+                      then: {
+                        $concat: [
+                          {
+                            $first: {
+                              $split: [
+                                {
+                                  $toLower: '$$el.name'
+                                },
+                                ' '
+                              ]
+                            }
+                          },
+                          '.',
+                          '$$item.k'
+                        ]
+                      },
+                      else: null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        $addFields: {
+          permissions: {
+            $filter: {
+              input: {
+                $reduce: {
+                  input: '$roles',
+                  initialValue: [],
+                  in: {
+                    $concatArrays: ['$$value', '$$this']
+                  }
+                }
+              },
+              as: 'role',
+              cond: {
+                $ne: ['$$role', null]
+              }
+            }
+          }
+        }
+      }
+    ]
+    const role = await this.rolesModel.aggregate(aggregateOptions).exec()
+
+    return role[0].permissions
   }
 
 }

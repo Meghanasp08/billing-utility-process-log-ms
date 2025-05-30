@@ -21,6 +21,8 @@ import { PaginationDTO } from 'src/common/dto/common.dto';
 
 import { unlink } from 'fs';
 import { UploadService } from './upload.service';
+import { Claims } from 'src/common/claims/claims.decorator';
+import { Claim } from 'src/common/claims/claim.enum';
 
 
 
@@ -56,7 +58,8 @@ export class UploadController {
             },
             required: ['raw_data', 'payment_data'],
         },
-    })
+    })  
+    @Claims(Claim.LOG_UPLOAD)
     async uploadFiles(@UploadedFiles() files: { raw_data?: Express.Multer.File[]; payment_data?: Express.Multer.File[]; }, @Req() req: any) {
         try {
             if (!files?.raw_data || !files?.payment_data) {
@@ -96,6 +99,7 @@ export class UploadController {
 
     // @UseGuards(JwtAuthGuard)
     @Post('csv')
+    @Claims(Claim.LOG_DOWNLOAD)
     @UseInterceptors(FileFieldsInterceptor([
         { name: 'raw_data', maxCount: 1 },
         { name: 'payment_data', maxCount: 1 },]))
@@ -153,6 +157,7 @@ export class UploadController {
 
     @ApiBearerAuth()
     @Get('raw-log/download/:id')
+    @Claims(Claim.DATA_UPLOADER_DOWNLOAD)
     @UseGuards(JwtAuthGuard)
     @ApiOperation({ summary: 'Download raw log file.' })
     async downloadRawLog(@Res() res: Response, @Param('id') id: string,) {
@@ -173,6 +178,7 @@ export class UploadController {
     @Get('payment/download/:id')
     @UseGuards(JwtAuthGuard)
     @ApiOperation({ summary: 'Download payment log file.' })
+    @Claims(Claim.DATA_UPLOADER_DOWNLOAD)
     async downloadPaymentLog(@Res() res: Response, @Param('id') id: string,) {
         try {
             const paymentPath = await this.uploadService.getPaymentLogCsv(id);
@@ -190,6 +196,7 @@ export class UploadController {
     @Get('log')
     @UseGuards(JwtAuthGuard)
     @ApiOperation({ summary: 'Get upload log data' })
+    @Claims(Claim.DATA_UPLOADER_VIEW)
     async getUploadLog(@Query(ValidationPipe) PaginationDTO: PaginationDTO) {
         try {
 
@@ -240,6 +247,7 @@ export class UploadController {
             required: ['organization_data'],
         },
     })
+    @Claims(Claim.GLOBAL_CONFIGURATION_UPLOAD)
     async uploadLfiTpp(@UploadedFiles() files: { organization_data?: Express.Multer.File[]; }, @Req() req: any) {
         try {
             if (!files?.organization_data) {

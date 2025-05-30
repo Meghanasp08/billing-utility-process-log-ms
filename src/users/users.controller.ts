@@ -5,16 +5,20 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDTO } from 'src/common/dto/common.dto';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth-guard';
+import { Claims } from 'src/common/claims/claims.decorator';
+import { Claim } from 'src/common/claims/claim.enum';
+import { ClaimsGuard } from 'src/common/claims/claims.guard';
 
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 @Controller('users')
+@UseGuards(JwtAuthGuard,ClaimsGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 
 
   @ApiOperation({ summary: 'Create a User' })
   @Post()
+  @Claims(Claim.USER_CREATE)
   async create(@Body() createUserDto: CreateUserDto) {
     try {
       const result = await this.usersService.create(createUserDto);
@@ -31,6 +35,7 @@ export class UsersController {
 
   @ApiOperation({ summary: 'Get all Users and its details' })
   @Get()
+  @Claims(Claim.USER_VIEW)
   async findAll(@Query(ValidationPipe) PaginationDTO: PaginationDTO) {
     try {
       const result = await this.usersService.findAll(PaginationDTO);
@@ -48,6 +53,7 @@ export class UsersController {
 
   @ApiOperation({ summary: 'Get Users By ID' })
   @Get(':id')
+  @Claims(Claim.USER_VIEW)
   async findOne(@Param('id') id: string) {
     try {
       const result = await this.usersService.findOne(id);
@@ -64,8 +70,10 @@ export class UsersController {
 
   @ApiOperation({ summary: 'Update Users data' })
   @Patch(':id')
+  @Claims(Claim.USER_EDIT)
   async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     try {
+      console.log("EDIT")
       const result = await this.usersService.update(id, updateUserDto);
       return {
         message: 'Success',
@@ -97,6 +105,7 @@ export class UsersController {
 
   @ApiOperation({ summary: 'Send Activatiom Mail for the User' })
   @Post('/send-activation-mail')
+  @Claims(Claim.USER_EDIT)
   async sendActivationEmail(@Body() data:any) {
     try {
       const result = await this.usersService.sendActivationEmail(data);

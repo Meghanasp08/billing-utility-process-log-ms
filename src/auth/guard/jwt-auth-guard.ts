@@ -67,6 +67,7 @@ export class JwtAuthGuard implements CanActivate {
           secret: process.env.ACCESS_TOKEN_SECRET,
         });
         request.user = decoded;
+        request.user.permission =  await this.authService.findUserWithPermissions(decoded,decoded.userId);
         return true;
       }
     } catch (error) {
@@ -79,6 +80,7 @@ export class JwtAuthGuard implements CanActivate {
           const user = await this.authService.getUserData(decodedRefreshToken.userId);
           if (user && user.refreshToken === refreshToken) {
             request.user = decodedRefreshToken;
+            request.user.permission =  await this.authService.findUserWithPermissions(decodedRefreshToken,decodedRefreshToken.userId);
             return true; // Allow access
           }
         } catch (refreshError) {

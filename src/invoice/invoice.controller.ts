@@ -7,15 +7,18 @@ import { JwtAuthGuard } from 'src/auth/guard/jwt-auth-guard';
 import { PaginationDTO } from 'src/common/dto/common.dto';
 import { commonDto, invoiceGenerateDto, InvoiceLfiEmailDto, InvoiceTppEmailDto, pdfGenerateLfiDto, pdfGenerateTppDto, UpdateInvoiceValueDto, UpdateManyDto } from './dto/invoice.dto';
 import { InvoiceService } from './invoice.service';
+import { Claims } from 'src/common/claims/claims.decorator';
+import { Claim } from 'src/common/claims/claim.enum';
 
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller('invoice')
 export class InvoiceController {
   constructor(private readonly invoiceService: InvoiceService) { }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all Invoices and its details' })
   @Get()
+  @Claims(Claim.INVOICE_TPP_VIEW)
   async findAllInvoices(@Query(ValidationPipe) PaginationDTO: PaginationDTO) {
     try {
       const result = await this.invoiceService.findAllInvoices(PaginationDTO);
@@ -31,8 +34,8 @@ export class InvoiceController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+
+  @Claims(Claim.INVOICE_LFI_VIEW)
   @ApiOperation({ summary: 'Get LFI details' })
   @Get('collection-memo')
   async findAllCollectionMemo(@Query(ValidationPipe) PaginationDTO: PaginationDTO) {
@@ -50,8 +53,7 @@ export class InvoiceController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @Claims(Claim.INVOICE_LFI_VIEW)
   @ApiOperation({ summary: 'Get single LFI details' })
   @Get('collection-memo/:id')
   async findCollectionMemoById(@Param('id') id: string) {
@@ -68,8 +70,7 @@ export class InvoiceController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @Claims(Claim.INVOICE_TPP_EDIT)
   @ApiOperation({ summary: 'Update invoice status to PAID/UNPAID' })
   @Patch('update-invoice/:id')
   async updateInvoiceData(@Req() req: any, @Param('id') id: string, @Body() updateInvoiceValueDto: UpdateInvoiceValueDto,) {
@@ -85,9 +86,8 @@ export class InvoiceController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Bulk Update for InvoiceData' })
+  @Claims(Claim.INVOICE_TPP_EDIT)
   @Put('bulk-update')
   async bulkUpdate(@Body() data: UpdateManyDto[]) {
     const invoiceData = await this.invoiceService.bulkUpdate(data);
@@ -98,11 +98,9 @@ export class InvoiceController {
     }
   }
 
-  
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: ' Update Many  for InvoiceData' })
   @Patch('update-many')
+  @Claims(Claim.INVOICE_TPP_EDIT)
   async updateManyInvoices(@Body() body: any) {
     const invoiceData = await this.invoiceService.updateManyInvoices(body);
     return {
@@ -112,10 +110,9 @@ export class InvoiceController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Generate invoices from logs' })
   @Post()
+  @Claims(Claim.INVOICE_TPP_CREATE)
   async invoiceCreation(@Body(ValidationPipe) invoiceDto: invoiceGenerateDto,): Promise<any> {
     try {
       const result = await this.invoiceService.invoiceCreation(invoiceDto);
@@ -166,10 +163,10 @@ export class InvoiceController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+
   @ApiOperation({ summary: 'Get single Invoice data' })
   @Get(':id')
+  @Claims(Claim.INVOICE_TPP_VIEW)
   async getInvoiceDetails(@Param('id') id: string): Promise<any> {
     try {
       const result = await this.invoiceService.getInvoiceDetails(id);
@@ -184,10 +181,9 @@ export class InvoiceController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Billing API for a TPP' })
   @Get('billing-tpp/:tpp_id')
+  @Claims(Claim.BILLING_TPP_VIEW)
   async getbillingTpps(@Param('tpp_id') tpp_id: string, @Query(ValidationPipe) invoiceDto: commonDto): Promise<any> {
     try {
       const result = await this.invoiceService.billingTpp(tpp_id, invoiceDto);
@@ -202,10 +198,9 @@ export class InvoiceController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Billing API for a LFI' })
   @Get('billing-lfi/:lf_id')
+  @Claims(Claim.BILLING_LFI_VIEW)
   async getbillingLfis(@Param('lf_id') lf_id: string, @Query(ValidationPipe) invoiceDto: commonDto): Promise<any> {
     try {
       const result = await this.invoiceService.billingLfiStatement(lf_id, invoiceDto);
@@ -220,10 +215,10 @@ export class InvoiceController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+
   @ApiOperation({ summary: 'PDF generate for a TPP' })
   @Post('pdf-generate-tpp')
+  @Claims(Claim.INVOICE_TPP_DOWNLOAD)
   async generateInvoicePDFTpp(@Body(ValidationPipe) invoiceDto: pdfGenerateTppDto, @Res() res: Response
   ): Promise<any> {
     try {
@@ -253,10 +248,10 @@ export class InvoiceController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+
   @ApiOperation({ summary: 'PDF generate for a LFI' })
   @Post('pdf-generate-lfi')
+  @Claims(Claim.INVOICE_LFI_DOWNLOAD)
   async generateInvoicePDFLfi(@Body(ValidationPipe) invoiceDto: pdfGenerateLfiDto, @Res() res: Response
   ): Promise<any> {
     try {
@@ -286,8 +281,7 @@ export class InvoiceController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @Claims(Claim.INVOICE_TPP_DOWNLOAD)
   @Post('send-tpp-invoice')
   async sendInvoiceTppEmail(
     @Body(ValidationPipe) emailDto: InvoiceTppEmailDto,
@@ -302,9 +296,9 @@ export class InvoiceController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+
   @Post('send-lfi-invoice')
+  @Claims(Claim.INVOICE_LFI_DOWNLOAD)
   async sendInvoiceLfiEmail(
     @Body(ValidationPipe) emailDto: InvoiceLfiEmailDto,
   ): Promise<any> {
