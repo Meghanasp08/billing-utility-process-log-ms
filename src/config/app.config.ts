@@ -22,6 +22,7 @@ export const AppConfig = {
     discount: 200,
     aedConstant: 100,
     highValueMerchantcapCheck: 20000,
+    paymentTypes: ['Collection', 'LargeValueCollection', 'PushP2P', 'PullP2PPayment', 'Me2Me', ''],
 };
 
 export const invoice_config = {

@@ -32,6 +32,7 @@ export class UploadService {
 
   private readonly peer_to_peer_types = AppConfig.peerToPeerTypes;
   private readonly nonLargeValueCapMerchantCheck = AppConfig.highValueMerchantcapCheck;
+  private readonly paymentTypes = AppConfig.paymentTypes;
 
   private variables: {
     nonLargeValueCapMerchant?: any; //50 aed
@@ -315,19 +316,95 @@ export class UploadService {
       }
     );
 
-    const parseBoolean = (value: string) => {
+    const parseBoolean = async (value: string, index: number, filed: string, rawData: boolean) => {
       if (typeof value === 'string') {
         const normalized = value.trim().toLowerCase();
         if (normalized === 'true' || normalized === '1') return true;
         if (normalized === 'false' || normalized === '0') return false;
       }
+      await this.uploadLog.findByIdAndUpdate(
+        logUpdate._id,
+        {
+          $set: {
+            status: 'Failed',
+            remarks: `Failed to validate ${rawData ? 'Raw Log File' : 'Payment Log File'}`,
+          },
+          $push: {
+            log: {
+              description: `Validation error occured in the ${index + 1} row for the field ${filed} in ${rawData ? 'Raw Log File' : 'Payment Log File'}, value is not boolean, value: ${value}`,
+              status: 'Failed',
+              errorDetail: null,
+            },
+          },
+        }
+      );
+      throw new HttpException({
+        message: `Validation error occured in the ${index + 1} row for the field ${filed} in ${rawData ? 'Raw Log File' : 'Payment Log File'}, value is not boolean, value: ${value}`,
+        status: 400
+      }, HttpStatus.BAD_REQUEST);
+
       return null;
     };
-    const mergedData: any[] = [];
-    for (let i = 0; i < file1Data.length; i++) {
-      const rawApiRecord = file1Data[i];
-      const paymentRecord = file2Data[i] || {};
-      const mergedRecord = {
+
+    const paymentDataMap = new Map<string, any>();
+    file2Data.forEach(async (paymentRecord, index) => {
+      let errorPayType = !this.paymentTypes.includes(paymentRecord.paymentType)
+      if (errorPayType) {
+        await this.uploadLog.findByIdAndUpdate(
+          logUpdate._id,
+          {
+            $set: {
+              status: 'Failed',
+              remarks: `Failed to validate 'Payment Log File`,
+            },
+            $push: {
+              log: {
+                description: `Validation error occurred in row ${index + 1} for the field 'paymentType' in the 'Payment Log File': the value does not match any of ${this.paymentTypes}. Invalid value: '${paymentRecord.paymentType}'`,
+                status: 'Failed',
+                errorDetail: null,
+              },
+            },
+          }
+        );
+        throw new HttpException({
+          message: `Payment Type is not valid in the ${index + 1} th row, please check the payment log file`,
+          status: 400
+        }, HttpStatus.BAD_REQUEST);
+      }
+      let errorAmount = paymentRecord.amount !== "" && isNaN(parseFloat(paymentRecord.amount));
+      if (errorAmount) {
+        await this.uploadLog.findByIdAndUpdate(
+          logUpdate._id,
+          {
+            $set: {
+              status: 'Failed',
+              remarks: `Failed to validate 'Payment Log File`,
+            },
+            $push: {
+              log: {
+                description: `Validation error occurred in row ${index + 1} for the field 'amount' in the 'Payment Log File': the value should be a number. Invalid value: '${paymentRecord.amount}'`,
+                status: 'Failed',
+                errorDetail: null,
+              },
+            },
+          }
+        );
+        throw new HttpException({
+          message: `Validation error occurred in row ${index + 1} for the field 'amount' in the 'Payment Log File': the value should be a number. Invalid value: '${paymentRecord.amount}'`,
+          status: 400
+        }, HttpStatus.BAD_REQUEST);
+      }
+      const paymentId = paymentRecord.PaymentId?.trim();
+      if (paymentId) {
+        paymentDataMap.set(paymentId, paymentRecord);
+      }
+    });
+
+    const mergedData = file1Data.map((rawApiRecord, index) => {
+      const paymentId = rawApiRecord.PaymentId?.trim();
+      const paymentRecord = paymentId ? paymentDataMap.get(paymentId) : null;
+
+      return {
         [`raw_api_log_data.timestamp`]: rawApiRecord.timestamp || null,
         [`raw_api_log_data.tpp_name`]: rawApiRecord.tppName || null,
         [`raw_api_log_data.lfi_name`]: rawApiRecord.lfiName || null,
@@ -342,38 +419,38 @@ export class UploadService {
         [`raw_api_log_data.interaction_id`]: rawApiRecord.interactionId || null,
         [`raw_api_log_data.resource_name`]: rawApiRecord.resourceName || null,
         [`raw_api_log_data.lfi_response_code_group`]: rawApiRecord.lfIResponseCodeGroup || null,
-        [`raw_api_log_data.is_attended`]: parseBoolean(rawApiRecord.isAttended),
+        [`raw_api_log_data.is_attended`]: parseBoolean(rawApiRecord.isAttended, index, 'isAttended', true),
         [`raw_api_log_data.records`]: rawApiRecord.records || null,
         [`raw_api_log_data.payment_type`]: rawApiRecord.paymentType || null,
         [`raw_api_log_data.payment_id`]: rawApiRecord.PaymentId || null,
         [`raw_api_log_data.merchant_id`]: rawApiRecord.merchantId || null,
         [`raw_api_log_data.psu_id`]: rawApiRecord.psuId || null,
-        ["raw_api_log_data.is_large_corporate"]: parseBoolean(rawApiRecord.isLargeCorporate),
+        ["raw_api_log_data.is_large_corporate"]: parseBoolean(rawApiRecord.isLargeCorporate, index, 'isLargeCorporate', true),
         [`raw_api_log_data.user_type`]: rawApiRecord.userType || null,
         [`raw_api_log_data.purpose`]: rawApiRecord.purpose || null,
 
-        [`payment_logs.timestamp`]: paymentRecord.timestamp || null,
-        [`payment_logs.tpp_name`]: paymentRecord.tppName || null,
-        [`payment_logs.lfi_name`]: paymentRecord.lfiName || null,
-        [`payment_logs.lfi_id`]: paymentRecord.lfiId || null,
-        [`payment_logs.tpp_id`]: paymentRecord.tppId || '',
-        [`payment_logs.tpp_client_id`]: paymentRecord.tppClientId || null,
-        [`payment_logs.status`]: paymentRecord.status || null,
-        [`payment_logs.currency`]: paymentRecord.currency || null,
-        [`payment_logs.amount`]: paymentRecord.amount || null,
-        [`payment_logs.payment_consent_type`]: paymentRecord.paymentConsentType || null,
-        [`payment_logs.payment_type`]: paymentRecord.paymentType || null,
-        [`payment_logs.transaction_id`]: paymentRecord.transactionId || null,
-        [`payment_logs.payment_id`]: paymentRecord.PaymentId || null,
-        [`payment_logs.merchant_id`]: paymentRecord.merchantId || null,
-        [`payment_logs.psu_id`]: paymentRecord.psuId || null,
-        [`payment_logs.is_large_corporate`]: parseBoolean(paymentRecord.isLargeCorporate),
-        [`payment_logs.number_of_successful_transactions`]: paymentRecord.numberOfSuccessfulTransactions || null,
-        [`payment_logs.international_payment`]: parseBoolean(paymentRecord.internationalPayment),
+        [`payment_logs.timestamp`]: paymentRecord?.timestamp || null,
+        [`payment_logs.tpp_name`]: paymentRecord?.tppName || null,
+        [`payment_logs.lfi_name`]: paymentRecord?.lfiName || null,
+        [`payment_logs.lfi_id`]: paymentRecord?.lfiId || null,
+        [`payment_logs.tpp_id`]: paymentRecord?.tppId || '',
+        [`payment_logs.tpp_client_id`]: paymentRecord?.tppClientId || null,
+        [`payment_logs.status`]: paymentRecord?.status || null,
+        [`payment_logs.currency`]: paymentRecord?.currency || null,
+        [`payment_logs.amount`]: paymentRecord?.amount || null,
+        [`payment_logs.payment_consent_type`]: paymentRecord?.paymentConsentType || null,
+        [`payment_logs.payment_type`]: paymentRecord?.paymentType || null,
+        [`payment_logs.transaction_id`]: paymentRecord?.transactionId || null,
+        [`payment_logs.payment_id`]: paymentId || null,
+        [`payment_logs.merchant_id`]: paymentRecord?.merchantId || null,
+        [`payment_logs.psu_id`]: paymentRecord?.psuId || null,
+        [`payment_logs.is_large_corporate`]: parseBoolean(paymentRecord?.isLargeCorporate, index, 'isLargeCorporate', false),
+        [`payment_logs.number_of_successful_transactions`]: paymentRecord?.numberOfSuccessfulTransactions || null,
+        [`payment_logs.international_payment`]: parseBoolean(paymentRecord?.internationalPayment, index, 'internationalPayment', false),
       };
-      mergedData.push(mergedRecord);
+    });
 
-    }
+
     // return mergedData;
     const chargeFile = await this.chargableConvertion(mergedData);
     console.log('stage 1 completed');
@@ -876,11 +953,11 @@ export class UploadService {
 
             return {
               ...record,
-              calculatedFee: parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * this.variables.bulkLargeCorporatefee.value).toFixed(3)),
-              applicableFee: parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * this.variables.bulkLargeCorporatefee.value).toFixed(3)), // Ensure 
+              calculatedFee: parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.bulkLargeCorporatefee.value).toFixed(3)),
+              applicableFee: parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.bulkLargeCorporatefee.value).toFixed(3)), // Ensure 
               type: "corporate",
               unit_price: this.variables.bulkLargeCorporatefee.value,
-              volume: parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0),
+              volume: parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1),
               isCapped: false,
               cappedAt: 0,
             }
@@ -896,10 +973,10 @@ export class UploadService {
                 unit_price = this.variables.paymentLargeValueFee.value;
                 volume = 1;
               } else if (record.group == 'payment-bulk') {
-                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * this.variables.paymentLargeValueFee.value).toFixed(3));
+                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.paymentLargeValueFee.value).toFixed(3));
                 applicableFee = calculatedFee
                 unit_price = this.variables.paymentLargeValueFee.value;
-                volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0);
+                volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
               }
 
 
@@ -938,13 +1015,13 @@ export class UploadService {
           else if (record.type === 'peer-2-peer') {
             if (record.group === 'payment-bulk') {
               if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
-                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * this.variables.paymentLargeValueFee.value).toFixed(3));
+                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0) * this.variables.paymentLargeValueFee.value).toFixed(3));
                 applicableFee = calculatedFee
                 unit_price = this.variables.paymentLargeValueFee.value;
                 volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0);
 
               } else {
-                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"]) * this.variables.paymentNonLargevalueFeePeer.value).toFixed(3));
+                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0) * this.variables.paymentNonLargevalueFeePeer.value).toFixed(3));
 
                 applicableFee = parseFloat((calculatedFee > this.variables.bulkPeernonLargeValueCap.value ? this.variables.bulkPeernonLargeValueCap.value : calculatedFee).toFixed(3));
                 unit_price = this.variables.paymentNonLargevalueFeePeer.value;
@@ -1064,13 +1141,11 @@ export class UploadService {
       .filter(api => api.chargeable_LFI_TPP_fee === true)
       .map(api => ({ endpoint: api.api_endpoint, method: api.api_operation.toUpperCase() }));
 
-    console.log('iam chargeable urls', chargableUrls)
-    console.log('iam lfi chargeable urls', lfiChargableUrls)
+
 
     return await Promise.all(data.map(async record => {
       const rawDataEndpoint = await this.matchTemplateVersionUrl(record["raw_api_log_data.url"]);
       const rawDataMethod = record["raw_api_log_data.http_method"];
-      console.log(rawDataMethod, ':', rawDataEndpoint, 'rawDataMethod')
 
 
       // Match the raw URL and method against chargeable API data
@@ -1220,7 +1295,6 @@ export class UploadService {
     const regexString = templateUrl.replace(/{[^}]+}/g, '[^/]+');
     const regex = new RegExp(`^${regexString}$`);
 
-    console.log('iam regex', regex.test(realUrl))
     return regex.test(realUrl);
   }
 
@@ -1342,7 +1416,7 @@ export class UploadService {
           .on('end', resolve)
           .on('error', reject);
       });
-      console.log('iam organizationData', organizationData)
+      // console.log('iam organizationData', organizationData)
 
       const lfiData = organizationData.filter(record => record.Size === 'LFI' && record.ContactType === 'Business');
       const tppData = organizationData.filter(record => record.Size === 'TPP' && record.ContactType === 'Business');

@@ -10,6 +10,9 @@ export class GlobalConfiguration {
     label: string;
 
     @Prop({ required: true })
+    category: string;
+
+    @Prop({ required: true })
     description: string;
 
     @Prop({ required: true })
@@ -22,7 +25,7 @@ export class GlobalConfiguration {
     data: Record<string, any>;
 
     @Prop({ required: false })
-    type: string; // Example: "50 AED", "250 fils"
+    type: string;
 
     @Prop({ type: Boolean, default: false })
     single_update: boolean;

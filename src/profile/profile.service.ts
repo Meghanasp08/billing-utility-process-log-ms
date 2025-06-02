@@ -3,14 +3,14 @@ import { InjectModel } from '@nestjs/mongoose';
 import * as fs from 'fs';
 const moment = require('moment-timezone');
 
+import * as bcrypt from 'bcryptjs';
 import { Model } from 'mongoose';
 import { Log, LogDocument } from 'src/upload/schemas/billing-log.schema';
 import { LfiData, LfiDataDocument } from 'src/upload/schemas/lfi-data.schema';
 import { TppData, TppDataDocument } from 'src/upload/schemas/tpp-data.schema';
-import { User, UserDocument } from './schemas/user.schema';
 import { ChangePasswordDto } from './dto/profile.dto';
+import { User, UserDocument } from './schemas/user.schema';
 const { Parser } = require('json2csv');
-import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class ProfileService {
@@ -67,12 +67,14 @@ export class ProfileService {
     if (apiChargeable) {
       filter["chargeable"] = apiChargeable
     }
-    
+
     if (search) {
       const searchRegex = new RegExp(search, "i");
       filter["$or"] = [
+        { "raw_api_log_data.interaction_id": search },
+        { "payment_logs.transaction_id": search },
         { "raw_api_log_data.tpp_id": search },
-        { "raw_api_log_data.tppName": searchRegex },
+        { "raw_api_log_data.tpp_name": searchRegex },
         { "raw_api_log_data.lfi_id": search },
         { "raw_api_log_data.lfi_name": searchRegex }
       ];
