@@ -68,6 +68,25 @@ export class PermissionsDTO {
     })
     @IsNotEmpty()
     readonly delete: string
+
+    // @ApiProperty({
+    //     description: 'Upload',
+    //     type: String,
+    //     required: true
+    // })
+    // @IsNotEmpty()
+    readonly upload: string
+
+
+    // @ApiProperty({
+    //     description: 'Download',
+    //     type: String,
+    //     required: true
+    // })
+    // @IsNotEmpty()
+    readonly download: string
+
+
 }
 export class CreateRoleDto {
     @ApiProperty({
@@ -88,7 +107,6 @@ export class CreateRoleDto {
     @IsOptional()
     readonly description: string = ''
 
-    isFacilityUser: any
 
     @ApiProperty({
         description: 'Permissions of a role',
@@ -97,7 +115,7 @@ export class CreateRoleDto {
         example: [
             {
                 id: '',
-                name: 'Entity Onboarding',
+                name: 'Roles',
                 access: true,
                 authorize: true,
                 create: true,
@@ -115,45 +133,44 @@ export class CreateRoleDto {
 
     createdBy: any
 
-    @ApiProperty({
-        description: 'type of the role',
-        type: String,
-        required: true
-    })
-    @IsNotEmpty()
-    @IsString()
-    readonly roleType: string
+    // @ApiProperty({
+    //     description: 'type of the role',
+    //     type: String,
+    //     required: true
+    // })
+    // @IsNotEmpty()
+    // @IsString()
+    // readonly roleType: string
 }
 
 export class SearchFilterDto {
     @ApiProperty({
-      description: 'search',
-      type: String,
-      required: false
+        description: 'search',
+        type: String,
+        required: false
     })
     @IsString()
     @IsOptional()
     readonly search: string
-  
+
     @ApiProperty({
-      description: 'Status',
-      type: Boolean,
-      required: false
+        description: 'Status',
+        type: Boolean,
+        required: false
     })
     @IsOptional()
     readonly status: boolean
 
-    roleType:string
+    roleType: string
 
     @ApiProperty({
         description: 'description',
         type: String,
         required: false
-      })
+    })
     @IsOptional()
-    description:string
+    description: string
 
-    
-  }
 
-  
+}
+

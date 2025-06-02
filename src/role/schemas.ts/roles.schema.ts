@@ -17,9 +17,6 @@ export class Role {
   @Prop({ default: false })
   isDefault: boolean;
 
-  @Prop({ enum: ['Admin', 'Business'] })
-  roleType: string;
-
   @Prop({ default: false })
   isAdmin: boolean;
 
@@ -34,3 +31,4 @@ export class Role {
 }
 
 export const RoleSchema = SchemaFactory.createForClass(Role);
+
