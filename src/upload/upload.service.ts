@@ -40,12 +40,12 @@ export class UploadService {
     bulkLargeCorporatefee?: any; // 2.5
     paymentLargeValueFee?: any; //4 aed
     paymentFeeMe2me?: any; // 0.2 aed
-    bulkMe2meCap?: any; //2.5 aed
+    bulkMe2mePeer2PeerCap?: any; //2.5 aed
     paymentNonLargevalueFeePeer?: any; //0.25 aed
     attendedCallFreeLimit?: any; // 15 count
     unAttendedCallFreeLimit?: any; // 5 count
     nonLargeValueMerchantBps?: any; //0.0038 aed
-    bulkPeernonLargeValueCap?: any; //2.5 aed
+    // bulkPeernonLargeValueCap?: any; //2.5 aed
     dataLargeCorporateMdp?: any; // 0.4 aed
     paymentApiHubFee?: any; // 0.025 aed
     discountApiHubFee?: any; // 0.005 aed
@@ -75,8 +75,8 @@ export class UploadService {
           case 'paymentFeeMe2me':
             this.variables.paymentFeeMe2me = obj;
             break;
-          case 'bulkMe2meCap':
-            this.variables.bulkMe2meCap = obj;
+          case 'bulkMe2mePeer2PeerCap':
+            this.variables.bulkMe2mePeer2PeerCap = obj;
             break;
           case 'paymentNonLargevalueFeePeer':
             this.variables.paymentNonLargevalueFeePeer = obj;
@@ -90,9 +90,9 @@ export class UploadService {
           case 'nonLargeValueMerchantBps':
             this.variables.nonLargeValueMerchantBps = obj;
             break;
-          case 'bulkPeernonLargeValueCap':
-            this.variables.bulkPeernonLargeValueCap = obj;
-            break;
+          // case 'bulkPeernonLargeValueCap':
+          //   this.variables.bulkPeernonLargeValueCap = obj;
+          //   break;
           case 'dataLargeCorporateMdp':
             this.variables.dataLargeCorporateMdp = obj;
             break;
@@ -1023,11 +1023,11 @@ export class UploadService {
               } else {
                 calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0) * this.variables.paymentNonLargevalueFeePeer.value).toFixed(3));
 
-                applicableFee = parseFloat((calculatedFee > this.variables.bulkPeernonLargeValueCap.value ? this.variables.bulkPeernonLargeValueCap.value : calculatedFee).toFixed(3));
+                applicableFee = parseFloat((calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? this.variables.bulkMe2mePeer2PeerCap.value : calculatedFee).toFixed(3));
                 unit_price = this.variables.paymentNonLargevalueFeePeer.value;
                 volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0);
-                isCapped = calculatedFee > this.variables.bulkPeernonLargeValueCap.value ? true : false // Assign boolean value
-                cappedAt = isCapped ? this.variables.bulkPeernonLargeValueCap.value : 0;
+                isCapped = calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? true : false // Assign boolean value
+                cappedAt = isCapped ? this.variables.bulkMe2mePeer2PeerCap.value : 0;
               }
             }
             else if (record.group === 'payment-non-bulk') {
@@ -1052,11 +1052,11 @@ export class UploadService {
           else if (record.type === 'me-2-me') {
             if (record.group === 'payment-bulk') {
               calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0) * this.variables.paymentFeeMe2me.value).toFixed(3));
-              applicableFee = parseFloat((calculatedFee > this.variables.bulkMe2meCap.value ? this.variables.bulkMe2meCap.value : calculatedFee).toFixed(3));
+              applicableFee = parseFloat((calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? this.variables.bulkMe2mePeer2PeerCap.value : calculatedFee).toFixed(3));
               unit_price = this.variables.paymentFeeMe2me.value;
               volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0);
-              isCapped = calculatedFee > this.variables.bulkMe2meCap.value ? true : false
-              cappedAt = isCapped ? this.variables.bulkMe2meCap.value : 0;
+              isCapped = calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? true : false
+              cappedAt = isCapped ? this.variables.bulkMe2mePeer2PeerCap.value : 0;
             }
             else if (record.group === 'payment-non-bulk') {
               calculatedFee = parseFloat((this.variables.paymentFeeMe2me.value).toFixed(3));
