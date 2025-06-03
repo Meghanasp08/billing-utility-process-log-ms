@@ -244,6 +244,9 @@ export class Log {
   @Prop()
   isCapped: boolean;
 
+  @Prop()
+  duplicate: boolean;
+
   @Prop({ type: Number, default: 0, validate: { validator: (val: number) => !isNaN(val), message: 'Value must be a number' } })
   cappedAt: number;
 

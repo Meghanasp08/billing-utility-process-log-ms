@@ -396,6 +396,29 @@ export class UploadService {
           status: 400
         }, HttpStatus.BAD_REQUEST);
       }
+      let errorTrn = paymentRecord.numberOfSuccessfulTransactions !== "" && isNaN(parseFloat(paymentRecord.numberOfSuccessfulTransactions));
+      if (errorTrn) {
+        await this.uploadLog.findByIdAndUpdate(
+          logUpdate._id,
+          {
+            $set: {
+              status: 'Failed',
+              remarks: `Failed to validate 'Raw Log File`,
+            },
+            $push: {
+              log: {
+                description: `Validation error occurred in row ${index + 1} for the field 'numberOfSuccessfulTransactions' in the 'Raw Log File': the value should be a number. Invalid value: '${paymentRecord.numberOfSuccessfulTransactions}'`,
+                status: 'Failed',
+                errorDetail: null,
+              },
+            },
+          }
+        );
+        throw new HttpException({
+          message: `Validation error occurred in row ${index + 1} for the field 'numberOfSuccessfulTransactions' in the 'Raw Log File': the value should be a number. Invalid value: '${paymentRecord.numberOfSuccessfulTransactions}'`,
+          status: 400
+        }, HttpStatus.BAD_REQUEST);
+      }
       const paymentId = paymentRecord.PaymentId?.trim();
       if (paymentId) {
         paymentDataMap.set(paymentId, paymentRecord);
@@ -547,7 +570,8 @@ export class UploadService {
           "limitApplied",
           "isCapped",
           "cappedAt",
-          "numberOfPages"
+          "numberOfPages",
+          "duplicate"
         ];
 
         // Convert JSON to CSV
@@ -563,39 +587,19 @@ export class UploadService {
       }
     } else {
       // return totalHubFeecalculation
-      // const billData = await this.logModel.insertMany(totalHubFeecalculation);
-      // if (billData.length) {
-      //   await this.uploadLog.findByIdAndUpdate(
-      //     logUpdate._id,
-      //     {
-      //       $set: {
-      //         status: 'Completed',
-      //         remarks: 'Database Process Completed',
-      //       },
-      //       $push: {
-      //         log: {
-      //           description: `Filtering Completed and the Latest Merged Data Updated In the Database`,
-      //           status: 'Completed',
-      //           errorDetail: null
-      //         },
-      //       },
-      //     }
-      //   );
-      // }
-      // return billData.length;
 
-      // Perform insert or update based on interaction_id
-      const bulkOps = totalHubFeecalculation.map((record) => ({
-        updateOne: {
-          filter: { "raw_api_log_data.interaction_id": record["raw_api_log_data.interaction_id"] },
-          update: { $set: record },
-          upsert: true, // Ensures that a new record is created if no match is found
-        },
-      }));
+      const existingInteractionIds = await this.logModel.distinct("raw_api_log_data.interaction_id");
 
-      if (bulkOps.length) {
-        const bulkWriteResult = await this.logModel.bulkWrite(bulkOps);
-        if (bulkWriteResult.upsertedCount || bulkWriteResult.modifiedCount) {
+      const processedRecords = totalHubFeecalculation.map((record) => {
+        const isDuplicate = existingInteractionIds.includes(record["raw_api_log_data.interaction_id"]);
+        return {
+          ...record,
+          duplicate: isDuplicate,
+        };
+      });
+      if (processedRecords.length) {
+        const billData = await this.logModel.insertMany(processedRecords);
+        if (billData.length) {
           await this.uploadLog.findByIdAndUpdate(
             logUpdate._id,
             {
@@ -607,14 +611,46 @@ export class UploadService {
                 log: {
                   description: `Filtering Completed and the Latest Merged Data Updated In the Database`,
                   status: 'Completed',
-                  errorDetail: null,
+                  errorDetail: null
                 },
               },
             }
           );
         }
-        return bulkWriteResult;
       }
+      return processedRecords
+
+      // Perform insert or update based on interaction_id
+      //   const bulkOps = totalHubFeecalculation.map((record) => ({
+      //     updateOne: {
+      //       filter: { "raw_api_log_data.interaction_id": record["raw_api_log_data.interaction_id"] },
+      //       update: { $set: record },
+      //       upsert: true, // Ensures that a new record is created if no match is found
+      //     },
+      //   }));
+
+      //   if (bulkOps.length) {
+      //     const bulkWriteResult = await this.logModel.bulkWrite(bulkOps);
+      //     if (bulkWriteResult.upsertedCount || bulkWriteResult.modifiedCount) {
+      //       await this.uploadLog.findByIdAndUpdate(
+      //         logUpdate._id,
+      //         {
+      //           $set: {
+      //             status: 'Completed',
+      //             remarks: 'Database Process Completed',
+      //           },
+      //           $push: {
+      //             log: {
+      //               description: `Filtering Completed and the Latest Merged Data Updated In the Database`,
+      //               status: 'Completed',
+      //               errorDetail: null,
+      //             },
+      //           },
+      //         }
+      //       );
+      //     }
+      //     return bulkWriteResult;
+      //   }
 
     }
 

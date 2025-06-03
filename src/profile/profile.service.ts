@@ -522,6 +522,7 @@ export class ProfileService {
       isCapped: entry.isCapped,
       cappedAt: entry.cappedAt,
       numberOfPages: entry.numberOfPages,
+      duplicate: entry.duplicate,
     }));
 
     const outputPath = './output/log_data.csv';
