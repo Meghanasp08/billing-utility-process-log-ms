@@ -1,8 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { PaginationEnum } from 'src/common/constants/constants.enum';
-import { PaginationDTO } from 'src/common/dto/common.dto';
 import { LfiData, LfiDataDocument } from 'src/upload/schemas/lfi-data.schema';
 import { CreateApiDto, GetglobalValueDto, UpdateApiDto, UpdateglobalValueDto } from './dto/global_value.dto';
 import { UpdateLfiDataDto } from './dto/lfi_update.dto';
@@ -99,29 +97,26 @@ export class ConfigurationService {
         return await this.globalModel.bulkWrite(operations);
     }
 
-    async getApiData(paginationDTO: PaginationDTO) {
-        try {
-            const offset = paginationDTO.offset
-                ? Number(paginationDTO.offset)
-                : PaginationEnum.OFFSET;
-            const limit = paginationDTO.limit
-                ? Number(paginationDTO.limit)
-                : PaginationEnum.LIMIT;
 
-            const total = await this.apiDataModel.countDocuments({}).exec();
-            const apiData = await this.apiDataModel.find().skip(offset).limit(limit).sort({ createdAt: -1 }).lean<any>();
-            return {
-                apiData,
-                pagination: {
-                    offset: offset,
-                    limit: limit,
-                    total: total
-                }
-            }
+    async getApiData() {
+        try {
+            const allData = await this.apiDataModel.find().sort({ createdAt: -1 }).lean<any>();
+
+            const categorizedData = allData.reduce((acc, item) => {
+                const category = item.api_category;
+                if (!acc[category]) acc[category] = [];
+                acc[category].push(item);
+                return acc;
+            }, {});
+
+            return categorizedData;
         } catch (error) {
-            throw new Error(`Error retrieving api data: ${error.message}`);
+            throw new Error(`Error retrieving API data: ${error.message}`);
         }
     }
+
+
+
     async updateApidatas(updateApiDto: UpdateApiDto) {
         try {
             const existingApi = await this.apiDataModel.findById(updateApiDto._id);

@@ -321,6 +321,8 @@ export class UploadService {
         const normalized = value.trim().toLowerCase();
         if (normalized === 'true' || normalized === '1') return true;
         if (normalized === 'false' || normalized === '0') return false;
+        if (normalized === '') return null;
+
       }
       await this.uploadLog.findByIdAndUpdate(
         logUpdate._id,
@@ -400,58 +402,60 @@ export class UploadService {
       }
     });
 
-    const mergedData = file1Data.map((rawApiRecord, index) => {
-      const paymentId = rawApiRecord.PaymentId?.trim();
-      const paymentRecord = paymentId ? paymentDataMap.get(paymentId) : null;
+    const mergedData = await Promise.all(
+      file1Data.map(async (rawApiRecord, index) => {
+        const paymentId = rawApiRecord.PaymentId?.trim();
+        const paymentRecord = paymentId ? paymentDataMap.get(paymentId) : null;
 
-      return {
-        [`raw_api_log_data.timestamp`]: rawApiRecord.timestamp || null,
-        [`raw_api_log_data.tpp_name`]: rawApiRecord.tppName || null,
-        [`raw_api_log_data.lfi_name`]: rawApiRecord.lfiName || null,
-        [`raw_api_log_data.lfi_id`]: rawApiRecord.lfiId || null,
-        [`raw_api_log_data.tpp_id`]: rawApiRecord.tppId || null,
-        [`raw_api_log_data.tpp_client_id`]: rawApiRecord.tppClientId || null,
-        [`raw_api_log_data.api_set_sub`]: rawApiRecord.apiSet || null,
-        [`raw_api_log_data.http_method`]: rawApiRecord.httpMethod || null,
-        [`raw_api_log_data.url`]: rawApiRecord.url || null,
-        [`raw_api_log_data.tpp_response_code_group`]: rawApiRecord.tppResponseCodeGroup || null,
-        [`raw_api_log_data.execution_time`]: rawApiRecord.executionTime || null,
-        [`raw_api_log_data.interaction_id`]: rawApiRecord.interactionId || null,
-        [`raw_api_log_data.resource_name`]: rawApiRecord.resourceName || null,
-        [`raw_api_log_data.lfi_response_code_group`]: rawApiRecord.lfIResponseCodeGroup || null,
-        [`raw_api_log_data.is_attended`]: parseBoolean(rawApiRecord.isAttended, index, 'isAttended', true),
-        [`raw_api_log_data.records`]: rawApiRecord.records || null,
-        [`raw_api_log_data.payment_type`]: rawApiRecord.paymentType || null,
-        [`raw_api_log_data.payment_id`]: rawApiRecord.PaymentId || null,
-        [`raw_api_log_data.merchant_id`]: rawApiRecord.merchantId || null,
-        [`raw_api_log_data.psu_id`]: rawApiRecord.psuId || null,
-        ["raw_api_log_data.is_large_corporate"]: parseBoolean(rawApiRecord.isLargeCorporate, index, 'isLargeCorporate', true),
-        [`raw_api_log_data.user_type`]: rawApiRecord.userType || null,
-        [`raw_api_log_data.purpose`]: rawApiRecord.purpose || null,
+        return {
+          [`raw_api_log_data.timestamp`]: rawApiRecord.timestamp || null,
+          [`raw_api_log_data.tpp_name`]: rawApiRecord.tppName || null,
+          [`raw_api_log_data.lfi_name`]: rawApiRecord.lfiName || null,
+          [`raw_api_log_data.lfi_id`]: rawApiRecord.lfiId || null,
+          [`raw_api_log_data.tpp_id`]: rawApiRecord.tppId || null,
+          [`raw_api_log_data.tpp_client_id`]: rawApiRecord.tppClientId || null,
+          [`raw_api_log_data.api_set_sub`]: rawApiRecord.apiSet || null,
+          [`raw_api_log_data.http_method`]: rawApiRecord.httpMethod || null,
+          [`raw_api_log_data.url`]: rawApiRecord.url || null,
+          [`raw_api_log_data.tpp_response_code_group`]: rawApiRecord.tppResponseCodeGroup || null,
+          [`raw_api_log_data.execution_time`]: rawApiRecord.executionTime || null,
+          [`raw_api_log_data.interaction_id`]: rawApiRecord.interactionId || null,
+          [`raw_api_log_data.resource_name`]: rawApiRecord.resourceName || null,
+          [`raw_api_log_data.lfi_response_code_group`]: rawApiRecord.lfIResponseCodeGroup || null,
+          [`raw_api_log_data.is_attended`]: await parseBoolean(rawApiRecord.isAttended, index, 'isAttended', true),
+          [`raw_api_log_data.records`]: rawApiRecord.records || null,
+          [`raw_api_log_data.payment_type`]: rawApiRecord.paymentType || null,
+          [`raw_api_log_data.payment_id`]: rawApiRecord.PaymentId || null,
+          [`raw_api_log_data.merchant_id`]: rawApiRecord.merchantId || null,
+          [`raw_api_log_data.psu_id`]: rawApiRecord.psuId || null,
+          ["raw_api_log_data.is_large_corporate"]: await parseBoolean(rawApiRecord.isLargeCorporate, index, 'isLargeCorporate', true),
+          [`raw_api_log_data.user_type`]: rawApiRecord.userType || null,
+          [`raw_api_log_data.purpose`]: rawApiRecord.purpose || null,
 
-        [`payment_logs.timestamp`]: paymentRecord?.timestamp || null,
-        [`payment_logs.tpp_name`]: paymentRecord?.tppName || null,
-        [`payment_logs.lfi_name`]: paymentRecord?.lfiName || null,
-        [`payment_logs.lfi_id`]: paymentRecord?.lfiId || null,
-        [`payment_logs.tpp_id`]: paymentRecord?.tppId || '',
-        [`payment_logs.tpp_client_id`]: paymentRecord?.tppClientId || null,
-        [`payment_logs.status`]: paymentRecord?.status || null,
-        [`payment_logs.currency`]: paymentRecord?.currency || null,
-        [`payment_logs.amount`]: paymentRecord?.amount || null,
-        [`payment_logs.payment_consent_type`]: paymentRecord?.paymentConsentType || null,
-        [`payment_logs.payment_type`]: paymentRecord?.paymentType || null,
-        [`payment_logs.transaction_id`]: paymentRecord?.transactionId || null,
-        [`payment_logs.payment_id`]: paymentId || null,
-        [`payment_logs.merchant_id`]: paymentRecord?.merchantId || null,
-        [`payment_logs.psu_id`]: paymentRecord?.psuId || null,
-        [`payment_logs.is_large_corporate`]: parseBoolean(paymentRecord?.isLargeCorporate, index, 'isLargeCorporate', false),
-        [`payment_logs.number_of_successful_transactions`]: paymentRecord?.numberOfSuccessfulTransactions || null,
-        [`payment_logs.international_payment`]: parseBoolean(paymentRecord?.internationalPayment, index, 'internationalPayment', false),
-      };
-    });
-
+          [`payment_logs.timestamp`]: paymentRecord?.timestamp || null,
+          [`payment_logs.tpp_name`]: paymentRecord?.tppName || null,
+          [`payment_logs.lfi_name`]: paymentRecord?.lfiName || null,
+          [`payment_logs.lfi_id`]: paymentRecord?.lfiId || null,
+          [`payment_logs.tpp_id`]: paymentRecord?.tppId || '',
+          [`payment_logs.tpp_client_id`]: paymentRecord?.tppClientId || null,
+          [`payment_logs.status`]: paymentRecord?.status || null,
+          [`payment_logs.currency`]: paymentRecord?.currency || null,
+          [`payment_logs.amount`]: paymentRecord?.amount || null,
+          [`payment_logs.payment_consent_type`]: paymentRecord?.paymentConsentType || null,
+          [`payment_logs.payment_type`]: paymentRecord?.paymentType || null,
+          [`payment_logs.transaction_id`]: paymentRecord?.transactionId || null,
+          [`payment_logs.payment_id`]: paymentId || null,
+          [`payment_logs.merchant_id`]: paymentRecord?.merchantId || null,
+          [`payment_logs.psu_id`]: paymentRecord?.psuId || null,
+          [`payment_logs.is_large_corporate`]: await parseBoolean(paymentRecord?.isLargeCorporate, index, 'isLargeCorporate', false),
+          [`payment_logs.number_of_successful_transactions`]: paymentRecord?.numberOfSuccessfulTransactions || null,
+          [`payment_logs.international_payment`]: await parseBoolean(paymentRecord?.internationalPayment, index, 'internationalPayment', false),
+        };
+      })
+    );
 
     // return mergedData;
+
     const chargeFile = await this.chargableConvertion(mergedData);
     console.log('stage 1 completed');
 
@@ -559,26 +563,59 @@ export class UploadService {
       }
     } else {
       // return totalHubFeecalculation
-      const billData = await this.logModel.insertMany(totalHubFeecalculation);
-      if (billData.length) {
-        await this.uploadLog.findByIdAndUpdate(
-          logUpdate._id,
-          {
-            $set: {
-              status: 'Completed',
-              remarks: 'Database Process Completed',
-            },
-            $push: {
-              log: {
-                description: `Filtering Completed and the Latest Merged Data Updated In the Database`,
+      // const billData = await this.logModel.insertMany(totalHubFeecalculation);
+      // if (billData.length) {
+      //   await this.uploadLog.findByIdAndUpdate(
+      //     logUpdate._id,
+      //     {
+      //       $set: {
+      //         status: 'Completed',
+      //         remarks: 'Database Process Completed',
+      //       },
+      //       $push: {
+      //         log: {
+      //           description: `Filtering Completed and the Latest Merged Data Updated In the Database`,
+      //           status: 'Completed',
+      //           errorDetail: null
+      //         },
+      //       },
+      //     }
+      //   );
+      // }
+      // return billData.length;
+
+      // Perform insert or update based on interaction_id
+      const bulkOps = totalHubFeecalculation.map((record) => ({
+        updateOne: {
+          filter: { "raw_api_log_data.interaction_id": record["raw_api_log_data.interaction_id"] },
+          update: { $set: record },
+          upsert: true, // Ensures that a new record is created if no match is found
+        },
+      }));
+
+      if (bulkOps.length) {
+        const bulkWriteResult = await this.logModel.bulkWrite(bulkOps);
+        if (bulkWriteResult.upsertedCount || bulkWriteResult.modifiedCount) {
+          await this.uploadLog.findByIdAndUpdate(
+            logUpdate._id,
+            {
+              $set: {
                 status: 'Completed',
-                errorDetail: null
+                remarks: 'Database Process Completed',
               },
-            },
-          }
-        );
+              $push: {
+                log: {
+                  description: `Filtering Completed and the Latest Merged Data Updated In the Database`,
+                  status: 'Completed',
+                  errorDetail: null,
+                },
+              },
+            }
+          );
+        }
+        return bulkWriteResult;
       }
-      return billData.length;
+
     }
 
   }

@@ -1,12 +1,12 @@
 import { Body, Controller, Get, HttpStatus, Param, Patch, Post, Put, Query, Req, UseGuards, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth-guard';
+import { Claim } from 'src/common/claims/claim.enum';
+import { Claims } from 'src/common/claims/claims.decorator';
 import { PaginationDTO } from 'src/common/dto/common.dto';
 import { ConfigurationService } from './configuration.service';
 import { CreateApiDto, GetglobalValueDto, UpdateApiDto, UpdateglobalValueDto, UpdateManyDto } from './dto/global_value.dto';
 import { UpdateLfiDataDto } from './dto/lfi_update.dto';
-import { Claim } from 'src/common/claims/claim.enum';
-import { Claims } from 'src/common/claims/claims.decorator';
 
 
 @ApiTags('configuration')
@@ -107,7 +107,7 @@ export class ConfigurationController {
     @Get('api-data')
     @Claims(Claim.GLOBAL_CONFIGURATION_VIEW)
     async getApiData(@Query(ValidationPipe) PaginationDTO: PaginationDTO) {
-        const apiData = await this.configService.getApiData(PaginationDTO);
+        const apiData = await this.configService.getApiData();
         return {
             message: 'Api Data List',
             result: apiData,
