@@ -571,9 +571,9 @@ export class MailService {
       throw new NotFoundException('User not found');
     }
 
-    if (user.isVerified == true) {
-      throw new NotFoundException('Account already activated');
-    }
+    // if (user.isVerified == true) {
+    //   throw new NotFoundException('Account already activated');
+    // }
 
     user.status = 1;
     await user.save();

@@ -3608,6 +3608,9 @@ export class InvoiceService {
         let total_due = Number(data.total_amount);
 
         const monthName = moment().month(data.invoice_month - 1).format('MMMM');
+        const firstDay = moment(`${data?.invoice_year}-${data?.invoice_month}`, 'YYYY-M').startOf('month').format('Do MMMM YYYY');
+        const lastDay = moment(`${data?.invoice_year}-${data?.invoice_month}`, 'YYYY-M').endOf('month').format('Do MMMM YYYY');
+        console.log("DAY",firstDay,lastDay);
 
         for (const item of data?.tpp_usage_per_lfi) {
             lfi_list += `<tr>
@@ -4207,8 +4210,7 @@ export class InvoiceService {
             </div>
             <div class="billing-row">
                 <div class="billing-label">Period: </div>
-                <div class="billing-sub-label">${moment(data.billing_period_start).format('D MMMM YYYY')} to ${moment(data.billing_period_end).format('Do MMMM YYYY')}</div>
-            </div>
+                <div class="billing-sub-label">${firstDay} to ${lastDay}
 
         </div>
 
@@ -4609,6 +4611,10 @@ export class InvoiceService {
         let total_vat = data?.tpp.reduce((sum, item) => sum + item.vat, 0);
         let grand_total = data?.tpp.reduce((sum, item) => sum + item.full_total, 0);
 
+        const firstDay = moment(`${data?.invoice_year}-${data?.invoice_month}`, 'YYYY-M').startOf('month').format('Do MMMM YYYY');
+        const lastDay = moment(`${data?.invoice_year}-${data?.invoice_month}`, 'YYYY-M').endOf('month').format('Do MMMM YYYY');
+        console.log("DAY",firstDay,lastDay);
+        
         for (const tpp_data of data.tpp || []) {
             revenue_data += `<tr class="tpp-name">
                 <td rowspan="${(tpp_data.collection_memo_subitem?.length || 0) + 2}">
@@ -4640,7 +4646,7 @@ export class InvoiceService {
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LFI Statement of Revenue</title>
+    <title>LFI Statement of Fee</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -4756,17 +4762,17 @@ export class InvoiceService {
     <div class="container">
         <div class="header">
             <div>
-                <h1>LFI STATEMENT OF REVENUE</h1>
-                <p style="color: #1b194f;"><strong>Revenue Statement #001</strong><br><strong>${moment(data.createdAt).format('DD MMMM YYYY')}</strong> </p>
-                <p class="lif-details"><br>${data.lfi_id}<br>Address1</p>
+                <h1>LFI STATEMENT OF FEE</h1>
+                <p style="color: #1b194f;"><strong>Fee Statement #001</strong><br><strong>${moment(data.createdAt).format('DD MMMM YYYY')}</strong> </p>
+                <p class="lif-details"><br>${data.lfi_name}<br>${data.lfi_id}<br>Address1</p>
                 <p class="lif-details">Invoice Currency : AED</p>
             </div>
 
         </div>
 
         <div class="section">
-            <h2>Revenue Summary:</h2>
-            <p class="date">Billing Period: ${moment(data.billing_period_start).format('D MMMM YYYY')} to ${moment(data.billing_period_end).format('Do MMMM YYYY')}</p>
+            <h2>Fee Summary:</h2>
+            <p class="date">Billing Period: ${firstDay} to ${lastDay}</p>
         </div>
 
         <table>
