@@ -192,10 +192,10 @@ export class AuthService {
       );
     }
 
-    await this.mailService.sendForgotPasswordEmail(forgotPassword.email, user);
+    await this.mailService.sendActivationEmail(user,true);
 
     return {
-      otp: true,
+      msg: 'The link has been successfully sent to your email address',
       email: user.email,
     };
   }

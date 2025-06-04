@@ -210,20 +210,33 @@ export class MailService {
     }
   }
 
-  async sendActivationEmail(user: any) {
+  async sendActivationEmail(user: any, forget_key = false) {
     const token = await this.generateActivationToken(user);
     user.activationToken = token;
     const user_data = await user.save();
-    const activationLink = `http://193.123.81.148:8888/email-verify/${token}`;
 
-    const mail_data = {
-      to: user.email,
-      subject: 'Activate your account',
-      html: await this.activation_html(user_data, activationLink),
-      to_mail: user.email
-    };
+    if (forget_key === true) {
+      let activationLink = `http://193.123.81.148:8888/email-verify/${token}`;
+      const mail_data = {
+        to: user.email,
+        subject: 'Forgot Password',
+        html: await this.forgetPasswordLink_html(user_data, activationLink),
+        to_mail: user.email
+      };
+      await this.sendEmail(mail_data);
 
-    await this.sendEmail(mail_data);
+    } else {
+      let passwordLink = `http://193.123.81.148:8888/reset-password/${token}`;
+      const mail_data = {
+        to: user.email,
+        subject: 'Activate your account',
+        html: await this.activation_html(user_data, passwordLink),
+        to_mail: user.email
+      };
+      await this.sendEmail(mail_data);
+    }
+
+
   }
 
   async activation_html(data, activationLink) {
@@ -267,6 +280,57 @@ export class MailService {
                 <li><strong>Access Portal:</strong> <a href="http://193.123.81.148:8888/" style="color: #007bff;">http://193.123.81.148:8888/</a></li>
                 <li><strong>Username:</strong> ${data.email}</li>
               </ul>
+
+              <p style="font-size: 16px; color: #555;">
+                If you have any questions or require assistance,  please contact us at
+                <a href="mailto:billing@nebrasopenfinance.ae" style="color: #007bff;">billing@nebrasopenfinance.ae</a>.
+              </p>
+
+              <p style="font-size: 16px; color: #555; margin-top: 40px;">
+                Best regards,<br/>
+                <strong>The Nebras Open Finance Team</strong>
+              </p>
+            </td>
+          </tr>
+        </table>
+        
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+
+`
+
+  }
+  async forgetPasswordLink_html(data, passwordLink) {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Account Activation</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 0;">
+  <table width="100%" cellspacing="0" cellpadding="0" style="padding: 30px;">
+    <tr>
+      <td align="center">
+        <table cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); padding: 30px;">
+          <tr>
+            <td align="left">
+              <h2 style="color: #2b2d42;">Password Reset Request</h2>
+              <p style="font-size: 16px; color: #555;">
+                Dear <strong>${data?.firstName}</strong>,
+              </p>
+              <p style="font-size: 16px; color: #555;">
+                We received a request to reset your password for the Billing Utility system. please click the button below:
+              </p>
+
+              <p style="text-align: center; margin: 30px 0;">
+                <a href="${passwordLink}" style="background-color: #007bff; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                  Reset Password
+                </a>
+              </p>
 
               <p style="font-size: 16px; color: #555;">
                 If you have any questions or require assistance,  please contact us at
