@@ -97,7 +97,7 @@ export class AuthController {
       const result =
         await this.authService.sendOtpForForgetPassword(forgotPassword);
       return {
-        message: 'Otp Sent Successfully',
+        message: 'The link has been successfully sent to your email address',
         result: result,
         statusCode: HttpStatus.OK,
       };
