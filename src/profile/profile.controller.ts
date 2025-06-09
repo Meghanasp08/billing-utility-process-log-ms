@@ -40,7 +40,7 @@ export class ProfileController {
   @ApiQuery({ name: 'search', required: false, description: 'Search keyword for filtering logs (TPP id, LFI Id, TPP Name , LFI Name).' })
   @Get('log')
   @Claims(Claim.LOG_VIEW)
-  async getLogData(@Req() req: any, queryParameter: QueryParametersDTO) {
+  async getLogData(@Req() req: any, @Query(ValidationPipe) queryParameter: QueryParametersDTO) {
     try {
       const logData = await this.profileService.getLogData(
         queryParameter
@@ -218,7 +218,7 @@ export class ProfileController {
   @ApiQuery({ name: 'search', required: false, description: 'Search keyword for filtering logs (TPP id, LFI Id, TPP Name , LFI Name).' })
   @Get('log/csv')
   @Claims(Claim.LOG_DOWNLOAD)
-  async getLogDataToCsv(@Req() req: any, @Res() res: Response, queryParameters: QueryParametersDTO) {
+  async getLogDataToCsv(@Req() req: any, @Res() res: Response, @Query(ValidationPipe) queryParameters: QueryParametersDTO) {
     try {
       const logData = await this.profileService.getLogDataToCSV(queryParameters);
       // return {
