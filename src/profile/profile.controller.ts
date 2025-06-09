@@ -226,7 +226,7 @@ export class ProfileController {
       //   result: logData,
       //   statusCode: HttpStatus.OK
       // }
-      res.download('./output/log_data.csv', 'merged-data.csv', (err) => {
+      res.download('./output/log_data.csv', 'Merged-data.csv', (err) => {
         if (err) {
           console.error('Error while downloading file:', err);
           res.status(HttpStatus.INTERNAL_SERVER_ERROR).send('Failed to download file.');

@@ -1090,17 +1090,17 @@ export class UploadService {
           else if (record.type === 'peer-2-peer') {
             if (record.group === 'payment-bulk') {
               if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
-                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0) * this.variables.paymentLargeValueFee.value).toFixed(3));
+                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.paymentLargeValueFee.value).toFixed(3));
                 applicableFee = calculatedFee
                 unit_price = this.variables.paymentLargeValueFee.value;
-                volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0);
+                volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
 
               } else {
-                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0) * this.variables.paymentNonLargevalueFeePeer.value).toFixed(3));
+                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.paymentNonLargevalueFeePeer.value).toFixed(3));
 
                 applicableFee = parseFloat((calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? this.variables.bulkMe2mePeer2PeerCap.value : calculatedFee).toFixed(3));
                 unit_price = this.variables.paymentNonLargevalueFeePeer.value;
-                volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0);
+                volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
                 isCapped = calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? true : false // Assign boolean value
                 cappedAt = isCapped ? this.variables.bulkMe2mePeer2PeerCap.value : 0;
               }
@@ -1126,10 +1126,10 @@ export class UploadService {
           // ME-2-ME
           else if (record.type === 'me-2-me') {
             if (record.group === 'payment-bulk') {
-              calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0) * this.variables.paymentFeeMe2me.value).toFixed(3));
+              calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.paymentFeeMe2me.value).toFixed(3));
               applicableFee = parseFloat((calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? this.variables.bulkMe2mePeer2PeerCap.value : calculatedFee).toFixed(3));
               unit_price = this.variables.paymentFeeMe2me.value;
-              volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 0);
+              volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
               isCapped = calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? true : false
               cappedAt = isCapped ? this.variables.bulkMe2mePeer2PeerCap.value : 0;
             }
@@ -1467,7 +1467,7 @@ export class UploadService {
     }
   }
 
-  async updateTppAndLfi(userEmail: string, organizationPath: string,) {
+  async updateTppAndLfi(userEmail: string, organizationPath: string, fileName: string) {
     let logUpdate: any;
     try {
       if (!organizationPath) {
@@ -1475,6 +1475,7 @@ export class UploadService {
           batchNo: `${Date.now()}`,
           uploadedAt: new Date(),
           master_log_path: organizationPath,
+          fileName: fileName,
           key: 'lfiTppMaster',
           status: 'Failed',
           uploadedBy: userEmail,
@@ -1499,6 +1500,7 @@ export class UploadService {
           batchNo: `${Date.now()}`,
           uploadedAt: new Date(),
           master_log_path: organizationPath,
+          fileName: fileName,
           status: 'Processing',
           key: 'lfiTppMaster',
           uploadedBy: userEmail,
@@ -1526,6 +1528,13 @@ export class UploadService {
               // console.log('iam data1Error', data1Error)
             } catch (error) {
               console.error('Validation failed for Organization data headers:', error.message);
+              reject(new HttpException(
+                {
+                  message: error.message,
+                  status: 400,
+                },
+                HttpStatus.BAD_REQUEST, // Use the appropriate status code constant
+              ));
               await this.uploadLog.findByIdAndUpdate(
                 logUpdate._id,
                 {
@@ -1542,13 +1551,7 @@ export class UploadService {
                   },
                 }
               );
-              reject(new HttpException(
-                {
-                  message: error.message,
-                  status: 400,
-                },
-                HttpStatus.BAD_REQUEST, // Use the appropriate status code constant
-              ));
+
             }
           })
           .on('data', (row) => {

@@ -36,6 +36,9 @@ export class uploadLog {
     @Prop({ required: true })
     key: string;
 
+    @Prop({ required: false })
+    fileName: string;
+
     @Prop({ required: true })
     status: string;
 

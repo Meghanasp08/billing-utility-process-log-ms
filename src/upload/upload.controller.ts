@@ -305,8 +305,9 @@ export class UploadController {
             }
 
             const organizationFilePath = files.organization_data[0].path;
+            const fileName = files.organization_data[0].originalname;
 
-            const tppLfi = await this.uploadService.updateTppAndLfi(req.user.email, organizationFilePath,);
+            const tppLfi = await this.uploadService.updateTppAndLfi(req.user.email, organizationFilePath, fileName);
 
             // unlink(organizationFilePath, (unlinkErr) => {
             //     if (unlinkErr) {
