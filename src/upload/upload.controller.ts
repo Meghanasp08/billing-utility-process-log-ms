@@ -31,7 +31,7 @@ export class UploadController {
 
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
-    @Post()
+    @Post('input')
     @UseInterceptors(FileFieldsInterceptor([
         { name: 'raw_data', maxCount: 1 },
         { name: 'payment_data', maxCount: 1 },]))
@@ -192,14 +192,14 @@ export class UploadController {
         }
     }
     @ApiBearerAuth()
-    @Get('log')
+    @Get('input/log')
     @UseGuards(JwtAuthGuard)
     @ApiOperation({ summary: 'Get upload log data' })
     @Claims(Claim.DATA_UPLOADER_VIEW)
     async getUploadLog(@Query(ValidationPipe) PaginationDTO: PaginationDTO) {
         try {
-
-            const uploadLog = await this.uploadService.getUploadLogData(PaginationDTO);
+            let key = 'inputFiles';
+            const uploadLog = await this.uploadService.getUploadLogData(key, PaginationDTO);
             return {
                 message: 'Upload Log details',
                 result: uploadLog,
@@ -223,9 +223,60 @@ export class UploadController {
             );
         }
     }
+
+    @ApiBearerAuth()
+    @Get('master/download/:id')
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({ summary: 'Download Master Data file.' })
+    @Claims(Claim.DATA_UPLOADER_DOWNLOAD)
+    async downloadMaterData(@Res() res: Response, @Param('id') id: string,) {
+        try {
+            const masterData = await this.uploadService.getMasterLogCsv(id);
+            return res.download(masterData, 'Master_Data.csv', (err) => {
+                if (err) {
+                    console.error('Error while downloading file:', err);
+                    res.status(HttpStatus.INTERNAL_SERVER_ERROR).send('Failed to download file.');
+                }
+            });
+        } catch (error) {
+            throw error;
+        }
+    }
+    @ApiBearerAuth()
+    @Get('lfi-tpp/master/log')
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({ summary: 'Get Master log data' })
+    @Claims(Claim.DATA_UPLOADER_VIEW)
+    async getMasterUploadLog(@Query(ValidationPipe) PaginationDTO: PaginationDTO) {
+        try {
+            let key = 'lfiTppMaster';
+            const uploadLog = await this.uploadService.getUploadLogData(key, PaginationDTO);
+            return {
+                message: 'Master Log details',
+                result: uploadLog,
+                statusCode: HttpStatus.OK
+            }
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error; // Re-throw expected errors with proper status codes
+            }
+
+            const statusCode = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
+            const errorMessage = error.message || 'Internal server error';
+
+            throw new HttpException(
+                {
+                    message: errorMessage,
+                    status: statusCode,
+                    details: error.details || 'An unexpected error occurred.',
+                },
+                statusCode,
+            );
+        }
+    }
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
-    @Post('lfi-tpp')
+    @Post('lfi-tpp/master')
     @UseInterceptors(FileFieldsInterceptor([
         { name: 'organization_data', maxCount: 1 },]))
     @ApiConsumes('multipart/form-data')

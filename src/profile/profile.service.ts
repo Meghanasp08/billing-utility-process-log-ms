@@ -9,6 +9,7 @@ import { Log, LogDocument } from 'src/upload/schemas/billing-log.schema';
 import { LfiData, LfiDataDocument } from 'src/upload/schemas/lfi-data.schema';
 import { TppData, TppDataDocument } from 'src/upload/schemas/tpp-data.schema';
 import { ChangePasswordDto } from './dto/profile.dto';
+import { QueryParametersDTO } from './dto/query-parameter.dto';
 import { User, UserDocument } from './schemas/user.schema';
 const { Parser } = require('json2csv');
 
@@ -40,48 +41,47 @@ export class ProfileService {
     }
   }
 
-  async getLogData(startDate?: string, endDate?: string, search?: string, limit: number = 100,
-    offset: number = 0, group?: string, type?: string, lfiChargable?: boolean, apiChargeable?: boolean) {
+  async getLogData(queryParameters: QueryParametersDTO) {
     const filter: any = {};
     let timezone: string = moment.tz.guess();
 
-    if (startDate && endDate) {
+    if (queryParameters.startDate && queryParameters.endDate) {
       filter["raw_api_log_data.timestamp"] = {
-        $gte: moment.tz(startDate, timezone).utc().toDate(),
-        $lte: moment.tz(endDate, timezone).utc().toDate(),
+        $gte: moment.tz(queryParameters.startDate, timezone).utc().toDate(),
+        $lte: moment.tz(queryParameters.endDate, timezone).utc().toDate(),
       };
-    } else if (startDate) {
-      filter["raw_api_log_data.timestamp"] = { $gte: moment.tz(startDate, timezone).utc().toDate(), };
-    } else if (endDate) {
-      filter["raw_api_log_data.timestamp"] = { $lte: moment.tz(endDate, timezone).utc().toDate(), };
+    } else if (queryParameters.startDate) {
+      filter["raw_api_log_data.timestamp"] = { $gte: moment.tz(queryParameters.startDate, timezone).utc().toDate(), };
+    } else if (queryParameters.endDate) {
+      filter["raw_api_log_data.timestamp"] = { $lte: moment.tz(queryParameters.endDate, timezone).utc().toDate(), };
     }
-    if (group) {
-      filter["group"] = group
+    if (queryParameters.group) {
+      filter["group"] = queryParameters.group
     }
-    if (type) {
-      filter["type"] = type
+    if (queryParameters.type) {
+      filter["type"] = queryParameters.type
     }
-    if (lfiChargable) {
-      filter["lfiChargable"] = lfiChargable
+    if (queryParameters.lfiChargable) {
+      filter["lfiChargable"] = queryParameters.lfiChargable
     }
-    if (apiChargeable) {
-      filter["chargeable"] = apiChargeable
+    if (queryParameters.apiChargeable) {
+      filter["chargeable"] = queryParameters.apiChargeable
     }
 
-    if (search) {
-      const searchRegex = new RegExp(search, "i");
+    if (queryParameters.search) {
+      const searchRegex = new RegExp(queryParameters.search, "i");
       filter["$or"] = [
-        { "raw_api_log_data.interaction_id": search },
-        { "payment_logs.transaction_id": search },
-        { "raw_api_log_data.tpp_id": search },
+        { "raw_api_log_data.interaction_id": queryParameters.search },
+        { "payment_logs.transaction_id": queryParameters.search },
+        { "raw_api_log_data.tpp_id": queryParameters.search },
         { "raw_api_log_data.tpp_name": searchRegex },
-        { "raw_api_log_data.lfi_id": search },
+        { "raw_api_log_data.lfi_id": queryParameters.search },
         { "raw_api_log_data.lfi_name": searchRegex }
       ];
     }
     const total = await this.logModel.countDocuments(filter).exec();
-    const log = await this.logModel.find(filter).skip(offset)
-      .limit(limit).lean().exec();
+    const log = await this.logModel.find(filter).skip(queryParameters.offset)
+      .limit(queryParameters.limit).lean().exec();
 
     // const localizedLog = log.map((entry: any) => {
     //   const timestamp = entry.raw_api_log_data?.timestamp;
@@ -95,8 +95,8 @@ export class ProfileService {
     return {
       log,
       pagination: {
-        offset: offset,
-        limit: limit,
+        offset: queryParameters.offset,
+        limit: queryParameters.limit,
         total: total
       }
     }
@@ -434,27 +434,42 @@ export class ProfileService {
       throw new Error("Failed to fetch billing details");
     }
   }
-  async getLogDataToCSV(startDate?: string, endDate?: string, search?: string,) {
+  async getLogDataToCSV(queryParameters: QueryParametersDTO) {
     const filter: any = {};
 
     let timezone: string = moment.tz.guess();
 
-    if (startDate && endDate) {
+    if (queryParameters.startDate && queryParameters.endDate) {
       filter["raw_api_log_data.timestamp"] = {
-        $gte: moment.tz(startDate, timezone).utc().toDate(),
-        $lte: moment.tz(endDate, timezone).utc().toDate(),
+        $gte: moment.tz(queryParameters.startDate, timezone).utc().toDate(),
+        $lte: moment.tz(queryParameters.endDate, timezone).utc().toDate(),
       };
-    } else if (startDate) {
-      filter["raw_api_log_data.timestamp"] = { $gte: moment.tz(startDate, timezone).utc().toDate(), };
-    } else if (endDate) {
-      filter["raw_api_log_data.timestamp"] = { $lte: moment.tz(endDate, timezone).utc().toDate(), };
+    } else if (queryParameters.startDate) {
+      filter["raw_api_log_data.timestamp"] = { $gte: moment.tz(queryParameters.startDate, timezone).utc().toDate(), };
+    } else if (queryParameters.endDate) {
+      filter["raw_api_log_data.timestamp"] = { $lte: moment.tz(queryParameters.endDate, timezone).utc().toDate(), };
     }
-    if (search) {
-      const searchRegex = new RegExp(search, "i");
+    if (queryParameters.group) {
+      filter["group"] = queryParameters.group
+    }
+    if (queryParameters.type) {
+      filter["type"] = queryParameters.type
+    }
+    if (queryParameters.lfiChargable) {
+      filter["lfiChargable"] = queryParameters.lfiChargable
+    }
+    if (queryParameters.apiChargeable) {
+      filter["chargeable"] = queryParameters.apiChargeable
+    }
+
+    if (queryParameters.search) {
+      const searchRegex = new RegExp(queryParameters.search, "i");
       filter["$or"] = [
-        { "raw_api_log_data.tpp_id": search },
-        { "raw_api_log_data.tppName": searchRegex },
-        { "raw_api_log_data.lfi_id": search },
+        { "raw_api_log_data.interaction_id": queryParameters.search },
+        { "payment_logs.transaction_id": queryParameters.search },
+        { "raw_api_log_data.tpp_id": queryParameters.search },
+        { "raw_api_log_data.tpp_name": searchRegex },
+        { "raw_api_log_data.lfi_id": queryParameters.search },
         { "raw_api_log_data.lfi_name": searchRegex }
       ];
     }

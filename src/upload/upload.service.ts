@@ -157,6 +157,7 @@ export class UploadService {
         raw_log_path: file1Path,
         payment_log_path: file2Path,
         status: 'Processing',
+        key: 'inputFiles',
         uploadedBy: userEmail,
         remarks: 'File Uploaded, processing started',
         log: [
@@ -619,7 +620,7 @@ export class UploadService {
           );
         }
       }
-      return processedRecords
+      return processedRecords.length
 
       // Perform insert or update based on interaction_id
       //   const bulkOps = totalHubFeecalculation.map((record) => ({
@@ -1402,7 +1403,22 @@ export class UploadService {
     }
   }
 
-  async getUploadLogData(paginationDTO: PaginationDTO) {
+  async getMasterLogCsv(batchId: string) {
+    try {
+      const logData = await this.uploadLog.findOne({ _id: batchId });
+      if (!logData) {
+        throw new HttpException('Batch ID not found', HttpStatus.NOT_FOUND);
+      }
+      const filePath = logData.master_log_path;
+      return filePath;
+    } catch (error) {
+      console.error("Error in getMasterLogCsv:", error);
+      throw new Error("Failed to retrieve Master Data CSV");
+
+    }
+  }
+
+  async getUploadLogData(key: string, paginationDTO: PaginationDTO) {
     try {
       const offset = paginationDTO.offset
         ? Number(paginationDTO.offset)
@@ -1429,6 +1445,10 @@ export class UploadService {
         const searchRegex = new RegExp(search, "i");
         options.$or = [{ "batchNo": search }, { "uploadedBy": searchRegex }];
       }
+      if (key) {
+        options.key = key;
+      }
+
       const total = await this.uploadLog.countDocuments(options).exec();
       const uploadlogData = await this.uploadLog.find(options).skip(offset).limit(limit).sort({ createdAt: -1 }).lean<any>()
       // return uploadlogData;
@@ -1480,6 +1500,7 @@ export class UploadService {
           uploadedAt: new Date(),
           master_log_path: organizationPath,
           status: 'Processing',
+          key: 'lfiTppMaster',
           uploadedBy: userEmail,
           remarks: 'File Uploaded, processing started',
           log: [

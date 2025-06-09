@@ -2,10 +2,11 @@ import { Body, Controller, Get, HttpStatus, Param, Post, Query, Req, Res, UseGua
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth-guard';
-import { ProfileService } from './profile.service';
-import { ChangePasswordDto } from './dto/profile.dto';
-import { Claims } from 'src/common/claims/claims.decorator';
 import { Claim } from 'src/common/claims/claim.enum';
+import { Claims } from 'src/common/claims/claims.decorator';
+import { ChangePasswordDto } from './dto/profile.dto';
+import { QueryParametersDTO } from './dto/query-parameter.dto';
+import { ProfileService } from './profile.service';
 
 @ApiTags('profile')
 @Controller('profile')
@@ -39,13 +40,10 @@ export class ProfileController {
   @ApiQuery({ name: 'search', required: false, description: 'Search keyword for filtering logs (TPP id, LFI Id, TPP Name , LFI Name).' })
   @Get('log')
   @Claims(Claim.LOG_VIEW)
-  async getLogData(@Req() req: any, @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string, @Query('search') search?: string, @Query('limit') limit: number = 100,
-    @Query('offset') offset: number = 0, @Query('group') group?: string, @Query('type') type?: string,
-    @Query('lfiChargable') lfiChargable?: boolean,@Query('apiChargeable') apiChargeable?: boolean,) {
+  async getLogData(@Req() req: any, queryParameter: QueryParametersDTO) {
     try {
       const logData = await this.profileService.getLogData(
-        startDate, endDate, search, limit, offset, group, type, lfiChargable, apiChargeable
+        queryParameter
       );
       return {
         message: 'List of Logs',
@@ -220,10 +218,9 @@ export class ProfileController {
   @ApiQuery({ name: 'search', required: false, description: 'Search keyword for filtering logs (TPP id, LFI Id, TPP Name , LFI Name).' })
   @Get('log/csv')
   @Claims(Claim.LOG_DOWNLOAD)
-  async getLogDataToCsv(@Req() req: any, @Res() res: Response, @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string, @Query('search') search?: string) {
+  async getLogDataToCsv(@Req() req: any, @Res() res: Response, queryParameters: QueryParametersDTO) {
     try {
-      const logData = await this.profileService.getLogDataToCSV(startDate, endDate, search);
+      const logData = await this.profileService.getLogDataToCSV(queryParameters);
       // return {
       //   message: 'List of Logs',
       //   result: logData,
