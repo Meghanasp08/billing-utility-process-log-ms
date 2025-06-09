@@ -1443,7 +1443,7 @@ export class UploadService {
       const search = paginationDTO.search ? paginationDTO.search.trim() : null;
       if (search) {
         const searchRegex = new RegExp(search, "i");
-        options.$or = [{ "fileName": searchRegex }, { "uploadedBy": searchRegex }];
+        options.$or = [{ "fileName": searchRegex }, { "batchNo": search }, { "uploadedBy": searchRegex }];
       }
       if (key) {
         options.key = key;
