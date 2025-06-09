@@ -178,14 +178,21 @@ export class UsersService {
                         },
                         then: {
                           $concat: [
+                            // {
+                            //   $first: {
+                            //     $split: [
+                            //       {
+                            //         $toLower: '$$el.name'
+                            //       },
+                            //       ' '
+                            //     ]
+                            //   }
+                            // },
                             {
-                              $first: {
-                                $split: [
-                                  {
-                                    $toLower: '$$el.name'
-                                  },
-                                  ' '
-                                ]
+                              $replaceAll: {
+                                input: { $toLower: "$$el.name" },
+                                find: " ",
+                                replacement: "-"
                               }
                             },
                             '.',
