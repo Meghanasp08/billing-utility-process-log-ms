@@ -69,9 +69,18 @@ export class RoleService {
         PaginationDTO: PaginationDTO,
     ): Promise<any> {
 
+       const search = PaginationDTO?.search ? PaginationDTO?.search.trim() : null;
+
         const options = {
             isDeleted: false,
         };
+
+        if (search) {
+            options['$or'] = [
+                { name: { $regex: search ? search : '', $options: 'i' } },
+                { description: { $regex: search ? search : '', $options: 'i' } },
+            ];
+        }
         const result = await this.rolesModel.find(options).select('name _id');
 
         return result;
