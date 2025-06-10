@@ -474,7 +474,7 @@ export class UploadService {
           [`payment_logs.psu_id`]: paymentRecord?.psuId || null,
           [`payment_logs.is_large_corporate`]: await parseBoolean(paymentRecord?.isLargeCorporate || '', paymentRecord?.paymentId, 'isLargeCorporate', false),
           [`payment_logs.number_of_successful_transactions`]: paymentRecord?.numberOfSuccessfulTransactions || null,
-          [`payment_logs.international_payment`]: paymentRecord?.internationalPayment || false,
+          [`payment_logs.international_payment`]: paymentRecord?.internationalPayment == 'TRUE' ? true : false,
         };
       })
     );
