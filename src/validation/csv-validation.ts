@@ -5,7 +5,7 @@ export const file1HeadersSchema = Joi.array().items(
         'timestamp', 'tppName', 'lfiId', 'lfiName', 'tppId', 'tppClientId',
         'apiSet', 'httpMethod', 'url', 'tppResponseCodeGroup',
         'executionTime', 'interactionId', 'resourceName', 'lfIResponseCodeGroup',
-        'isAttended', 'records', 'paymentType', 'PaymentId', 'merchantId',
+        'isAttended', 'records', 'paymentType', 'paymentId', 'merchantId',
         'psuId', 'isLargeCorporate', 'userType', 'purpose'
     )
 ).required();
@@ -14,7 +14,7 @@ export const file2HeadersSchema = Joi.array().items(
     Joi.string().valid(
         'timestamp', 'tppName', 'lfiId', 'lfiName', 'tppId', 'tppClientId',
         'status', 'currency', 'amount', 'paymentConsentType', 'paymentType',
-        'transactionId', 'PaymentId', 'merchantId', 'psuId',
+        'transactionId', 'paymentId', 'merchantId', 'psuId',
         'isLargeCorporate', 'numberOfSuccessfulTransactions', 'internationalPayment'
 
     )
@@ -25,14 +25,14 @@ export const file1HeadersIncludeSchema = [
     'timestamp', 'tppName', 'lfiId', 'lfiName', 'tppId', 'tppClientId',
     'apiSet', 'httpMethod', 'url', 'tppResponseCodeGroup',
     'executionTime', 'interactionId', 'resourceName', 'lfIResponseCodeGroup',
-    'isAttended', 'records', 'paymentType', 'PaymentId', 'merchantId',
+    'isAttended', 'records', 'paymentType', 'paymentId', 'merchantId',
     'psuId', 'isLargeCorporate', 'userType', 'purpose'
 ];
 
 export const file2HeadersIncludeSchema = [
     'timestamp', 'tppName', 'lfiId', 'lfiName', 'tppId', 'tppClientId',
     'status', 'currency', 'amount', 'paymentConsentType', 'paymentType',
-    'transactionId', 'PaymentId', 'merchantId', 'psuId',
+    'transactionId', 'paymentId', 'merchantId', 'psuId',
     'isLargeCorporate', 'numberOfSuccessfulTransactions', 'internationalPayment'
 ];
 

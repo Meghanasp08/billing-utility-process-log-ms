@@ -231,7 +231,7 @@ export class UploadService {
           }
 
           if (!isEmptyRow) {
-            normalizedRow['PaymentId'] = normalizedRow['PaymentId'] || normalizedRow['Payment Id'];
+            // normalizedRow['PaymentId'] = normalizedRow['PaymentId'] || normalizedRow['Payment Id'];
             file1Data.push(normalizedRow);
           }
         })
@@ -296,7 +296,7 @@ export class UploadService {
           }
 
           if (!isEmptyRow) {
-            normalizedRow['PaymentId'] = normalizedRow['PaymentId'] || normalizedRow['Payment Id'];
+            // normalizedRow['PaymentId'] = normalizedRow['PaymentId'] || normalizedRow['Payment Id'];
             file2Data.push(normalizedRow);
           }
         })
@@ -318,13 +318,13 @@ export class UploadService {
       }
     );
 
-    const parseBoolean = async (value: string, index: number, filed: string, rawData: boolean) => {
+    const parseBoolean = async (value: string, index: number, field: string, rawData: boolean) => {
+
       if (typeof value === 'string') {
         const normalized = value.trim().toLowerCase();
         if (normalized === 'true' || normalized === '1') return true;
         if (normalized === 'false' || normalized === '0') return false;
         if (normalized === '') return null;
-
       }
       await this.uploadLog.findByIdAndUpdate(
         logUpdate._id,
@@ -335,7 +335,7 @@ export class UploadService {
           },
           $push: {
             log: {
-              description: `Validation error occured in the ${index + 1} row for the field ${filed} in ${rawData ? 'Raw Log File' : 'Payment Log File'}, value is not boolean, value: ${value}`,
+              description: rawData ? `Validation error occured in the ${index + 2} row for the field ${field} in Raw Log File , value is not boolean, value: ${value}` : `Validation error occured in the Payment Log file Payment ID: ${index} for the field ${field} value is not boolean, value: ${value}`,
               status: 'Failed',
               errorDetail: null,
             },
@@ -343,7 +343,7 @@ export class UploadService {
         }
       );
       throw new HttpException({
-        message: `Validation error occured in the ${index + 1} row for the field ${filed} in ${rawData ? 'Raw Log File' : 'Payment Log File'}, value is not boolean, value: ${value}`,
+        message: rawData ? `Validation error occured in the ${index + 2} row for the field ${field} in Raw Log File, value is not boolean, value: ${value}` : `Validation error occured in the Payment Log file Payment ID: ${index} for the field ${field} value is not boolean, value: ${value}`,
         status: 400
       }, HttpStatus.BAD_REQUEST);
 
@@ -421,7 +421,7 @@ export class UploadService {
           status: 400
         }, HttpStatus.BAD_REQUEST);
       }
-      const paymentId = paymentRecord.PaymentId?.trim();
+      const paymentId = paymentRecord.paymentId?.trim();
       if (paymentId) {
         paymentDataMap.set(paymentId, paymentRecord);
       }
@@ -429,7 +429,7 @@ export class UploadService {
 
     const mergedData = await Promise.all(
       file1Data.map(async (rawApiRecord, index) => {
-        const paymentId = rawApiRecord.PaymentId?.trim();
+        const paymentId = rawApiRecord.paymentId?.trim();
         const paymentRecord = paymentId ? paymentDataMap.get(paymentId) : null;
 
         return {
@@ -450,7 +450,7 @@ export class UploadService {
           [`raw_api_log_data.is_attended`]: await parseBoolean(rawApiRecord.isAttended, index, 'isAttended', true),
           [`raw_api_log_data.records`]: rawApiRecord.records || null,
           [`raw_api_log_data.payment_type`]: rawApiRecord.paymentType || null,
-          [`raw_api_log_data.payment_id`]: rawApiRecord.PaymentId || null,
+          [`raw_api_log_data.payment_id`]: rawApiRecord.paymentId || null,
           [`raw_api_log_data.merchant_id`]: rawApiRecord.merchantId || null,
           [`raw_api_log_data.psu_id`]: rawApiRecord.psuId || null,
           ["raw_api_log_data.is_large_corporate"]: await parseBoolean(rawApiRecord.isLargeCorporate, index, 'isLargeCorporate', true),
@@ -472,9 +472,9 @@ export class UploadService {
           [`payment_logs.payment_id`]: paymentId || null,
           [`payment_logs.merchant_id`]: paymentRecord?.merchantId || null,
           [`payment_logs.psu_id`]: paymentRecord?.psuId || null,
-          [`payment_logs.is_large_corporate`]: await parseBoolean(paymentRecord?.isLargeCorporate, index, 'isLargeCorporate', false),
+          [`payment_logs.is_large_corporate`]: await parseBoolean(paymentRecord?.isLargeCorporate || '', paymentRecord?.paymentId, 'isLargeCorporate', false),
           [`payment_logs.number_of_successful_transactions`]: paymentRecord?.numberOfSuccessfulTransactions || null,
-          [`payment_logs.international_payment`]: await parseBoolean(paymentRecord?.internationalPayment, index, 'internationalPayment', false),
+          [`payment_logs.international_payment`]: paymentRecord?.internationalPayment || false,
         };
       })
     );
@@ -1306,7 +1306,6 @@ export class UploadService {
   }
 
   private async findGroupData(record: any, apiData: any[]): Promise<any> {
-    console.log('---------------------------------------------------------------------')
     const endPointurl = await this.matchTemplateVersionUrl(record["raw_api_log_data.url"]);
     const httpMethod = record["raw_api_log_data.http_method"]
 
