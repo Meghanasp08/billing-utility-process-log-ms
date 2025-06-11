@@ -146,7 +146,7 @@ export class ConfigurationController {
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Get Filter List' })
-    @Post('get-filters')
+    @Get('get-filters')
     async getFilterList() {
         const result = await this.configService.getFilterList();
         return {
@@ -159,7 +159,7 @@ export class ConfigurationController {
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Get Payment Filter List' })
-    @Post('get-payment-filters')
+    @Get('get-payment-filters')
     async getPaymentFilter() {
         const result = await this.configService.getPaymentFilter();
         return {
