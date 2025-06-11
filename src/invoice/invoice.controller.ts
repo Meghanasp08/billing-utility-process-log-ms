@@ -133,7 +133,7 @@ export class InvoiceController {
   // @Post('single-day-creation')
   async invoiceCreationSingleDay(@Body(ValidationPipe) invoiceDto: any,): Promise<any> {
     try {
-      const result = await this.invoiceService.invoiceCreationSingleDay();
+      const result = await this.invoiceService.invoiceCreationSingleDay('tpp');
       return {
         message: 'Invoice Data',
         result: result,
@@ -151,7 +151,7 @@ export class InvoiceController {
   // @Post('monthly-creation')
   async invoiceCreationMonthlyTpp(@Body(ValidationPipe) invoiceDto: any,): Promise<any> {
     try {
-      const result = await this.invoiceService.invoiceCreationMonthlyTpp();
+      const result = await this.invoiceService.invoiceCreationMonthlyTpp('gg');
       return {
         message: 'Invoice Data',
         result: result,
@@ -311,4 +311,5 @@ export class InvoiceController {
       throw error;
     }
   }
+
 }

@@ -11,7 +11,8 @@ import { ProfileModule } from './profile/profile.module';
 import { UploadModule } from './upload/upload.module';
 import { UsersModule } from './users/users.module';
 import { RoleModule } from './role/role.module';
-
+import { BullModule } from '@nestjs/bull';
+import { ScheduleModule } from '@nestjs/schedule';
 @Module({
   imports: [
     MongooseModule.forRoot(process.env.MONGO_URL || 'mongodb://localhost:27017/defaultdb'),
@@ -23,7 +24,15 @@ import { RoleModule } from './role/role.module';
     ConfigurationModule,
     DashboardModule,
     UsersModule,
-    RoleModule],
+    RoleModule,
+    BullModule.forRoot({
+      redis: {
+        host: 'localhost',
+        port: 6379,
+      },
+    }),
+    ScheduleModule.forRoot(),
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

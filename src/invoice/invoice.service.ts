@@ -9,7 +9,11 @@ import { collection_memo_config, invoice_config } from 'src/config/app.config';
 import { GlobalConfiguration, GlobalConfigurationDocument } from 'src/configuration/schema/global_config.schema';
 import { MailService } from 'src/mail/mail.service';
 import { UpdateInvoiceValueDto } from './dto/invoice.dto';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 const puppeteer = require('puppeteer')
+import { CronJob } from 'cron'
+import { Cron } from '@nestjs/schedule'
 @Injectable()
 export class InvoiceService {
     constructor(
@@ -23,6 +27,7 @@ export class InvoiceService {
         @InjectModel('Counter') private readonly CounterModel: Model<any>,
         @InjectModel(GlobalConfiguration.name) private globalModel: Model<GlobalConfigurationDocument>,
         private readonly mailService: MailService,
+        @InjectQueue('invoice') private invoiceQueue: Queue,
     ) { }
 
     async findAllInvoices(PaginationDTO: PaginationDTO): Promise<any> {
@@ -2181,7 +2186,7 @@ export class InvoiceService {
 
     }
 
-    async invoiceCreationSingleDay(): Promise<any> {
+    async invoiceCreationSingleDay(tpp): Promise<any> {
 
         // Get yesterday's start and end timestamps
         // const fromDate = moment().subtract(2, 'day').startOf('day').toDate();
@@ -2219,319 +2224,635 @@ export class InvoiceService {
 
         const currentDate = new Date();
 
-        for (const tpp of tppData) {
+        // for (const tpp of tppData) {
 
-            const result = await this.logsModel.aggregate(
-                [
-                    {
-                        $match: {
-                            "raw_api_log_data.tpp_id": tpp?.tpp_id,
-                            "chargeable": true,
-                            "success": true,
-                            'raw_api_log_data.timestamp': {
-                                $gte: fromDate,
-                                $lte: toDate
-                            }
+        const result = await this.logsModel.aggregate(
+            [
+                {
+                    $match: {
+                        "raw_api_log_data.tpp_id": tpp?.tpp_id,
+                        "chargeable": true,
+                        "success": true,
+                        'raw_api_log_data.timestamp': {
+                            $gte: fromDate,
+                            $lte: toDate
                         }
-                    },
-                    {
-                        $addFields: {
-                            paymentTypeLabel: {
-                                $switch: {
-                                    branches: [
-                                        {
-                                            case: {
-                                                $eq: ["$group", "payment-bulk"]
-                                            },
-                                            then: "Corporate Payment"   //-- paymentApiHubFee
+                    }
+                },
+                {
+                    $addFields: {
+                        paymentTypeLabel: {
+                            $switch: {
+                                branches: [
+                                    {
+                                        case: {
+                                            $eq: ["$group", "payment-bulk"]
                                         },
-                                        {
-                                            case: {
-                                                $eq: [
-                                                    "$group",
-                                                    "payment-non-bulk"
-                                                ]
-                                            },
-                                            then: "Payment Initiation"    //--paymentApiHubFee
-                                        },
-                                        {
-                                            case: {
-                                                $eq: ["$group", "insurance"]
-                                            },
-                                            then: "Insurance"    //-- insuranceApiHubFee
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $eq: ["$group", "data"]
-                                                    },
-                                                    {
-                                                        $eq: [
-                                                            "$api_category",
-                                                            "setup"
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Setup and Consent"    //-- paymentApiHubFee
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $eq: ["$group", "data"]
-                                                    },
-                                                    {
-                                                        $eq: ["$type", "corporate"]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Corporate Data"   //-- paymentApiHubFee
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $eq: ["$group", "data"]
-                                                    },
-                                                    {
-                                                        $eq: ["$discount_type", "cop"]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Confirmation of Payee(Discounted)"  //-- discountApiHubFee
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $eq: ["$group", "data"]
-                                                    },
-                                                    {
-                                                        $eq: [
-                                                            "$discount_type",
-                                                            "balance"
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Balance(Discounted)"  //-- discountApiHubFee
-                                        },
-                                        {
-                                            case: {
-                                                $eq: ["$group", "data"]
-                                            },
-                                            then: "Bank Data Sharing"   //--paymentApiHubFee
-                                        }
-                                    ],
-                                    default: null
-                                }
-                            }
-                        }
-                    },
-                    {
-                        $addFields: {
-                            category: {
-                                $cond: {
-                                    if: {
-                                        $in: [
-                                            "$paymentTypeLabel",
-                                            [
-                                                "Corporate Payment",
-                                                "Payment Initiation"
-                                            ]
-                                        ]
+                                        then: "Corporate Payment"   //-- paymentApiHubFee
                                     },
-                                    then: "service_initiation",
-                                    else: "data_sharing"
-                                }
+                                    {
+                                        case: {
+                                            $eq: [
+                                                "$group",
+                                                "payment-non-bulk"
+                                            ]
+                                        },
+                                        then: "Payment Initiation"    //--paymentApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $eq: ["$group", "insurance"]
+                                        },
+                                        then: "Insurance"    //-- insuranceApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: ["$group", "data"]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$api_category",
+                                                        "setup"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "Setup and Consent"    //-- paymentApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: ["$group", "data"]
+                                                },
+                                                {
+                                                    $eq: ["$type", "corporate"]
+                                                }
+                                            ]
+                                        },
+                                        then: "Corporate Data"   //-- paymentApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: ["$group", "data"]
+                                                },
+                                                {
+                                                    $eq: ["$discount_type", "cop"]
+                                                }
+                                            ]
+                                        },
+                                        then: "Confirmation of Payee(Discounted)"  //-- discountApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: ["$group", "data"]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$discount_type",
+                                                        "balance"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "Balance(Discounted)"  //-- discountApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $eq: ["$group", "data"]
+                                        },
+                                        then: "Bank Data Sharing"   //--paymentApiHubFee
+                                    }
+                                ],
+                                default: null
                             }
                         }
-                    },
-                    {
-                        $match: {
-                            paymentTypeLabel: {
-                                $ne: null
+                    }
+                },
+                {
+                    $addFields: {
+                        category: {
+                            $cond: {
+                                if: {
+                                    $in: [
+                                        "$paymentTypeLabel",
+                                        [
+                                            "Corporate Payment",
+                                            "Payment Initiation"
+                                        ]
+                                    ]
+                                },
+                                then: "service_initiation",
+                                else: "data_sharing"
                             }
                         }
-                    },
-                    {
-                        $group: {
-                            _id: {
-                                category: "$category",
-                                description: "$paymentTypeLabel"
-                            },
-                            quantity: {
-                                $sum: "$apiHubVolume"
-                            },
+                    }
+                },
+                {
+                    $match: {
+                        paymentTypeLabel: {
+                            $ne: null
+                        }
+                    }
+                },
+                {
+                    $group: {
+                        _id: {
+                            category: "$category",
+                            description: "$paymentTypeLabel"
+                        },
+                        quantity: {
+                            $sum: "$apiHubVolume"
+                        },
+                        unit_price: {
+                            $first: "$api_hub_fee"
+                        },
+                        total: {
+                            $sum: "$applicableApiHubFee"
+                        }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        category: "$_id.category",
+                        item: {
+                            description: "$_id.description",
+                            quantity: "$quantity",
                             unit_price: {
-                                $first: "$api_hub_fee"
+                                $round: ["$unit_price", 3]
                             },
                             total: {
-                                $sum: "$applicableApiHubFee"
+                                $round: ["$total", 3]
+                            },
+                            vat_amount: {
+                                $round: [
+                                    { $multiply: ["$total", vatDecimal] },
+                                    3
+                                ]
+                            },
+                            full_total: {
+                                $round: [
+                                    {
+                                        $add: [
+                                            "$total",
+                                            {
+                                                $multiply: ["$total", vatDecimal]
+                                            }
+                                        ]
+                                    },
+                                    3
+                                ]
                             }
                         }
-                    },
-                    {
-                        $project: {
-                            _id: 0,
-                            category: "$_id.category",
-                            item: {
-                                description: "$_id.description",
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$category",
+                        items: {
+                            $push: "$item"
+                        }
+                    }
+                },
+                {
+                    $addFields: {
+                        allItems: {
+                            $cond: {
+                                if: {
+                                    $eq: ["$_id", "service_initiation"]
+                                },
+                                then: [
+                                    "Corporate Payment",
+                                    "Payment Initiation"
+                                ],
+                                else: [
+                                    "Insurance",
+                                    "Setup and Consent",
+                                    "Corporate Data",
+                                    "Confirmation of Payee",
+                                    "Balance(Discounted)",
+                                    "Bank Data Sharing"
+                                ]
+                            }
+                        }
+                    }
+                },
+                {
+                    $addFields: {
+                        items: {
+                            $map: {
+                                input: "$allItems",
+                                as: "desc",
+                                in: {
+                                    $let: {
+                                        vars: {
+                                            matchedItem: {
+                                                $first: {
+                                                    $filter: {
+                                                        input: "$items",
+                                                        as: "item",
+                                                        cond: {
+                                                            $eq: [
+                                                                "$$item.description",
+                                                                "$$desc"
+                                                            ]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        in: {
+                                            description: "$$desc",
+                                            quantity: {
+                                                $ifNull: [
+                                                    "$$matchedItem.quantity",
+                                                    0
+                                                ]
+                                            },
+                                            unit_price: {
+                                                $ifNull: [
+                                                    "$$matchedItem.unit_price",
+                                                    {
+                                                        $switch: {
+                                                            branches: [
+                                                                {
+                                                                    case: { $eq: ["$$desc", "Corporate Payment"] },
+                                                                    then: paymentApiHubFee
+                                                                },
+                                                                {
+                                                                    case: { $eq: ["$$desc", "Payment Initiation"] },
+                                                                    then: paymentApiHubFee
+                                                                },
+                                                                {
+                                                                    case: { $eq: ["$$desc", "Insurance"] },
+                                                                    then: insuranceApiHubFee
+                                                                },
+                                                                {
+                                                                    case: { $eq: ["$$desc", "Setup and Consent"] },
+                                                                    then: paymentApiHubFee
+                                                                },
+                                                                {
+                                                                    case: { $eq: ["$$desc", "Corporate Data"] },
+                                                                    then: paymentApiHubFee
+                                                                },
+                                                                {
+                                                                    case: { $eq: ["$$desc", "Confirmation of Payee"] },
+                                                                    then: discountApiHubFee
+                                                                },
+                                                                {
+                                                                    case: { $eq: ["$$desc", "Balance(Discounted)"] },
+                                                                    then: discountApiHubFee
+                                                                },
+                                                                {
+                                                                    case: { $eq: ["$$desc", "Bank Data Sharing"] },
+                                                                    then: paymentApiHubFee
+                                                                }
+                                                            ],
+                                                            default: 0.25 // Fallback if description doesn't match
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            total: {
+                                                $ifNull: [
+                                                    "$$matchedItem.total",
+                                                    0
+                                                ]
+                                            },
+                                            vat_amount: {
+                                                $ifNull: [
+                                                    "$$matchedItem.vat_amount",
+                                                    0
+                                                ]
+                                            },
+                                            full_total: {
+                                                $ifNull: [
+                                                    "$$matchedItem.full_total",
+                                                    0
+                                                ]
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    $addFields: {
+                        sub_total: {
+                            $sum: "$items.total"
+                        }
+                    }
+                },
+                {
+                    $addFields: {
+                        vat_amount: {
+                            $round: [
+                                {
+                                    $multiply: ["$sub_total", vatDecimal]
+                                },
+                                3
+                            ]
+                        },
+                        category_total: {
+                            $round: [
+                                {
+                                    $add: [
+                                        "$sub_total",
+                                        {
+                                            $multiply: ["$sub_total", vatDecimal]
+                                        }
+                                    ]
+                                },
+                                3
+                            ]
+                        }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        category: "$_id",
+                        items: 1,
+                        sub_total: 1,
+                        vat_amount: 1,
+                        category_total: 1
+                    }
+                }
+            ]
+        );
+
+        const result_of_lfi = await this.logsModel.aggregate(
+            [
+                {
+                    $match: {
+                        "raw_api_log_data.tpp_id": tpp?.tpp_id,
+                        lfiChargable: true,
+                        success: true,
+                        'raw_api_log_data.timestamp': {
+                            $gte: fromDate,
+                            $lte: toDate
+                        }
+                    }
+                },
+                {
+                    $addFields: {
+                        label: {
+                            $switch: {
+                                branches: [
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $in: [
+                                                        "$group",
+                                                        [
+                                                            "payment-bulk",
+                                                            "payment-non-bulk"
+                                                        ]
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$type", "merchant"]
+                                                },
+                                                {
+                                                    $ne: [
+                                                        "$raw_api_log_data.payment_type",
+                                                        "LargeValueCollection"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "Merchant Collection"   //-- nonLargeValueMerchantBps/10000
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $in: [
+                                                        "$group",
+                                                        [
+                                                            "payment-bulk",
+                                                            "payment-non-bulk"
+                                                        ]
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$type", "peer-2-peer"]
+                                                },
+                                                {
+                                                    $ne: [
+                                                        "$raw_api_log_data.payment_type",
+                                                        "LargeValueCollection"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "Peer-to-Peer"   //paymentNonLargevalueFeePeer
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $in: [
+                                                        "$group",
+                                                        [
+                                                            "payment-bulk",
+                                                            "payment-non-bulk"
+                                                        ]
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$type", "me-2-me"]
+                                                },
+                                                {
+                                                    $ne: [
+                                                        "$raw_api_log_data.payment_type",
+                                                        "LargeValueCollection"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "Me-to-Me Transfer"  //paymentFeeMe2me
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $in: [
+                                                        "$group",
+                                                        [
+                                                            "payment-bulk",
+                                                            "payment-non-bulk"
+                                                        ]
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$raw_api_log_data.payment_type",
+                                                        "LargeValueCollection"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "Large Value Collections"  // paymentLargeValueFee
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: [
+                                                        "$group",
+                                                        "payment-bulk"
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$type", "corporate"]
+                                                }
+                                            ]
+                                        },
+                                        then: "Corporate Payments" // bulkLargeCorporatefee
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: ["$group", "data"]
+                                                },
+                                                {
+                                                    $eq: ["$type", "corporate"]
+                                                }
+                                            ]
+                                        },
+                                        then: "Corporate Treasury Data" // dataLargeCorporateMdp
+                                    },
+                                    {
+                                        case: {
+                                            $eq: ["$group", "data"]
+                                        },
+                                        then: "Customer Data"       //Take mppRate from lfi
+                                    }
+                                ],
+                                default: "Others"
+                            }
+                        }
+                    }
+                },
+                {
+                    $group: {
+                        _id: {
+                            lfi_id: "$raw_api_log_data.lfi_id",
+                            label: "$label"
+                        },
+                        quantity: {
+                            $sum: "$volume"
+                        },
+                        unit_price: {
+                            $first: "$unit_price"
+                        },
+                        total: {
+                            $sum: "$applicableFee"
+                        },
+                        capped: {
+                            $max: "$isCapped"
+                        }
+                    }
+                },
+                {
+                    $match: {
+                        total: { $ne: 0 }
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$_id.lfi_id",
+                        labels: {
+                            $push: {
+                                label: "$_id.label",
                                 quantity: "$quantity",
                                 unit_price: {
-                                    $round: ["$unit_price", 3]
+                                    $round: ["$unit_price", 4]
                                 },
                                 total: {
                                     $round: ["$total", 3]
                                 },
-                                vat_amount: {
-                                    $round: [
-                                        { $multiply: ["$total", vatDecimal] },
-                                        3
-                                    ]
-                                },
-                                full_total: {
-                                    $round: [
-                                        {
-                                            $add: [
-                                                "$total",
-                                                {
-                                                    $multiply: ["$total", vatDecimal]
-                                                }
-                                            ]
-                                        },
-                                        3
-                                    ]
-                                }
+                                capped: "$capped",
                             }
                         }
-                    },
-                    {
-                        $group: {
-                            _id: "$category",
-                            items: {
-                                $push: "$item"
-                            }
-                        }
-                    },
-                    {
-                        $addFields: {
-                            allItems: {
-                                $cond: {
-                                    if: {
-                                        $eq: ["$_id", "service_initiation"]
-                                    },
-                                    then: [
-                                        "Corporate Payment",
-                                        "Payment Initiation"
-                                    ],
-                                    else: [
-                                        "Insurance",
-                                        "Setup and Consent",
-                                        "Corporate Data",
-                                        "Confirmation of Payee",
-                                        "Balance(Discounted)",
-                                        "Bank Data Sharing"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    {
-                        $addFields: {
-                            items: {
-                                $map: {
-                                    input: "$allItems",
-                                    as: "desc",
-                                    in: {
-                                        $let: {
-                                            vars: {
-                                                matchedItem: {
-                                                    $first: {
-                                                        $filter: {
-                                                            input: "$items",
-                                                            as: "item",
-                                                            cond: {
-                                                                $eq: [
-                                                                    "$$item.description",
-                                                                    "$$desc"
-                                                                ]
-                                                            }
+                    }
+                },
+                {
+                    '$lookup': {
+                        'from': 'lfi_data',
+                        'localField': '_id',
+                        'foreignField': 'lfi_id',
+                        'as': 'lfi_data'
+                    }
+                }, {
+                    '$unwind': {
+                        'path': '$lfi_data'
+                    }
+                },
+                {
+                    $addFields: {
+                        labels: {
+                            $map: {
+                                input: [
+                                    "Merchant Collection",
+                                    "Peer-to-Peer",
+                                    "Me-to-Me Transfer",
+                                    "Large value collection",
+                                    "Corporate Payments",
+                                    "Corporate Treasury Data",
+                                    "Customer Data"
+                                ],
+                                as: "expectedLabel",
+                                in: {
+                                    $let: {
+                                        vars: {
+                                            matched: {
+                                                $first: {
+                                                    $filter: {
+                                                        input: "$labels",
+                                                        as: "existing",
+                                                        cond: {
+                                                            $eq: ["$$existing.label", "$$expectedLabel"]
                                                         }
                                                     }
                                                 }
                                             },
-                                            in: {
-                                                description: "$$desc",
-                                                quantity: {
-                                                    $ifNull: [
-                                                        "$$matchedItem.quantity",
-                                                        0
-                                                    ]
-                                                },
-                                                unit_price: {
-                                                    $ifNull: [
-                                                        "$$matchedItem.unit_price",
-                                                        {
-                                                            $switch: {
-                                                                branches: [
-                                                                    {
-                                                                        case: { $eq: ["$$desc", "Corporate Payment"] },
-                                                                        then: paymentApiHubFee
-                                                                    },
-                                                                    {
-                                                                        case: { $eq: ["$$desc", "Payment Initiation"] },
-                                                                        then: paymentApiHubFee
-                                                                    },
-                                                                    {
-                                                                        case: { $eq: ["$$desc", "Insurance"] },
-                                                                        then: insuranceApiHubFee
-                                                                    },
-                                                                    {
-                                                                        case: { $eq: ["$$desc", "Setup and Consent"] },
-                                                                        then: paymentApiHubFee
-                                                                    },
-                                                                    {
-                                                                        case: { $eq: ["$$desc", "Corporate Data"] },
-                                                                        then: paymentApiHubFee
-                                                                    },
-                                                                    {
-                                                                        case: { $eq: ["$$desc", "Confirmation of Payee"] },
-                                                                        then: discountApiHubFee
-                                                                    },
-                                                                    {
-                                                                        case: { $eq: ["$$desc", "Balance(Discounted)"] },
-                                                                        then: discountApiHubFee
-                                                                    },
-                                                                    {
-                                                                        case: { $eq: ["$$desc", "Bank Data Sharing"] },
-                                                                        then: paymentApiHubFee
-                                                                    }
-                                                                ],
-                                                                default: 0.25 // Fallback if description doesn't match
-                                                            }
-                                                        }
-                                                    ]
-                                                },
-                                                total: {
-                                                    $ifNull: [
-                                                        "$$matchedItem.total",
-                                                        0
-                                                    ]
-                                                },
-                                                vat_amount: {
-                                                    $ifNull: [
-                                                        "$$matchedItem.vat_amount",
-                                                        0
-                                                    ]
-                                                },
-                                                full_total: {
-                                                    $ifNull: [
-                                                        "$$matchedItem.full_total",
-                                                        0
-                                                    ]
+                                            defaultUnitPrice: {
+                                                $switch: {
+                                                    branches: [
+                                                        { case: { $eq: ["$$expectedLabel", "Merchant Collection"] }, then: nonLargeValueMerchantBps },
+                                                        { case: { $eq: ["$$expectedLabel", "Peer-to-Peer"] }, then: paymentLargeValueFeePeer },
+                                                        { case: { $eq: ["$$expectedLabel", "Me-to-Me Transfer"] }, then: paymentFeeMe2me },
+                                                        { case: { $eq: ["$$expectedLabel", "Large value collection"] }, then: paymentLargeValueFee },
+                                                        { case: { $eq: ["$$expectedLabel", "Corporate Payments"] }, then: bulkLargeCorporatefee },
+                                                        { case: { $eq: ["$$expectedLabel", "Corporate Treasury Data"] }, then: dataLargeCorporateMdp },
+                                                        { case: { $eq: ["$$expectedLabel", "Customer Data"] }, then: "$lfi_data.mdp_rate" }
+                                                    ],
+                                                    default: 0.025
+                                                }
+                                            }
+                                        },
+                                        in: {
+                                            $cond: {
+                                                if: "$$matched",
+                                                then: "$$matched",
+                                                else: {
+                                                    label: "$$expectedLabel",
+                                                    quantity: 0,
+                                                    unit_price: "$$defaultUnitPrice",
+                                                    total: 0
                                                 }
                                             }
                                         }
@@ -2539,425 +2860,107 @@ export class InvoiceService {
                                 }
                             }
                         }
-                    },
-                    {
-                        $addFields: {
-                            sub_total: {
-                                $sum: "$items.total"
-                            }
-                        }
-                    },
-                    {
-                        $addFields: {
-                            vat_amount: {
-                                $round: [
-                                    {
-                                        $multiply: ["$sub_total", vatDecimal]
-                                    },
-                                    3
-                                ]
-                            },
-                            category_total: {
-                                $round: [
-                                    {
-                                        $add: [
-                                            "$sub_total",
-                                            {
-                                                $multiply: ["$sub_total", vatDecimal]
-                                            }
-                                        ]
-                                    },
-                                    3
-                                ]
-                            }
-                        }
-                    },
-                    {
-                        $project: {
-                            _id: 0,
-                            category: "$_id",
-                            items: 1,
-                            sub_total: 1,
-                            vat_amount: 1,
-                            category_total: 1
-                        }
                     }
-                ]
+                },
+                {
+                    $addFields: {
+                        full_total: {
+                            $round: [
+                                {
+                                    $sum: "$labels.total"
+                                },
+                                3
+                            ]
+                        },
+                        'lfi_name': '$lfi_data.lfi_name'
+                    }
+                }
+            ]
+        )
+
+        const invoice_data = {
+            invoice_number: await this.generateInvoiceNumber(),
+            tpp_id: tpp?.tpp_id,
+            tpp_name: tpp?.tpp_name,
+            generated_at: new Date(),
+            invoice_month: month,
+            invoice_year: year,
+            generated_for: generated_for,       // yesterday
+            tpp_usage_per_lfi: result_of_lfi,
+            invoice_items: result,
+        }
+        const invoice = new this.singleDayTppInvoiceModel(invoice_data)
+        const invoices = await invoice.save();
+
+
+        for (const obj of result_of_lfi) {
+            console.log(obj)
+            const tpp_id = tpp?.tpp_id; // replace with your actual ID
+            let collection_memo_data = await this.collectionMemoModel.findOne(
+                {
+                    lfi_id: obj?._id,
+                    // month: month,
+                    // year: year
+                }
             );
 
-            const result_of_lfi = await this.logsModel.aggregate(
-                [
-                    {
-                        $match: {
-                            "raw_api_log_data.tpp_id": tpp?.tpp_id,
-                            lfiChargable: true,
-                            success: true,
-                            'raw_api_log_data.timestamp': {
-                                $gte: fromDate,
-                                $lte: toDate
-                            }
-                        }
-                    },
-                    {
-                        $addFields: {
-                            label: {
-                                $switch: {
-                                    branches: [
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $in: [
-                                                            "$group",
-                                                            [
-                                                                "payment-bulk",
-                                                                "payment-non-bulk"
-                                                            ]
-                                                        ]
-                                                    },
-                                                    {
-                                                        $eq: ["$type", "merchant"]
-                                                    },
-                                                    {
-                                                        $ne: [
-                                                            "$raw_api_log_data.payment_type",
-                                                            "LargeValueCollection"
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Merchant Collection"   //-- nonLargeValueMerchantBps/10000
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $in: [
-                                                            "$group",
-                                                            [
-                                                                "payment-bulk",
-                                                                "payment-non-bulk"
-                                                            ]
-                                                        ]
-                                                    },
-                                                    {
-                                                        $eq: ["$type", "peer-2-peer"]
-                                                    },
-                                                    {
-                                                        $ne: [
-                                                            "$raw_api_log_data.payment_type",
-                                                            "LargeValueCollection"
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Peer-to-Peer"   //paymentNonLargevalueFeePeer
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $in: [
-                                                            "$group",
-                                                            [
-                                                                "payment-bulk",
-                                                                "payment-non-bulk"
-                                                            ]
-                                                        ]
-                                                    },
-                                                    {
-                                                        $eq: ["$type", "me-2-me"]
-                                                    },
-                                                    {
-                                                        $ne: [
-                                                            "$raw_api_log_data.payment_type",
-                                                            "LargeValueCollection"
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Me-to-Me Transfer"  //paymentFeeMe2me
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $in: [
-                                                            "$group",
-                                                            [
-                                                                "payment-bulk",
-                                                                "payment-non-bulk"
-                                                            ]
-                                                        ]
-                                                    },
-                                                    {
-                                                        $eq: [
-                                                            "$raw_api_log_data.payment_type",
-                                                            "LargeValueCollection"
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Large Value Collections"  // paymentLargeValueFee
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $eq: [
-                                                            "$group",
-                                                            "payment-bulk"
-                                                        ]
-                                                    },
-                                                    {
-                                                        $eq: ["$type", "corporate"]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Corporate Payments" // bulkLargeCorporatefee
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $eq: ["$group", "data"]
-                                                    },
-                                                    {
-                                                        $eq: ["$type", "corporate"]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Corporate Treasury Data" // dataLargeCorporateMdp
-                                        },
-                                        {
-                                            case: {
-                                                $eq: ["$group", "data"]
-                                            },
-                                            then: "Customer Data"       //Take mppRate from lfi
-                                        }
-                                    ],
-                                    default: "Others"
-                                }
-                            }
-                        }
-                    },
-                    {
-                        $group: {
-                            _id: {
-                                lfi_id: "$raw_api_log_data.lfi_id",
-                                label: "$label"
-                            },
-                            quantity: {
-                                $sum: "$volume"
-                            },
-                            unit_price: {
-                                $first: "$unit_price"
-                            },
-                            total: {
-                                $sum: "$applicableFee"
-                            },
-                            capped: {
-                                $max: "$isCapped"
-                            }
-                        }
-                    },
-                    {
-                        $match: {
-                            total: { $ne: 0 }
-                        }
-                    },
-                    {
-                        $group: {
-                            _id: "$_id.lfi_id",
-                            labels: {
-                                $push: {
-                                    label: "$_id.label",
-                                    quantity: "$quantity",
-                                    unit_price: {
-                                        $round: ["$unit_price", 4]
-                                    },
-                                    total: {
-                                        $round: ["$total", 3]
-                                    },
-                                    capped: "$capped",
-                                }
-                            }
-                        }
-                    },
-                    {
-                        '$lookup': {
-                            'from': 'lfi_data',
-                            'localField': '_id',
-                            'foreignField': 'lfi_id',
-                            'as': 'lfi_data'
-                        }
-                    }, {
-                        '$unwind': {
-                            'path': '$lfi_data'
-                        }
-                    },
-                    {
-                        $addFields: {
-                            labels: {
-                                $map: {
-                                    input: [
-                                        "Merchant Collection",
-                                        "Peer-to-Peer",
-                                        "Me-to-Me Transfer",
-                                        "Large value collection",
-                                        "Corporate Payments",
-                                        "Corporate Treasury Data",
-                                        "Customer Data"
-                                    ],
-                                    as: "expectedLabel",
-                                    in: {
-                                        $let: {
-                                            vars: {
-                                                matched: {
-                                                    $first: {
-                                                        $filter: {
-                                                            input: "$labels",
-                                                            as: "existing",
-                                                            cond: {
-                                                                $eq: ["$$existing.label", "$$expectedLabel"]
-                                                            }
-                                                        }
-                                                    }
-                                                },
-                                                defaultUnitPrice: {
-                                                    $switch: {
-                                                        branches: [
-                                                            { case: { $eq: ["$$expectedLabel", "Merchant Collection"] }, then: nonLargeValueMerchantBps },
-                                                            { case: { $eq: ["$$expectedLabel", "Peer-to-Peer"] }, then: paymentLargeValueFeePeer },
-                                                            { case: { $eq: ["$$expectedLabel", "Me-to-Me Transfer"] }, then: paymentFeeMe2me },
-                                                            { case: { $eq: ["$$expectedLabel", "Large value collection"] }, then: paymentLargeValueFee },
-                                                            { case: { $eq: ["$$expectedLabel", "Corporate Payments"] }, then: bulkLargeCorporatefee },
-                                                            { case: { $eq: ["$$expectedLabel", "Corporate Treasury Data"] }, then: dataLargeCorporateMdp },
-                                                            { case: { $eq: ["$$expectedLabel", "Customer Data"] }, then: "$lfi_data.mdp_rate" }
-                                                        ],
-                                                        default: 0.025
-                                                    }
-                                                }
-                                            },
-                                            in: {
-                                                $cond: {
-                                                    if: "$$matched",
-                                                    then: "$$matched",
-                                                    else: {
-                                                        label: "$$expectedLabel",
-                                                        quantity: 0,
-                                                        unit_price: "$$defaultUnitPrice",
-                                                        total: 0
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    {
-                        $addFields: {
-                            full_total: {
-                                $round: [
-                                    {
-                                        $sum: "$labels.total"
-                                    },
-                                    3
-                                ]
-                            },
-                            'lfi_name': '$lfi_data.lfi_name'
-                        }
+            if (collection_memo_data) {
+                console.log("LOG_ID1")
+
+                const new_tpp_data = {
+                    tpp_id: tpp_id,
+                    tpp_name: tpp?.tpp_name,
+                    collection_memo_subitem: obj.labels,
+                    full_total: obj?.full_total,
+                    vat_percent: 5,
+                    date: new Date()
+                };
+
+                for (const memo of collection_memo_data) {
+                    const tppExists = memo.tpp.some((t: any) => t.tpp_id === tpp_id);
+                    console.log("LOG_ID2")
+                    if (!tppExists) {
+                        console.log("LOG_ID3")
+                        memo.tpp.push(new_tpp_data);
+                        await memo.save();
+                    } else {
+                        console.log("LOG_ID4")
                     }
-                ]
-            )
+                }
+            } else {
 
-            const invoice_data = {
-                invoice_number: await this.generateInvoiceNumber(),
-                tpp_id: tpp?.tpp_id,
-                tpp_name: tpp?.tpp_name,
-                generated_at: new Date(),
-                invoice_month: month,
-                invoice_year: year,
-                generated_for: generated_for,       // yesterday
-                tpp_usage_per_lfi: result_of_lfi,
-                invoice_items: result,
-            }
-            const invoice = new this.singleDayTppInvoiceModel(invoice_data)
-            const invoices = await invoice.save();
-            console.log("ID-", invoices?._id)
-
-
-            for (const obj of result_of_lfi) {
-                console.log(obj)
-                const tpp_id = tpp?.tpp_id; // replace with your actual ID
-                let collection_memo_data = await this.collectionMemoModel.findOne(
-                    {
-                        lfi_id: obj?._id,
-                        // month: month,
-                        // year: year
-                    }
-                );
-
-                if (collection_memo_data) {
-                    console.log("LOG_ID1")
-
-                    const new_tpp_data = {
+                const lfiData = await this.lfiDataModel.findOne({ lfi_id: obj?._id });
+                const coll_memo_tpp = new this.singleDayCollectionMemoModel({
+                    lfi_id: obj?._id,
+                    lfi_name: lfiData.lfi_name,
+                    generated_at: new Date(),        // Generate Date
+                    generated_for: generated_for,
+                    invoice_month: month,
+                    invoice_year: year,
+                    currency: 'AED',         //AED default
+                    tpp: [{
                         tpp_id: tpp_id,
                         tpp_name: tpp?.tpp_name,
-                        collection_memo_subitem: obj.labels,
+                        collection_memo_subitem: obj?.labels,
                         full_total: obj?.full_total,
                         vat_percent: 5,
                         date: new Date()
-                    };
+                    }],
 
-                    for (const memo of collection_memo_data) {
-                        const tppExists = memo.tpp.some((t: any) => t.tpp_id === tpp_id);
-                        console.log("LOG_ID2")
-                        if (!tppExists) {
-                            console.log("LOG_ID3")
-                            memo.tpp.push(new_tpp_data);
-                            await memo.save();
-                        } else {
-                            console.log("LOG_ID4")
-                        }
-                    }
-                } else {
-
-                    const lfiData = await this.lfiDataModel.findOne({ lfi_id: obj?._id });
-                    const coll_memo_tpp = new this.singleDayCollectionMemoModel({
-                        lfi_id: obj?._id,
-                        lfi_name: lfiData.lfi_name,
-                        generated_at: new Date(),        // Generate Date
-                        generated_for: generated_for,
-                        invoice_month: month,
-                        invoice_year: year,
-                        currency: 'AED',         //AED default
-                        tpp: [{
-                            tpp_id: tpp_id,
-                            tpp_name: tpp?.tpp_name,
-                            collection_memo_subitem: obj?.labels,
-                            full_total: obj?.full_total,
-                            vat_percent: 5,
-                            date: new Date()
-                        }],
-
-                    })
-                    await coll_memo_tpp.save();
-                }
+                })
+                await coll_memo_tpp.save();
             }
         }
+
         return 'completed';
 
     }
 
-    async invoiceCreationMonthlyTpp(): Promise<any> {
+    async invoiceCreationMonthlyTpp(tpp): Promise<any> {
 
         // const startDate = moment().subtract(1, 'months').startOf('month');
         const startDate = moment().startOf('month').toDate();
         const endDate = moment().endOf('month').toDate();
-        console.log(startDate, endDate);
 
         const futureDate = new Date();
         const currentDate = new Date();
@@ -2971,375 +2974,394 @@ export class InvoiceService {
         const year = day.year();
         console.log(month, year);
 
-        for (const tpp of tppData) {
+        const global_vat = await this.globalModel.findOne({
+            key: 'vatPercentageValue',
+        });
+        const vatPercent = global_vat?.value ?? 5
+        const vatDecimal = vatPercent / 100;
 
-            const result_of_tpp = await this.singleDayTppInvoiceModel.aggregate(
-                [
-                    {
-                        '$match': {
-                            'tpp_id': tpp?.tpp_id,
-                            'createdAt': {
-                                $gte: startDate,
-                                $lte: endDate
-                            }
-                        }
-                    }, {
-                        '$group': {
-                            '_id': '$tpp_id',
-                            'tpp_name': {
-                                '$first': '$tpp_name'
-                            },
-                            'generated_for': {
-                                '$last': '$generated_for'
-                            },
-                            'createdAt': {
-                                '$last': '$createdAt'
-                            },
-                            'updatedAt': {
-                                '$last': '$updatedAt'
-                            },
-                            'all_invoice_items': {
-                                '$push': '$invoice_items'
-                            },
-                            'all_tpp_usage': {
-                                '$push': '$tpp_usage_per_lfi'
-                            }
-                        }
-                    }, {
-                        '$addFields': {
-                            'invoice_items': {
-                                '$reduce': {
-                                    'input': '$all_invoice_items',
-                                    'initialValue': [],
-                                    'in': {
-                                        '$concatArrays': [
-                                            '$$value', '$$this'
-                                        ]
-                                    }
-                                }
-                            },
-                            'tpp_usage_per_lfi': {
-                                '$reduce': {
-                                    'input': '$all_tpp_usage',
-                                    'initialValue': [],
-                                    'in': {
-                                        '$concatArrays': [
-                                            '$$value', '$$this'
-                                        ]
-                                    }
-                                }
-                            }
-                        }
-                    }, {
-                        '$unwind': '$invoice_items'
-                    }, {
-                        '$unwind': '$invoice_items.items'
-                    }, {
-                        '$group': {
-                            '_id': {
-                                'tpp_id': '$_id',
-                                'category': '$invoice_items.category',
-                                'description': '$invoice_items.items.description'
-                            },
-                            'tpp_name': {
-                                '$first': '$tpp_name'
-                            },
-                            'generated_for': {
-                                '$first': '$generated_for'
-                            },
-                            'createdAt': {
-                                '$first': '$createdAt'
-                            },
-                            'updatedAt': {
-                                '$first': '$updatedAt'
-                            },
-                            'quantity': {
-                                '$sum': '$invoice_items.items.quantity'
-                            },
-                            'unit_price': {
-                                '$first': '$invoice_items.items.unit_price'
-                            },
-                            'total': {
-                                '$sum': '$invoice_items.items.total'
-                            },
-                            'sub_total': {
-                                '$sum': '$invoice_items.sub_total'
-                            },
-                            'vat_amount': {
-                                '$sum': '$invoice_items.vat_amount'
-                            },
-                            'category_total': {
-                                '$sum': '$invoice_items.category_total'
-                            },
-                            'tpp_usage_per_lfi': {
-                                '$first': '$tpp_usage_per_lfi'
-                            }
-                        }
-                    }, {
-                        '$group': {
-                            '_id': {
-                                'tpp_id': '$_id.tpp_id',
-                                'category': '$_id.category'
-                            },
-                            'tpp_name': {
-                                '$first': '$tpp_name'
-                            },
-                            'generated_for': {
-                                '$first': '$generated_for'
-                            },
-                            'createdAt': {
-                                '$first': '$createdAt'
-                            },
-                            'updatedAt': {
-                                '$first': '$updatedAt'
-                            },
-                            'items': {
-                                '$push': {
-                                    'description': '$_id.description',
-                                    'quantity': '$quantity',
-                                    'unit_price': '$unit_price',
-                                    'total': '$total'
-                                }
-                            },
-                            'sub_total': {
-                                '$first': '$sub_total'
-                            },
-                            'vat_amount': {
-                                '$first': '$vat_amount'
-                            },
-                            'category_total': {
-                                '$first': '$category_total'
-                            },
-                            'tpp_usage_per_lfi': {
-                                '$first': '$tpp_usage_per_lfi'
-                            }
-                        }
-                    }, {
-                        '$group': {
-                            '_id': '$_id.tpp_id',
-                            'tpp_name': {
-                                '$first': '$tpp_name'
-                            },
-                            'generated_for': {
-                                '$first': '$generated_for'
-                            },
-                            'createdAt': {
-                                '$first': '$createdAt'
-                            },
-                            'updatedAt': {
-                                '$first': '$updatedAt'
-                            },
-                            'invoice_items': {
-                                '$push': {
-                                    'category': '$_id.category',
-                                    'items': '$items',
-                                    'sub_total': '$sub_total',
-                                    'vat_amount': '$vat_amount',
-                                    'category_total': '$category_total'
-                                }
-                            },
-                            'tpp_usage_per_lfi': {
-                                '$first': '$tpp_usage_per_lfi'
-                            }
-                        }
-                    }, {
-                        '$unwind': {
-                            'path': '$tpp_usage_per_lfi',
-                            'preserveNullAndEmptyArrays': true
-                        }
-                    }, {
-                        '$unwind': {
-                            'path': '$tpp_usage_per_lfi.labels',
-                            'preserveNullAndEmptyArrays': true
-                        }
-                    }, {
-                        '$group': {
-                            '_id': {
-                                'tpp_id': '$_id',
-                                'category': '$_id.category',
-                                'label': '$tpp_usage_per_lfi.labels.label'
-                            },
-                            'tpp_name': {
-                                '$first': '$tpp_name'
-                            },
-                            'invoice_items': {
-                                '$first': '$invoice_items'
-                            },
-                            'generated_for': {
-                                '$first': '$generated_for'
-                            },
-                            'createdAt': {
-                                '$first': '$createdAt'
-                            },
-                            'updatedAt': {
-                                '$first': '$updatedAt'
-                            },
-                            'items': {
-                                '$first': '$items'
-                            },
-                            'sub_total': {
-                                '$first': '$sub_total'
-                            },
-                            'vat_amount': {
-                                '$first': '$vat_amount'
-                            },
-                            'category_total': {
-                                '$first': '$category_total'
-                            },
-                            'lfi_id': {
-                                '$first': '$tpp_usage_per_lfi._id'
-                            },
-                            'quantity': {
-                                '$sum': '$tpp_usage_per_lfi.labels.quantity'
-                            },
-                            'unit_price': {
-                                '$first': '$tpp_usage_per_lfi.labels.unit_price'
-                            },
-                            'total': {
-                                '$sum': '$tpp_usage_per_lfi.labels.total'
-                            },
-                            'full_total': {
-                                '$sum': '$tpp_usage_per_lfi.full_total'
-                            },
-                            'vat': {
-                                '$sum': '$tpp_usage_per_lfi.vat'
-                            },
-                            'actual_total': {
-                                '$sum': '$tpp_usage_per_lfi.actual_total'
-                            }
-                        }
-                    }, {
-                        '$group': {
-                            '_id': {
-                                'tpp_id': '$_id.tpp_id',
-                                'category': '$_id.category'
-                            },
-                            'tpp_name': {
-                                '$first': '$tpp_name'
-                            },
-                            'generated_for': {
-                                '$first': '$generated_for'
-                            },
-                            'createdAt': {
-                                '$first': '$createdAt'
-                            },
-                            'updatedAt': {
-                                '$first': '$updatedAt'
-                            },
-                            'items': {
-                                '$first': '$items'
-                            },
-                            'sub_total': {
-                                '$first': '$sub_total'
-                            },
-                            'vat_amount': {
-                                '$first': '$vat_amount'
-                            },
-                            'category_total': {
-                                '$first': '$category_total'
-                            },
-                            'invoice_items': {
-                                '$first': '$invoice_items'
-                            },
-                            'labels': {
-                                '$push': {
-                                    'label': '$_id.label',
-                                    'quantity': '$quantity',
-                                    'unit_price': '$unit_price',
-                                    'total': '$total'
-                                }
-                            },
-                            'full_total': {
-                                '$first': '$full_total'
-                            },
-                            'vat': {
-                                '$first': '$vat'
-                            },
-                            'actual_total': {
-                                '$first': '$actual_total'
-                            },
-                            'lfi_id': {
-                                '$first': '$lfi_id'
-                            }
-                        }
-                    }, {
-                        '$group': {
-                            '_id': '$_id.tpp_id',
-                            'tpp_name': {
-                                '$first': '$tpp_name'
-                            },
-                            'generated_for': {
-                                '$first': '$generated_for'
-                            },
-                            'createdAt': {
-                                '$first': '$createdAt'
-                            },
-                            'updatedAt': {
-                                '$first': '$updatedAt'
-                            },
-                            'invoice_items': {
-                                '$first': '$invoice_items'
-                            },
-                            'tpp_usage_per_lfi': {
-                                '$push': {
-                                    'labels': '$labels',
-                                    'full_total': '$full_total',
-                                    'vat': '$vat',
-                                    'actual_total': '$actual_total',
-                                    'lfi_id': '$lfi_id'
-                                }
-                            }
-                        }
-                    }, {
-                        '$project': {
-                            '_id': 0,
-                            'tpp_id': '$_id',
-                            'tpp_name': 1,
-                            'generated_for': 1,
-                            'createdAt': 1,
-                            'updatedAt': 1,
-                            'invoice_items': 1,
-                            'tpp_usage_per_lfi': 1
+        // for (const tpp of tppData) {
+
+        const result_of_tpp = await this.singleDayTppInvoiceModel.aggregate(
+            [
+                {
+                    '$match': {
+                        'tpp_id': tpp?.tpp_id,
+                        'createdAt': {
+                            $gte: startDate,
+                            $lte: endDate
                         }
                     }
-                ]
-            )
-            console.log(result_of_tpp[0]?.invoice_items)
-            const total = result_of_tpp[0]?.invoice_items.reduce((sum, item) => sum + item.category_total, 0);
+                }, {
+                    '$group': {
+                        '_id': '$tpp_id',
+                        'tpp_name': {
+                            '$first': '$tpp_name'
+                        },
+                        'generated_for': {
+                            '$last': '$generated_for'
+                        },
+                        'createdAt': {
+                            '$last': '$createdAt'
+                        },
+                        'updatedAt': {
+                            '$last': '$updatedAt'
+                        },
+                        'all_invoice_items': {
+                            '$push': '$invoice_items'
+                        },
+                        'all_tpp_usage': {
+                            '$push': '$tpp_usage_per_lfi'
+                        }
+                    }
+                }, {
+                    '$addFields': {
+                        'invoice_items': {
+                            '$reduce': {
+                                'input': '$all_invoice_items',
+                                'initialValue': [],
+                                'in': {
+                                    '$concatArrays': [
+                                        '$$value', '$$this'
+                                    ]
+                                }
+                            }
+                        },
+                        'tpp_usage_per_lfi': {
+                            '$reduce': {
+                                'input': '$all_tpp_usage',
+                                'initialValue': [],
+                                'in': {
+                                    '$concatArrays': [
+                                        '$$value', '$$this'
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }, {
+                    '$unwind': '$invoice_items'
+                }, {
+                    '$unwind': '$invoice_items.items'
+                }, {
+                    '$group': {
+                        '_id': {
+                            'tpp_id': '$_id',
+                            'category': '$invoice_items.category',
+                            'description': '$invoice_items.items.description'
+                        },
+                        'tpp_name': {
+                            '$first': '$tpp_name'
+                        },
+                        'generated_for': {
+                            '$first': '$generated_for'
+                        },
+                        'createdAt': {
+                            '$first': '$createdAt'
+                        },
+                        'updatedAt': {
+                            '$first': '$updatedAt'
+                        },
+                        'quantity': {
+                            '$sum': '$invoice_items.items.quantity'
+                        },
+                        'unit_price': {
+                            '$first': '$invoice_items.items.unit_price'
+                        },
+                        'total': {
+                            '$sum': '$invoice_items.items.total'
+                        },
+                        'sub_total': {
+                            '$sum': '$invoice_items.sub_total'
+                        },
+                        'vat_amount': {
+                            '$sum': '$invoice_items.vat_amount'
+                        },
+                        'category_total': {
+                            '$sum': '$invoice_items.category_total'
+                        },
+                        'tpp_usage_per_lfi': {
+                            '$first': '$tpp_usage_per_lfi'
+                        }
+                    }
+                }, {
+                    '$group': {
+                        '_id': {
+                            'tpp_id': '$_id.tpp_id',
+                            'category': '$_id.category'
+                        },
+                        'tpp_name': {
+                            '$first': '$tpp_name'
+                        },
+                        'generated_for': {
+                            '$first': '$generated_for'
+                        },
+                        'createdAt': {
+                            '$first': '$createdAt'
+                        },
+                        'updatedAt': {
+                            '$first': '$updatedAt'
+                        },
+                        'items': {
+                            '$push': {
+                                'description': '$_id.description',
+                                'quantity': '$quantity',
+                                'unit_price': '$unit_price',
+                                'total': '$total'
+                            }
+                        },
+                        'sub_total': {
+                            '$first': '$sub_total'
+                        },
+                        'vat_amount': {
+                            '$first': '$vat_amount'
+                        },
+                        'category_total': {
+                            '$first': '$category_total'
+                        },
+                        'tpp_usage_per_lfi': {
+                            '$first': '$tpp_usage_per_lfi'
+                        }
+                    }
+                }, {
+                    '$group': {
+                        '_id': '$_id.tpp_id',
+                        'tpp_name': {
+                            '$first': '$tpp_name'
+                        },
+                        'generated_for': {
+                            '$first': '$generated_for'
+                        },
+                        'createdAt': {
+                            '$first': '$createdAt'
+                        },
+                        'updatedAt': {
+                            '$first': '$updatedAt'
+                        },
+                        'invoice_items': {
+                            '$push': {
+                                'category': '$_id.category',
+                                'items': '$items',
+                                'sub_total': '$sub_total',
+                                'vat_amount': '$vat_amount',
+                                'category_total': '$category_total'
+                            }
+                        },
+                        'tpp_usage_per_lfi': {
+                            '$first': '$tpp_usage_per_lfi'
+                        }
+                    }
+                }, {
+                    '$unwind': {
+                        'path': '$tpp_usage_per_lfi',
+                        'preserveNullAndEmptyArrays': true
+                    }
+                }, {
+                    '$unwind': {
+                        'path': '$tpp_usage_per_lfi.labels',
+                        'preserveNullAndEmptyArrays': true
+                    }
+                }, {
+                    '$group': {
+                        '_id': {
+                            'tpp_id': '$_id',
+                            'category': '$_id.category',
+                            'label': '$tpp_usage_per_lfi.labels.label'
+                        },
+                        'tpp_name': {
+                            '$first': '$tpp_name'
+                        },
+                        'invoice_items': {
+                            '$first': '$invoice_items'
+                        },
+                        'generated_for': {
+                            '$first': '$generated_for'
+                        },
+                        'createdAt': {
+                            '$first': '$createdAt'
+                        },
+                        'updatedAt': {
+                            '$first': '$updatedAt'
+                        },
+                        'items': {
+                            '$first': '$items'
+                        },
+                        'sub_total': {
+                            '$first': '$sub_total'
+                        },
+                        'vat_amount': {
+                            '$first': '$vat_amount'
+                        },
+                        'category_total': {
+                            '$first': '$category_total'
+                        },
+                        'lfi_id': {
+                            '$first': '$tpp_usage_per_lfi._id'
+                        },
+                        'quantity': {
+                            '$sum': '$tpp_usage_per_lfi.labels.quantity'
+                        },
+                        'unit_price': {
+                            '$first': '$tpp_usage_per_lfi.labels.unit_price'
+                        },
+                        'total': {
+                            '$sum': '$tpp_usage_per_lfi.labels.total'
+                        },
+                        'full_total': {
+                            '$sum': '$tpp_usage_per_lfi.full_total'
+                        },
+                        'vat': {
+                            '$sum': '$tpp_usage_per_lfi.vat'
+                        },
+                        'actual_total': {
+                            '$sum': '$tpp_usage_per_lfi.actual_total'
+                        }
+                    }
+                }, {
+                    '$group': {
+                        '_id': {
+                            'tpp_id': '$_id.tpp_id',
+                            'category': '$_id.category'
+                        },
+                        'tpp_name': {
+                            '$first': '$tpp_name'
+                        },
+                        'generated_for': {
+                            '$first': '$generated_for'
+                        },
+                        'createdAt': {
+                            '$first': '$createdAt'
+                        },
+                        'updatedAt': {
+                            '$first': '$updatedAt'
+                        },
+                        'items': {
+                            '$first': '$items'
+                        },
+                        'sub_total': {
+                            '$first': '$sub_total'
+                        },
+                        'vat_amount': {
+                            '$first': '$vat_amount'
+                        },
+                        'category_total': {
+                            '$first': '$category_total'
+                        },
+                        'invoice_items': {
+                            '$first': '$invoice_items'
+                        },
+                        'labels': {
+                            '$push': {
+                                'label': '$_id.label',
+                                'quantity': '$quantity',
+                                'unit_price': '$unit_price',
+                                'total': '$total'
+                            }
+                        },
+                        'full_total': {
+                            '$first': '$full_total'
+                        },
+                        'vat': {
+                            '$first': '$vat'
+                        },
+                        'actual_total': {
+                            '$first': '$actual_total'
+                        },
+                        'lfi_id': {
+                            '$first': '$lfi_id'
+                        }
+                    }
+                }, {
+                    '$group': {
+                        '_id': '$_id.tpp_id',
+                        'tpp_name': {
+                            '$first': '$tpp_name'
+                        },
+                        'generated_for': {
+                            '$first': '$generated_for'
+                        },
+                        'createdAt': {
+                            '$first': '$createdAt'
+                        },
+                        'updatedAt': {
+                            '$first': '$updatedAt'
+                        },
+                        'invoice_items': {
+                            '$first': '$invoice_items'
+                        },
+                        'tpp_usage_per_lfi': {
+                            '$push': {
+                                'labels': '$labels',
+                                'full_total': '$full_total',
+                                'vat': '$vat',
+                                'actual_total': '$actual_total',
+                                'lfi_id': '$lfi_id'
+                            }
+                        }
+                    }
+                }, {
+                    '$project': {
+                        '_id': 0,
+                        'tpp_id': '$_id',
+                        'tpp_name': 1,
+                        'generated_for': 1,
+                        'createdAt': 1,
+                        'updatedAt': 1,
+                        'invoice_items': 1,
+                        'tpp_usage_per_lfi': 1
+                    }
+                }
+            ]
+        )
+        // console.log(result_of_tpp[0]?.invoice_items)
+        // const total = result_of_tpp[0]?.invoice_items.reduce((sum, item) => sum + item.category_total, 0);
 
-            console.log(total)
-            const vat = total * 0.05;
 
-            const roundedTotal = Math.round(total * 100) / 100; // 0.23
-            const roundedVat = Math.round(vat * 100) / 100;
+        // const roundedTotal = Math.round(total * 100) / 100; // 0.23
+        // const roundedVat = Math.round(vat * 100) / 100;
 
-            const invoice_data = {
-                invoice_number: await this.generateInvoiceNumber(),
-                tpp_id: tpp?.tpp_id,
-                tpp_name: tpp?.tpp_name,
-                billing_address_line1: 'billing_address_line1',
-                billing_address_line2: 'billing_address_line2',
-                billing_address_city: 'billing_address_city',
-                billing_address_state: 'billing_address_state',
-                billing_address_postal_code: '1111',
-                billing_address_country: 'country',
-                billing_period_start: startDate,  // Month First
-                billing_period_end: endDate,   // Month Last
-                issued_date: new Date(),        // Generate Date
-                due_date: futureDate,  //issued_date + 30 days
-                generated_at: new Date(),        // Generate Date
-                currency: 'AED',         //AED default
-                tpp_usage_per_lfi: result_of_tpp[0]?.tpp_usage_per_lfi,
-                invoice_items: result_of_tpp[0]?.invoice_items,
-                vat_percent: 5, // Default 5 percent
-                vat_total: roundedVat,  // vat percent of invoice total
-                total_amount: roundedTotal,  // total of invoice array
-                status: 1,
-                notes: 'Invoice Added',
-            }
-            const invoice = new this.invoiceModel(invoice_data)
-            await invoice.save();
+        //           
+        const invoice_total = result_of_tpp[0]?.invoice_items.reduce((sum, item) => sum + item.category_total, 0);
+        const vat = invoice_total * vatDecimal;
+
+        const lfi_total = result_of_tpp[0]?.tpp_usage_per_lfi.reduce((sum, item) => sum + item.full_total, 0);
+
+        const total = Number(invoice_total) + Number(lfi_total);
+        const roundedTotal = Math.round(total * 100) / 100;
+        const roundedVat = Math.round(vat * 100) / 100;
+        //
+        const invoice_data = {
+            invoice_number: await this.generateInvoiceNumber(),
+            tpp_id: tpp?.tpp_id,
+            tpp_name: tpp?.tpp_name,
+            billing_address_line1: 'billing_address_line1',
+            billing_address_line2: 'billing_address_line2',
+            billing_address_city: 'billing_address_city',
+            billing_address_state: 'billing_address_state',
+            billing_address_postal_code: '1111',
+            billing_address_country: 'country',
+            invoice_month: month,
+            invoice_year: year,
+            billing_period_start: startDate,  // Month First
+            billing_period_end: endDate,   // Month Last
+            issued_date: new Date(),        // Generate Date
+            due_date: futureDate,  //issued_date + 30 days
+            generated_at: new Date(),        // Generate Date
+            currency: 'AED',         //AED default
+            tpp_usage_per_lfi: result_of_tpp[0]?.tpp_usage_per_lfi,
+            invoice_items: result_of_tpp[0]?.invoice_items,
+            vat_percent: vatPercent, // Default 5 percent
+            vat_total: roundedVat,  // vat percent of invoice total
+            total_amount: roundedTotal,  // total of invoice array
+            invoice_total: invoice_total,
+            lfi_total: lfi_total,
+            status: 1,
+            notes: 'Invoice Added',
         }
+        const invoice = new this.invoiceModel(invoice_data)
+        await invoice.save();
+
+        // }
 
     }
 
@@ -3573,7 +3595,7 @@ export class InvoiceService {
         let result;
         if (mail) {
             try {
-                console.log("EMAIL",email)
+                console.log("EMAIL", email)
                 if (!Array.isArray(email) || email.length === 0) {
                     throw new NotFoundException('No valid recipient email addresses provided.');
                 }
@@ -3610,7 +3632,7 @@ export class InvoiceService {
         const monthName = moment().month(data.invoice_month - 1).format('MMMM');
         const firstDay = moment(`${data?.invoice_year}-${data?.invoice_month}`, 'YYYY-M').startOf('month').format('Do MMMM YYYY');
         const lastDay = moment(`${data?.invoice_year}-${data?.invoice_month}`, 'YYYY-M').endOf('month').format('Do MMMM YYYY');
-        console.log("DAY",firstDay,lastDay);
+        console.log("DAY", firstDay, lastDay);
 
         for (const item of data?.tpp_usage_per_lfi) {
             lfi_list += `<tr>
@@ -4613,8 +4635,8 @@ export class InvoiceService {
 
         const firstDay = moment(`${data?.invoice_year}-${data?.invoice_month}`, 'YYYY-M').startOf('month').format('Do MMMM YYYY');
         const lastDay = moment(`${data?.invoice_year}-${data?.invoice_month}`, 'YYYY-M').endOf('month').format('Do MMMM YYYY');
-        console.log("DAY",firstDay,lastDay);
-        
+        console.log("DAY", firstDay, lastDay);
+
         for (const tpp_data of data.tpp || []) {
             revenue_data += `<tr class="tpp-name">
                 <td rowspan="${(tpp_data.collection_memo_subitem?.length || 0) + 2}">
@@ -4801,427 +4823,44 @@ export class InvoiceService {
 </html>
         `
     }
+
+
+    async generatePdf(invoice: any) {
+        // Use puppeteer / pdfkit to generate PDF and return file path or buffer
+        await this.generateInvoicePDFTpp(invoice, true);
+    }
+
+    async sendEmail(invoice: any, pdf: Buffer) {
+        // await this.mailService.send({
+        //     to: invoice.tpp_email,
+        //     subject: 'Your Invoice',
+        //     text: 'Please find attached.',
+        //     attachments: [{ filename: 'invoice.pdf', content: pdf }],
+        // });
+    }
+
+    // async handleDailyCron() {
+    //     const allTPPs = await this.tppDataModel.find();
+    //     console.log("CRONE RUNNING");
+    //     for (const tpp of allTPPs) {
+    //         await this.invoiceQueue.add('daily-crone', { tpp });
+    //     }
+    // }
+
+    // @Cron('*/5 * * * * *') // Every 5 seconds
+    // @Cron('0 0 1 * *') // Every month start
+    // @Cron('0 20 9 * * *') // 8:50:00 AM every day
+    async handleDailyCron() {
+        console.log("CRONEEEE")
+       const allTPPs = await this.tppDataModel.find();
+        for (const tpp of allTPPs) {
+            console.log("LOOP-ENTER")
+            await this.invoiceQueue.add('generate-invoice-daily', { tpp });
+        }
+    }
+
+
+    
 }
 
 
-//CappedCode
-// [
-//     {
-//       '$match': {
-//         'raw_api_log_data.tpp_id': '876789',
-//         'lfiChargable': true,
-//         'success': true,
-//         '$expr': {
-//           '$and': [
-//             {
-//               '$eq': [
-//                 {
-//                   '$month': '$raw_api_log_data.timestamp'
-//                 }, 4
-//               ]
-//             }, {
-//               '$eq': [
-//                 {
-//                   '$year': '$raw_api_log_data.timestamp'
-//                 }, 2025
-//               ]
-//             }
-//           ]
-//         }
-//       }
-//     }, {
-//       '$addFields': {
-//         'label': {
-//           '$switch': {
-//             'branches': [
-//               {
-//                 'case': {
-//                   '$and': [
-//                     {
-//                       '$in': [
-//                         '$group', [
-//                           'payment-bulk', 'payment-non-bulk'
-//                         ]
-//                       ]
-//                     }, {
-//                       '$eq': [
-//                         '$type', 'merchant'
-//                       ]
-//                     }, {
-//                       '$eq': [
-//                         '$isCapped', false
-//                       ]
-//                     }, {
-//                       '$ne': [
-//                         '$raw_api_log_data.payment_type', 'LargeValueCollection'
-//                       ]
-//                     }
-//                   ]
-//                 },
-//                 'then': 'Merchant Collection'
-//               }, {
-//                 'case': {
-//                   '$and': [
-//                     {
-//                       '$in': [
-//                         '$group', [
-//                           'payment-bulk', 'payment-non-bulk'
-//                         ]
-//                       ]
-//                     }, {
-//                       '$eq': [
-//                         '$type', 'merchant'
-//                       ]
-//                     }, {
-//                       '$eq': [
-//                         '$isCapped', true
-//                       ]
-//                     }, {
-//                       '$ne': [
-//                         '$raw_api_log_data.payment_type', 'LargeValueCollection'
-//                       ]
-//                     }
-//                   ]
-//                 },
-//                 'then': 'Merchant Collection (Capped)'
-//               }, {
-//                 'case': {
-//                   '$and': [
-//                     {
-//                       '$in': [
-//                         '$group', [
-//                           'payment-bulk', 'payment-non-bulk'
-//                         ]
-//                       ]
-//                     }, {
-//                       '$eq': [
-//                         '$type', 'peer-2-peer'
-//                       ]
-//                     }, {
-//                       '$eq': [
-//                         '$isCapped', false
-//                       ]
-//                     }, {
-//                       '$ne': [
-//                         '$raw_api_log_data.payment_type', 'LargeValueCollection'
-//                       ]
-//                     }
-//                   ]
-//                 },
-//                 'then': 'Peer-to-Peer'
-//               }, {
-//                 'case': {
-//                   '$and': [
-//                     {
-//                       '$in': [
-//                         '$group', [
-//                           'payment-bulk', 'payment-non-bulk'
-//                         ]
-//                       ]
-//                     }, {
-//                       '$eq': [
-//                         '$type', 'peer-2-peer'
-//                       ]
-//                     }, {
-//                       '$eq': [
-//                         '$isCapped', true
-//                       ]
-//                     }, {
-//                       '$ne': [
-//                         '$raw_api_log_data.payment_type', 'LargeValueCollection'
-//                       ]
-//                     }
-//                   ]
-//                 },
-//                 'then': 'Peer-to-Peer (Capped)'
-//               }, {
-//                 'case': {
-//                   '$and': [
-//                     {
-//                       '$in': [
-//                         '$group', [
-//                           'payment-bulk', 'payment-non-bulk'
-//                         ]
-//                       ]
-//                     }, {
-//                       '$eq': [
-//                         '$type', 'me-2-me'
-//                       ]
-//                     }, {
-//                       '$eq': [
-//                         '$isCapped', false
-//                       ]
-//                     }, {
-//                       '$ne': [
-//                         '$raw_api_log_data.payment_type', 'LargeValueCollection'
-//                       ]
-//                     }
-//                   ]
-//                 },
-//                 'then': 'Me-to-Me Transfer'
-//               }, {
-//                 'case': {
-//                   '$and': [
-//                     {
-//                       '$in': [
-//                         '$group', [
-//                           'payment-bulk', 'payment-non-bulk'
-//                         ]
-//                       ]
-//                     }, {
-//                       '$eq': [
-//                         '$type', 'me-2-me'
-//                       ]
-//                     }, {
-//                       '$eq': [
-//                         '$isCapped', true
-//                       ]
-//                     }, {
-//                       '$ne': [
-//                         '$raw_api_log_data.payment_type', 'LargeValueCollection'
-//                       ]
-//                     }
-//                   ]
-//                 },
-//                 'then': 'Me-to-Me Transfer (Capped)'
-//               }, {
-//                 'case': {
-//                   '$and': [
-//                     {
-//                       '$in': [
-//                         '$group', [
-//                           'payment-bulk', 'payment-non-bulk'
-//                         ]
-//                       ]
-//                     }, {
-//                       '$eq': [
-//                         '$raw_api_log_data.payment_type', 'LargeValueCollection'
-//                       ]
-//                     }
-//                   ]
-//                 },
-//                 'then': 'Large Value Collections'
-//               }, {
-//                 'case': {
-//                   '$and': [
-//                     {
-//                       '$eq': [
-//                         '$group', 'payment-bulk'
-//                       ]
-//                     }, {
-//                       '$eq': [
-//                         '$type', 'corporate'
-//                       ]
-//                     }
-//                   ]
-//                 },
-//                 'then': 'Corporate Payments'
-//               }, {
-//                 'case': {
-//                   '$and': [
-//                     {
-//                       '$eq': [
-//                         '$group', 'data'
-//                       ]
-//                     }, {
-//                       '$eq': [
-//                         '$type', 'corporate'
-//                       ]
-//                     }
-//                   ]
-//                 },
-//                 'then': 'Corporate Treasury Data'
-//               }, {
-//                 'case': {
-//                   '$eq': [
-//                     '$group', 'data'
-//                   ]
-//                 },
-//                 'then': 'Customer Data'
-//               }
-//             ],
-//             'default': 'Others'
-//           }
-//         }
-//       }
-//     }, {
-//       '$addFields': {
-//         'computedUnitPrice': {
-//           '$cond': {
-//             'if': {
-//               '$eq': [
-//                 '$isCapped', true
-//               ]
-//             },
-//             'then': '$cappedAt',
-//             'else': '$unit_price'
-//           }
-//         },
-//         'computedVolume': {
-//           '$cond': {
-//             'if': {
-//               '$eq': [
-//                 '$isCapped', true
-//               ]
-//             },
-//             'then': 1,
-//             'else': '$volume'
-//           }
-//         }
-//       }
-//     }, {
-//       '$group': {
-//         '_id': {
-//           'lfi_id': '$raw_api_log_data.lfi_id',
-//           'label': '$label',
-//           'isCapped': '$isCapped'
-//         },
-//         'quantity': {
-//           '$sum': '$computedVolume'
-//         },
-//         'unit_price': {
-//           '$first': '$computedUnitPrice'
-//         },
-//         'total': {
-//           '$sum': '$applicableFee'
-//         }
-//       }
-//     }, {
-//       '$group': {
-//         '_id': '$_id.lfi_id',
-//         'labels': {
-//           '$push': {
-//             'label': '$_id.label',
-//             'quantity': '$quantity',
-//             'unit_price': {
-//               '$round': [
-//                 '$unit_price', 4
-//               ]
-//             },
-//             'total': {
-//               '$round': [
-//                 '$total', 3
-//               ]
-//             }
-//           }
-//         }
-//       }
-//     }, {
-//       '$addFields': {
-//         'labels': {
-//           '$map': {
-//             'input': [
-//               'Merchant Collection', 'Merchant Collection (Capped)', 'Peer-to-Peer', 'Peer-to-Peer (Capped)', 'Me-to-Me Transfer', 'Me-to-Me Transfer (Capped)', 'Large value collection', 'Corporate Payments', 'Corporate Treasury Data', 'Customer Data'
-//             ],
-//             'as': 'expectedLabel',
-//             'in': {
-//               '$let': {
-//                 'vars': {
-//                   'matched': {
-//                     '$first': {
-//                       '$filter': {
-//                         'input': '$labels',
-//                         'as': 'existing',
-//                         'cond': {
-//                           '$eq': [
-//                             '$$existing.label', '$$expectedLabel'
-//                           ]
-//                         }
-//                       }
-//                     }
-//                   }
-//                 },
-//                 'in': {
-//                   '$cond': {
-//                     'if': '$$matched',
-//                     'then': '$$matched',
-//                     'else': {
-//                       'label': '$$expectedLabel',
-//                       'quantity': 0,
-//                       'unit_price': 0,
-//                       'total': 0
-//                     }
-//                   }
-//                 }
-//               }
-//             }
-//           }
-//         }
-//       }
-//     }, {
-//       '$addFields': {
-//         'labels': {
-//           '$map': {
-//             'input': '$labels',
-//             'as': 'item',
-//             'in': {
-//               '$mergeObjects': [
-//                 '$$item', {
-//                   'vat_amount': {
-//                     '$round': [
-//                       {
-//                         '$multiply': [
-//                           '$$item.total', 0.05
-//                         ]
-//                       }, 3
-//                     ]
-//                   },
-//                   'full_total': {
-//                     '$round': [
-//                       {
-//                         '$add': [
-//                           '$$item.total', {
-//                             '$multiply': [
-//                               '$$item.total', 0.05
-//                             ]
-//                           }
-//                         ]
-//                       }, 3
-//                     ]
-//                   }
-//                 }
-//               ]
-//             }
-//           }
-//         }
-//       }
-//     }, {
-//       '$addFields': {
-//         'full_total': {
-//           '$round': [
-//             {
-//               '$sum': '$labels.total'
-//             }, 3
-//           ]
-//         },
-//         'vat': {
-//           '$round': [
-//             {
-//               '$multiply': [
-//                 {
-//                   '$sum': '$labels.total'
-//                 }, 0.05
-//               ]
-//             }, 3
-//           ]
-//         },
-//         'actual_total': {
-//           '$round': [
-//             {
-//               '$add': [
-//                 {
-//                   '$sum': '$labels.total'
-//                 }, {
-//                   '$multiply': [
-//                     {
-//                       '$sum': '$labels.total'
-//                     }, 0.05
-//                   ]
-//                 }
-//               ]
-//             }, 3
-//           ]
-//         }
-//       }
-//     }
-//   ]

@@ -6,6 +6,7 @@ import { CreateApiDto, GetglobalValueDto, UpdateApiDto, UpdateglobalValueDto } f
 import { UpdateLfiDataDto } from './dto/lfi_update.dto';
 import { ApiDataConfiguration, ApiDataConfigurationDocument } from './schema/api_data.schema';
 import { GlobalConfiguration, GlobalConfigurationDocument } from './schema/global_config.schema';
+import { filter_master,paymentLabelFilters  } from 'src/config/app.config';
 @Injectable()
 export class ConfigurationService {
     constructor(
@@ -146,4 +147,21 @@ export class ConfigurationService {
             throw new Error(`Error creating api data: ${error.message}`);
         }
     }
+
+    async getFilterList() {
+        try {
+            return filter_master;
+        } catch (error) {
+            throw new Error(`Error Getting Filter Data: ${error.message}`);
+        }
+    }
+
+    async getPaymentFilter() {
+        try {
+            return paymentLabelFilters;
+        } catch (error) {
+            throw new Error(`Error Getting Filter Data: ${error.message}`);
+        }
+    }
+
 }

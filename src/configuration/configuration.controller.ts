@@ -142,4 +142,30 @@ export class ConfigurationController {
             statusCode: HttpStatus.OK
         }
     }
+
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get Filter List' })
+    @Post('get-filters')
+    async getFilterList() {
+        const result = await this.configService.getFilterList();
+        return {
+            message: 'Get Filter List successfully',
+            result: result,
+            statusCode: HttpStatus.OK
+        }
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get Payment Filter List' })
+    @Post('get-payment-filters')
+    async getPaymentFilter() {
+        const result = await this.configService.getPaymentFilter();
+        return {
+            message: 'Get Filter List successfully',
+            result: result,
+            statusCode: HttpStatus.OK
+        }
+    }
 }

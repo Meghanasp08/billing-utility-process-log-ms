@@ -134,6 +134,10 @@ export class RoleService {
         }
         
         if (updateRoleDto.isDeleted === true) {
+            
+            if (result?.isDefault === true) {
+                throw new ConflictException('This role cannot be deleted.')
+            }
             const assignedUserCount = await this.userModel.countDocuments({ role: ID });
 
             if (assignedUserCount > 0) {

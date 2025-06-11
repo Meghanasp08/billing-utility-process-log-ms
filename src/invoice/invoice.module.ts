@@ -13,6 +13,8 @@ import { CounterSchema } from './schemas/counter.schema';
 import { InvoiceSchema } from './schemas/invoice.schema';
 import { SingleDayTppInvoiceSchema } from './schemas/single-day-invoice-tpp.schems';
 import { SingleDayCollectionMemoSchema } from './schemas/single_day_collection-memo.schems';
+import { BullModule } from '@nestjs/bull';
+import { InvoiceProcessor } from './invoice.processor';
 
 @Module({
   imports: [
@@ -30,8 +32,17 @@ import { SingleDayCollectionMemoSchema } from './schemas/single_day_collection-m
     ]),
     MailModule,
     AuthModule,
+    BullModule.forRoot({
+      redis: {
+        host: 'localhost',
+        port: 6379,
+      },
+    }),
+    BullModule.registerQueue({
+      name: 'invoice',
+    }),
   ],
   controllers: [InvoiceController],
-  providers: [InvoiceService],
+  providers: [InvoiceService,InvoiceProcessor],
 })
 export class InvoiceModule { }
