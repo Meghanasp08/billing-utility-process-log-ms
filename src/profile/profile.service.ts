@@ -102,6 +102,92 @@ export class ProfileService {
     }
   }
 
+  async getLogDataNew(queryBody: any) {
+    const filter: any = {};
+    const { filterParams = [], offset = 0, limit = 20, search, startDate, endDate } = queryBody;
+
+    const timezone: string = moment.tz.guess();
+
+    // Handle Date Range
+    if (startDate && endDate) {
+      filter["raw_api_log_data.timestamp"] = {
+        $gte: moment.tz(startDate, timezone).utc().toDate(),
+        $lte: moment.tz(endDate, timezone).utc().toDate(),
+      };
+    } else if (startDate) {
+      filter["raw_api_log_data.timestamp"] = {
+        $gte: moment.tz(startDate, timezone).utc().toDate(),
+      };
+    } else if (endDate) {
+      filter["raw_api_log_data.timestamp"] = {
+        $lte: moment.tz(endDate, timezone).utc().toDate(),
+      };
+    }
+
+    // Apply filterParams
+    if (filterParams.length != 0) {
+      for (const param of filterParams) {
+        const { key, operator, value } = param;
+
+        switch (operator) {
+          case "eq":
+            filter[key] = value;
+            break;
+          case "ne":
+            filter[key] = { $ne: value };
+            break;
+          case "in":
+            filter[key] = { $in: value };
+            break;
+          case "nin":
+            filter[key] = { $nin: value };
+            break;
+          case "gte":
+            filter[key] = { $gte: value };
+            break;
+          case "lte":
+            filter[key] = { $lte: value };
+            break;
+          default:
+            throw new Error(`Unsupported operator: ${operator}`);
+        }
+      }
+    }
+
+
+    // Search Logic
+    if (search) {
+      const searchRegex = new RegExp(search, "i");
+      filter["$or"] = [
+        { "raw_api_log_data.interaction_id": search },
+        { "payment_logs.transaction_id": search },
+        { "raw_api_log_data.tpp_id": search },
+        { "raw_api_log_data.tpp_name": searchRegex },
+        { "raw_api_log_data.lfi_id": search },
+        { "raw_api_log_data.lfi_name": searchRegex }
+      ];
+    }
+
+    // Querying DB
+    const total = await this.logModel.countDocuments(filter).exec();
+    const log = await this.logModel
+      .find(filter)
+      .skip(offset)
+      .limit(limit)
+      .lean()
+      .exec();
+
+    return {
+      log,
+      pagination: {
+        offset,
+        limit,
+        total
+      }
+    };
+  }
+
+
   async getBillingData(group: String, startDate?: string, endDate?: string, search?: string, limit: number = 10,
     offset: number = 0) {
     try {

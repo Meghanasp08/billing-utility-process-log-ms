@@ -54,6 +54,23 @@ export class ProfileController {
       throw error;
     }
   }
+
+  @Post('logs')
+  @Claims(Claim.LOG_VIEW)
+  async getLogDataNew(@Req() req: any, @Body(ValidationPipe) queryBody: any, ) {
+    try {
+      const logData = await this.profileService.getLogDataNew(
+        queryBody
+      );
+      return {
+        message: 'List of Logs',
+        result: logData,
+        statusCode: HttpStatus.OK
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Retrieve billing data for LFI group.' })
