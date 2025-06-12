@@ -57,7 +57,7 @@ export class ProfileController {
 
   @Post('logs')
   @Claims(Claim.LOG_VIEW)
-  async getLogDataNew(@Req() req: any, @Body(ValidationPipe) queryBody: any, ) {
+  async getLogDataWithAllFilter(@Req() req: any, @Body(ValidationPipe) queryBody: any, ) {
     try {
       const logData = await this.profileService.getLogDataNew(
         queryBody

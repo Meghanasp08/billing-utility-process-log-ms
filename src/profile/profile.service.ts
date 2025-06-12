@@ -104,7 +104,7 @@ export class ProfileService {
 
   async getLogDataNew(queryBody: any) {
     const filter: any = {};
-    const { filterParams = [], offset = 0, limit = 20, search, startDate, endDate } = queryBody;
+    const { filterParams = [], offset = 0, limit = 20, search, startDate, endDate, tpp_id, lfi_id } = queryBody;
 
     const timezone: string = moment.tz.guess();
 
@@ -122,6 +122,14 @@ export class ProfileService {
       filter["raw_api_log_data.timestamp"] = {
         $lte: moment.tz(endDate, timezone).utc().toDate(),
       };
+    }
+
+    if (tpp_id) {
+      filter["raw_api_log_data.tpp_id"] = tpp_id
+    }
+
+    if (lfi_id) {
+      filter["raw_api_log_data.lfi_id"] = lfi_id
     }
 
     // Apply filterParams
@@ -154,6 +162,12 @@ export class ProfileService {
       }
     }
 
+    // Remove fields with null values
+    Object.keys(filter).forEach((key) => {
+      if (filter[key] === null) {
+        delete filter[key];
+      }
+    });
 
     // Search Logic
     if (search) {
@@ -169,6 +183,7 @@ export class ProfileService {
     }
 
     // Querying DB
+    console.log("FILTER", filter)
     const total = await this.logModel.countDocuments(filter).exec();
     const log = await this.logModel
       .find(filter)

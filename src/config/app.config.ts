@@ -294,7 +294,7 @@ export const paymentLabelFilters = [
             { key: "type", operator: "eq", value: "peer-2-peer" },
             { key: "lfiChargable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
-            { key: "payment_type", operator: "ne", value: "LargeValueCollection" },
+            { key: "raw_api_log_data.payment_type", operator: "ne", value: "LargeValueCollection" },
             { key: "api_category", operator: "eq", value: null },
             { key: "discount_type", operator: "eq", value: null }
         ]
@@ -307,7 +307,7 @@ export const paymentLabelFilters = [
             { key: "type", operator: "eq", value: "me-2-me" },
             { key: "lfiChargable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
-            { key: "payment_type", operator: "ne", value: "LargeValueCollection" },
+            { key: "raw_api_log_data.payment_type", operator: "ne", value: "LargeValueCollection" },
             { key: "api_category", operator: "eq", value: null },
             { key: "discount_type", operator: "eq", value: null }
         ]
@@ -317,7 +317,7 @@ export const paymentLabelFilters = [
         Label: "Large Value Collections",
         filterParams: [
             { key: "group", operator: "in", value: ["payment-bulk", "payment-non-bulk"] },
-            { key: "payment_type", operator: "eq", value: "LargeValueCollection" },
+            { key: "raw_api_log_data.payment_type", operator: "eq", value: "LargeValueCollection" },
             { key: "lfiChargable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
             { key: "api_category", operator: "eq", value: null },
@@ -368,7 +368,7 @@ export const filter_master = [
     {
         key: "group",
         label: "Group",
-        operators: ["eq", '$ne', '$in', '$nin', '$gte', '$lte'],
+        operators: ["eq", '$ne', '$in', '$nin'],
         options: [
             { value: "payment-bulk", label: "Payment Bulk" },
             { value: "payment-non-bulk", label: "Payment Non-Bulk" },
@@ -379,7 +379,7 @@ export const filter_master = [
     {
         key: "api_category",
         label: "API Category",
-        operators: ["eq", '$ne', '$in', '$nin', '$gte', '$lte'],
+        operators: ["eq", '$ne', '$in', '$nin'],
         options: [
             { value: null, label: "All" },
             { value: "setup", label: "Setup" }
@@ -388,7 +388,7 @@ export const filter_master = [
     {
         key: "discount_type",
         label: "Discount Type",
-        operators: ["eq", '$ne', '$in', '$nin', '$gte', '$lte'],
+        operators: ["eq", '$ne', '$in', '$nin'],
         options: [
             { value: null, label: "All" },
             { value: "cop", label: "Confirmation of Payee" },
@@ -398,16 +398,16 @@ export const filter_master = [
     {
         key: "type",
         label: "Type",
-        operators: ["eq", '$ne', '$in', '$nin', '$gte', '$lte'],
+        operators: ["eq", '$ne', '$in', '$nin'],
         options: [
             { value: null, label: "All" },
             { value: "corporate", label: "Corporate" }
         ]
     },
     {
-        key: "payment_type",
-        operators: ["eq", '$ne', '$in', '$nin', '$gte', '$lte'],
-        label: "Type",
+        key: "raw_api_log_data.payment_type",
+        operators: ["eq", '$ne', '$in', '$nin'],
+        label: "Payment Type",
         options: [
             { value: null, label: "All" },
             { value: "LargeValueCollection", label: "Large Value Collection" }
