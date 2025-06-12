@@ -73,6 +73,7 @@ export class ProfileService {
       filter["$or"] = [
         { "raw_api_log_data.interaction_id": queryParameters.search },
         { "payment_logs.transaction_id": queryParameters.search },
+        { "raw_api_log_data.payment_id": queryParameters.search },
         { "raw_api_log_data.tpp_id": queryParameters.search },
         { "raw_api_log_data.tpp_name": searchRegex },
         { "raw_api_log_data.lfi_id": queryParameters.search },
