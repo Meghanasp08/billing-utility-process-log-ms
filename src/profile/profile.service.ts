@@ -134,35 +134,74 @@ export class ProfileService {
     }
 
     // Apply filterParams
-    if (filterParams.length != 0) {
-      for (const param of filterParams) {
-        const { key, operator, value } = param;
+    // if (filterParams.length != 0) {
+    //   for (const param of filterParams) {
+    //     const { key, operator, value } = param;
 
-        switch (operator) {
-          case "eq":
-            filter[key] = value;
-            break;
-          case "ne":
-            filter[key] = { $ne: value };
-            break;
-          case "in":
-            filter[key] = { $in: value };
-            break;
-          case "nin":
-            filter[key] = { $nin: value };
-            break;
-          case "gte":
-            filter[key] = { $gte: value };
-            break;
-          case "lte":
-            filter[key] = { $lte: value };
-            break;
-          default:
-            throw new Error(`Unsupported operator: ${operator}`);
+    //     switch (operator) {
+    //       case "eq":
+    //         filter[key] = value;
+    //         break;
+    //       case "ne":
+    //         filter[key] = { $ne: value };
+    //         break;
+    //       case "in":
+    //         filter[key] = { $in: value };
+    //         break;
+    //       case "nin":
+    //         filter[key] = { $nin: value };
+    //         break;
+    //       case "gte":
+    //         filter[key] = { $gte: value };
+    //         break;
+    //       case "lte":
+    //         filter[key] = { $lte: value };
+    //         break;
+    //       default:
+    //         throw new Error(`Unsupported operator: ${operator}`);
+    //     }
+    //   }
+    // }
+
+    const multiKeyMap = {};
+
+    for (const { key, operator, value } of filterParams) {
+      const mongoOperator = operator === "eq" ? "$eq" :
+        operator === "ne" ? "$ne" :
+          operator === "gt" ? "$gt" :
+            operator === "gte" ? "$gte" :
+              operator === "lt" ? "$lt" :
+                operator === "lte" ? "$lte" :
+                  operator === "in" ? "$in" :
+                    operator === "nin" ? "$nin" : null;
+
+      if (!mongoOperator) continue;
+
+      if (!multiKeyMap[key]) multiKeyMap[key] = [];
+      multiKeyMap[key].push({ mongoOperator, value });
+    }
+
+    for (const key in multiKeyMap) {
+      const conditions = multiKeyMap[key];
+
+      if (conditions.length === 1) {
+        // Single condition, simple assignment
+        const { mongoOperator, value } = conditions[0];
+        filter[key] = mongoOperator === "$eq" ? value : { [mongoOperator]: value };
+      } else {
+        // Multiple conditions for same key
+        const eqValues = conditions.filter(c => c.mongoOperator === "$eq").map(c => c.value);
+        const neValues = conditions.filter(c => c.mongoOperator === "$ne").map(c => c.value);
+
+        if (eqValues.length > 0) {
+          filter[key] = { $in: eqValues };
+        }
+        if (neValues.length > 0) {
+          filter[key] = Object.assign(filter[key] || {}, { $nin: neValues });
         }
       }
     }
-
+    
     // Remove fields with null values
     Object.keys(filter).forEach((key) => {
       if (filter[key] === null) {
