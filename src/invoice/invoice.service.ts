@@ -347,7 +347,7 @@ export class InvoiceService {
                                         "Insurance",
                                         "Setup and Consent",
                                         "Corporate Data",
-                                        "Confirmation of Payee",
+                                        "Confirmation of Payee(Discounted)",
                                         "Balance(Discounted)",
                                         "Bank Data Sharing"
                                     ]
@@ -381,6 +381,21 @@ export class InvoiceService {
                                             },
                                             in: {
                                                 description: "$$desc",
+                                                key: {
+                                                    $switch: {
+                                                        branches: [
+                                                            { case: { $eq: ["$$desc", "Corporate Payment"] }, then: "corporate_payment" },
+                                                            { case: { $eq: ["$$desc", "Payment Initiation"] }, then: "payment_initiation" },
+                                                            { case: { $eq: ["$$desc", "Insurance"] }, then: "insurance" },
+                                                            { case: { $eq: ["$$desc", "Setup and Consent"] }, then: "setup_and_consent" },
+                                                            { case: { $eq: ["$$desc", "Corporate Data"] }, then: "corporate_data" },
+                                                            { case: { $eq: ["$$desc", "Confirmation of Payee(Discounted)"] }, then: "confirmation_of_payee_discounted" },
+                                                            { case: { $eq: ["$$desc", "Balance(Discounted)"] }, then: "balance_discounted" },
+                                                            { case: { $eq: ["$$desc", "Bank Data Sharing"] }, then: "bank_data_sharing" }
+                                                        ],
+                                                        default: "unknown"
+                                                    }
+                                                },
                                                 quantity: {
                                                     $ifNull: [
                                                         "$$matchedItem.quantity",
@@ -770,17 +785,37 @@ export class InvoiceService {
                                                         ],
                                                         default: 0.025
                                                     }
+                                                },
+                                                labelKey: {
+                                                    $switch: {
+                                                        branches: [
+                                                            { case: { $eq: ["$$expectedLabel", "Merchant Collection"] }, then: "merchant_collection" },
+                                                            { case: { $eq: ["$$expectedLabel", "Peer-to-Peer"] }, then: "peer_to_peer" },
+                                                            { case: { $eq: ["$$expectedLabel", "Me-to-Me Transfer"] }, then: "me_to_me_transfer" },
+                                                            { case: { $eq: ["$$expectedLabel", "Large value collection"] }, then: "large_value_collection" },
+                                                            { case: { $eq: ["$$expectedLabel", "Corporate Payments"] }, then: "corporate_payments" },
+                                                            { case: { $eq: ["$$expectedLabel", "Corporate Treasury Data"] }, then: "corporate_treasury_data" },
+                                                            { case: { $eq: ["$$expectedLabel", "Customer Data"] }, then: "customer_data" }
+                                                        ],
+                                                        default: "other"
+                                                    }
                                                 }
                                             },
                                             in: {
                                                 $cond: {
                                                     if: "$$matched",
-                                                    then: "$$matched",
+                                                    then: {
+                                                        $mergeObjects: [
+                                                            "$$matched",
+                                                            { key: "$$labelKey" }
+                                                        ]
+                                                    },
                                                     else: {
                                                         label: "$$expectedLabel",
                                                         quantity: 0,
                                                         unit_price: "$$defaultUnitPrice",
-                                                        total: 0
+                                                        total: 0,
+                                                        key: "$$labelKey"
                                                     }
                                                 }
                                             }
@@ -1012,6 +1047,7 @@ export class InvoiceService {
                 "items": [
                     {
                         "description": "Insurance",
+                        "key": "insurance",
                         "quantity": 0,
                         "unit_price": insuranceApiHubFee,
                         "total": 0,
@@ -1020,6 +1056,7 @@ export class InvoiceService {
                     },
                     {
                         "description": "Setup and Consent",
+                        "key": "setup_and_consent",
                         "quantity": 0,
                         "unit_price": paymentApiHubFee,
                         "total": 0,
@@ -1027,7 +1064,8 @@ export class InvoiceService {
                         "full_total": 0
                     },
                     {
-                        "description": "Corporate Payment",
+                        "description": "Corporate Data",
+                        "key": "corporate_data",
                         "quantity": 0,
                         "unit_price": paymentApiHubFee,
                         "total": 0,
@@ -1036,6 +1074,7 @@ export class InvoiceService {
                     },
                     {
                         "description": "Confirmation of Payee(Discounted)",
+                        "key": "confirmation_of_payee_discounted",
                         "quantity": 0,
                         "unit_price": discountApiHubFee,
                         "total": 0,
@@ -1044,6 +1083,7 @@ export class InvoiceService {
                     },
                     {
                         "description": "Balance(Discounted)",
+                        "key": "balance_discounted",
                         "quantity": 0,
                         "unit_price": discountApiHubFee,
                         "total": 0,
@@ -1052,6 +1092,7 @@ export class InvoiceService {
                     },
                     {
                         "description": "Bank Data Sharing",
+                        "key": "bank_data_sharing",
                         "quantity": 0,
                         "unit_price": paymentApiHubFee,
                         "total": 0,
@@ -1068,6 +1109,7 @@ export class InvoiceService {
                 "items": [
                     {
                         "description": "Corporate Payment",
+                        "key": "corporate_payment",
                         "quantity": 0,
                         "unit_price": paymentApiHubFee,
                         "total": 0.0,
@@ -1076,6 +1118,7 @@ export class InvoiceService {
                     },
                     {
                         "description": "Payment Initiation",
+                        "key": "payment_initiation",
                         "quantity": 0,
                         "unit_price": paymentApiHubFee,
                         "total": 0.00,
@@ -1376,7 +1419,40 @@ export class InvoiceService {
                             '$push': '$item'
                         }
                     }
-                }, {
+                },
+                {
+                    $addFields: {
+                        items: {
+                            $map: {
+                                input: "$items",
+                                as: "item",
+                                in: {
+                                    $mergeObjects: [
+                                        "$$item",
+                                        {
+                                            key: {
+                                                $switch: {
+                                                    branches: [
+                                                        { case: { $eq: ["$$item.description", "Corporate Payment"] }, then: "corporate_payment" },
+                                                        { case: { $eq: ["$$item.description", "Payment Initiation"] }, then: "payment_initiation" },
+                                                        { case: { $eq: ["$$item.description", "Insurance"] }, then: "insurance" },
+                                                        { case: { $eq: ["$$item.description", "Setup and Consent"] }, then: "setup_consent" },
+                                                        { case: { $eq: ["$$item.description", "Corporate Payment Data"] }, then: "corporate_payment_data" },
+                                                        { case: { $eq: ["$$item.description", "Confirmation of Payee(Discounted)"] }, then: "cop_discounted" },
+                                                        { case: { $eq: ["$$item.description", "Balance(Discounted)"] }, then: "balance_discounted" },
+                                                        { case: { $eq: ["$$item.description", "Bank Data Sharing"] }, then: "bank_data_sharing" }
+                                                    ],
+                                                    default: null
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                {
                     '$addFields': {
                         'allItems': {
                             '$cond': {
@@ -1666,7 +1742,39 @@ export class InvoiceService {
                             ]
                         }
                     }
-                }, {
+                },
+                {
+                    $addFields: {
+                        labels: {
+                            $map: {
+                                input: "$labels",
+                                as: "labelItem",
+                                in: {
+                                    $mergeObjects: [
+                                        "$$labelItem",
+                                        {
+                                            key: {
+                                                $switch: {
+                                                    branches: [
+                                                        { case: { $eq: ["$$labelItem.label", "Merchant Collection"] }, then: "merchant_collection" },
+                                                        { case: { $eq: ["$$labelItem.label", "Peer-to-Peer"] }, then: "peer_to_peer" },
+                                                        { case: { $eq: ["$$labelItem.label", "Me-to-Me Transfer"] }, then: "me_to_me_transfer" },
+                                                        { case: { $eq: ["$$labelItem.label", "Large Value Collections"] }, then: "large_value_collections" },
+                                                        { case: { $eq: ["$$labelItem.label", "Corporate Payments"] }, then: "corporate_payments" },
+                                                        { case: { $eq: ["$$labelItem.label", "Corporate Treasury Data"] }, then: "corporate_treasury_data" },
+                                                        { case: { $eq: ["$$labelItem.label", "Customer Data"] }, then: "customer_data" }
+                                                    ],
+                                                    default: null
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                {
                     '$lookup': {
                         'from': 'lfi_data',
                         'localField': '_id',
@@ -2077,7 +2185,40 @@ export class InvoiceService {
                     'path': '$tpp_details',
                     'preserveNullAndEmptyArrays': true
                 }
-            }, {
+            },
+            {
+                $addFields: {
+                    labels: {
+                        $map: {
+                            input: "$labels",
+                            as: "labelItem",
+                            in: {
+                                $mergeObjects: [
+                                    "$$labelItem",
+                                    {
+                                        key: {
+                                            $switch: {
+                                                branches: [
+                                                    { case: { $eq: ["$$labelItem.label", "Merchant Collection"] }, then: "merchant_collection" },
+                                                    { case: { $eq: ["$$labelItem.label", "Peer-to-Peer"] }, then: "peer_to_peer" },
+                                                    { case: { $eq: ["$$labelItem.label", "Me-to-Me Transfer"] }, then: "me_to_me_transfer" },
+                                                    { case: { $eq: ["$$labelItem.label", "Large Value Collections"] }, then: "large_value_collections" },
+                                                    { case: { $eq: ["$$labelItem.label", "Corporate Payments"] }, then: "corporate_payments" },
+                                                    { case: { $eq: ["$$labelItem.label", "Corporate Treasury Data"] }, then: "corporate_treasury_data" },
+                                                    { case: { $eq: ["$$labelItem.label", "Customer Data"] }, then: "customer_data" }
+                                                ],
+                                                default: null
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+
+            {
                 '$addFields': {
                     'full_total': {
                         '$round': [
@@ -4852,7 +4993,7 @@ export class InvoiceService {
     // @Cron('0 20 9 * * *') // 8:50:00 AM every day
     async handleDailyCron() {
         console.log("CRONEEEE")
-       const allTPPs = await this.tppDataModel.find();
+        const allTPPs = await this.tppDataModel.find();
         for (const tpp of allTPPs) {
             console.log("LOOP-ENTER")
             await this.invoiceQueue.add('generate-invoice-daily', { tpp });
@@ -4860,7 +5001,7 @@ export class InvoiceService {
     }
 
 
-    
+
 }
 
 
