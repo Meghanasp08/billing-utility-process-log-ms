@@ -45,134 +45,7 @@ export const collection_memo_config = {
     suffixSeparator: ""
 };
 
-export const paymentLabelFiltersOld = {
-    "Corporate Payment": {
-        group: "payment-bulk",
-        chargeable: true,
-        success: true,
-        api_category: null,
-        discount_type: null,
-        type: null
-    },
-    "Payment Initiation": {
-        group: "payment-non-bulk",
-        chargeable: true,
-        success: true,
-        api_category: null,
-        discount_type: null,
-        type: null
-    },
-    "Insurance": {
-        group: "insurance",
-        chargeable: true,
-        success: true,
-        api_category: null,
-        discount_type: null,
-        type: null
-    },
-    "Setup and Consent": {
-        group: "data",
-        chargeable: true,
-        success: true,
-        api_category: "setup",
-        discount_type: null,
-        type: null
-    },
-    "Corporate Data": {
-        group: "data",
-        chargeable: true,
-        success: true,
-        api_category: null,
-        discount_type: null,
-        type: "corporate"
-    },
-    "Confirmation of Payee(Discounted)": {
-        group: "data",
-        chargeable: true,
-        success: true,
-        api_category: null,
-        discount_type: "cop",
-        type: null
-    },
-    "Balance(Discounted)": {
-        group: "data",
-        chargeable: true,
-        success: true,
-        api_category: null,
-        discount_type: "balance",
-        type: null
-    },
-    "Bank Data Sharing": {
-        group: "data",
-        chargeable: true,
-        success: true,
-        api_category: { $ne: "setup" },
-        discount_type: { $nin: ["cop", "balance"] },
-        type: { $ne: "corporate" }
-    },
 
-    //LFI
-    "Merchant Collection": {
-        group: ["payment-bulk", "payment-non-bulk"],
-        type: "merchant",
-        lfiChargable: true,
-        success: true,
-        payment_type: { $ne: "LargeValueCollection" },
-        api_category: null,
-        discount_type: null
-    },
-    "Peer-to-Peer": {
-        group: ["payment-bulk", "payment-non-bulk"],
-        type: "peer-2-peer",
-        lfiChargable: true,
-        success: true,
-        payment_type: { $ne: "LargeValueCollection" },
-        api_category: null,
-        discount_type: null
-    },
-    "Me-to-Me Transfer": {
-        group: ["payment-bulk", "payment-non-bulk"],
-        type: "me-2-me",
-        lfiChargable: true,
-        success: true,
-        payment_type: { $ne: "LargeValueCollection" },
-        api_category: null,
-        discount_type: null
-    },
-    "Large Value Collections": {
-        group: ["payment-bulk", "payment-non-bulk"],
-        payment_type: "LargeValueCollection",
-        lfiChargable: true,
-        success: true,
-        api_category: null,
-        discount_type: null,
-        type: null
-    },
-    "Corporate Payments": {
-        group: "payment-bulk",
-        type: "corporate",
-        lfiChargable: true,
-        success: true,
-        api_category: null,
-        discount_type: null
-    },
-    "Corporate Treasury Data": {
-        group: "data",
-        type: "corporate",
-        lfiChargable: true,
-        success: true,
-        api_category: null,
-        discount_type: null
-    },
-    "Customer Data": {
-        group: "data",
-        lfiChargable: true,
-        success: true,
-        api_category: { $ne: "setup" },
-        discount_type: { $nin: ["cop", "balance"] },
-        type: { $ne: "corporate" }
-    }
-};
 
 export const paymentLabelFilters = [
     {
@@ -267,7 +140,8 @@ export const paymentLabelFilters = [
             { key: "chargeable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
             { key: "api_category", operator: "ne", value: "setup" },
-            { key: "discount_type", operator: "nin", value: ["cop", "balance"] },
+            { key: "discount_type", operator: "ne", value: "cop"},
+            { key: "discount_type", operator: "ne", value:"balance"},
             { key: "type", operator: "ne", value: "corporate" }
         ]
     },
@@ -277,11 +151,12 @@ export const paymentLabelFilters = [
         key: "merchant_collection",
         Label: "Merchant Collection",
         filterParams: [
-            { key: "group", operator: "in", value: ["payment-bulk", "payment-non-bulk"] },
+            { key: "group", operator: "eq", value: "payment-bulk" },
+            { key: "group", operator: "eq", value:  "payment-non-bulk"},
             { key: "type", operator: "eq", value: "merchant" },
             { key: "lfiChargable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
-            { key: "payment_type", operator: "ne", value: "LargeValueCollection" },
+            { key: "raw_api_log_data.payment_type", operator: "ne", value: "LargeValueCollection" },
             { key: "api_category", operator: "eq", value: null },
             { key: "discount_type", operator: "eq", value: null }
         ]
@@ -290,7 +165,8 @@ export const paymentLabelFilters = [
         key: "peer_to_peer",
         Label: "Peer-to-Peer",
         filterParams: [
-            { key: "group", operator: "in", value: ["payment-bulk", "payment-non-bulk"] },
+            { key: "group", operator: "eq", value: "payment-bulk" },
+            { key: "group", operator: "eq", value:  "payment-non-bulk"},
             { key: "type", operator: "eq", value: "peer-2-peer" },
             { key: "lfiChargable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
@@ -303,7 +179,8 @@ export const paymentLabelFilters = [
         key: "me_to_me_transfer",
         Label: "Me-to-Me Transfer",
         filterParams: [
-            { key: "group", operator: "in", value: ["payment-bulk", "payment-non-bulk"] },
+            { key: "group", operator: "eq", value: "payment-bulk" },
+            { key: "group", operator: "eq", value:  "payment-non-bulk"},
             { key: "type", operator: "eq", value: "me-2-me" },
             { key: "lfiChargable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
@@ -316,7 +193,8 @@ export const paymentLabelFilters = [
         key: "large_value_collections",
         Label: "Large Value Collections",
         filterParams: [
-            { key: "group", operator: "in", value: ["payment-bulk", "payment-non-bulk"] },
+             { key: "group", operator: "eq", value: "payment-bulk" },
+            { key: "group", operator: "eq", value:  "payment-non-bulk"},
             { key: "raw_api_log_data.payment_type", operator: "eq", value: "LargeValueCollection" },
             { key: "lfiChargable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
@@ -357,7 +235,8 @@ export const paymentLabelFilters = [
             { key: "lfiChargable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
             { key: "api_category", operator: "ne", value: "setup" },
-            { key: "discount_type", operator: "nin", value: ["cop", "balance"] },
+            { key: "discount_type", operator: "ne", value: "cop" },
+            { key: "discount_type", operator: "ne", value: "balance" },
             { key: "type", operator: "ne", value: "corporate" }
         ]
     }
