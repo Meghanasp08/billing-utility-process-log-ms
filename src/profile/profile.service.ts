@@ -201,7 +201,7 @@ export class ProfileService {
         }
       }
     }
-    
+
     // Remove fields with null values
     Object.keys(filter).forEach((key) => {
       if (filter[key] === null) {

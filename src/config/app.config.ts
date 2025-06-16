@@ -190,10 +190,10 @@ export const paymentLabelFilters = [
         ]
     },
     {
-        key: "large_value_collections",
-        Label: "Large Value Collections",
+        key: "large_value_collection",
+        Label: "Large Value Collection",
         filterParams: [
-             { key: "group", operator: "eq", value: "payment-bulk" },
+            { key: "group", operator: "eq", value: "payment-bulk" },
             { key: "group", operator: "eq", value:  "payment-non-bulk"},
             { key: "raw_api_log_data.payment_type", operator: "eq", value: "LargeValueCollection" },
             { key: "lfiChargable", operator: "eq", value: true },

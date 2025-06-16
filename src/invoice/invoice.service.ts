@@ -646,7 +646,7 @@ export class InvoiceService {
                                                     }
                                                 ]
                                             },
-                                            then: "Large Value Collections"  // paymentLargeValueFee
+                                            then: "Large Value Collection"  // paymentLargeValueFee
                                         },
                                         {
                                             case: {
@@ -1635,7 +1635,7 @@ export class InvoiceService {
                                                 }
                                             ]
                                         },
-                                        then: "Large Value Collections"
+                                        then: "Large Value Collection"
                                     },
                                     {
                                         case: {
@@ -1759,7 +1759,7 @@ export class InvoiceService {
                                                         { case: { $eq: ["$$labelItem.label", "Merchant Collection"] }, then: "merchant_collection" },
                                                         { case: { $eq: ["$$labelItem.label", "Peer-to-Peer"] }, then: "peer_to_peer" },
                                                         { case: { $eq: ["$$labelItem.label", "Me-to-Me Transfer"] }, then: "me_to_me_transfer" },
-                                                        { case: { $eq: ["$$labelItem.label", "Large Value Collections"] }, then: "large_value_collections" },
+                                                        { case: { $eq: ["$$labelItem.label", "Large Value Collection"] }, then: "large_value_collection" },
                                                         { case: { $eq: ["$$labelItem.label", "Corporate Payments"] }, then: "corporate_payments" },
                                                         { case: { $eq: ["$$labelItem.label", "Corporate Treasury Data"] }, then: "corporate_treasury_data" },
                                                         { case: { $eq: ["$$labelItem.label", "Customer Data"] }, then: "customer_data" }
@@ -2074,7 +2074,7 @@ export class InvoiceService {
                                             }
                                         ]
                                     },
-                                    then: "Large Value Collections"
+                                    then: "Large Value Collection"
                                 },
                                 {
                                     case: {
@@ -2202,7 +2202,7 @@ export class InvoiceService {
                                                     { case: { $eq: ["$$labelItem.label", "Merchant Collection"] }, then: "merchant_collection" },
                                                     { case: { $eq: ["$$labelItem.label", "Peer-to-Peer"] }, then: "peer_to_peer" },
                                                     { case: { $eq: ["$$labelItem.label", "Me-to-Me Transfer"] }, then: "me_to_me_transfer" },
-                                                    { case: { $eq: ["$$labelItem.label", "Large Value Collections"] }, then: "large_value_collections" },
+                                                    { case: { $eq: ["$$labelItem.label", "Large Value Collection"] }, then: "large_value_collection" },
                                                     { case: { $eq: ["$$labelItem.label", "Corporate Payments"] }, then: "corporate_payments" },
                                                     { case: { $eq: ["$$labelItem.label", "Corporate Treasury Data"] }, then: "corporate_treasury_data" },
                                                     { case: { $eq: ["$$labelItem.label", "Customer Data"] }, then: "customer_data" }
@@ -2844,7 +2844,7 @@ export class InvoiceService {
                                                 }
                                             ]
                                         },
-                                        then: "Large Value Collections"  // paymentLargeValueFee
+                                        then: "Large Value Collection"  // paymentLargeValueFee
                                     },
                                     {
                                         case: {
