@@ -103,7 +103,7 @@ export class ProfileService {
     }
   }
 
-  async getLogDataNew(queryBody: any) {
+  async getLogDataNew(queryBody: any, downloadCsv: boolean = false) {
     const filter: any = {};
     const { filterParams = [], offset = 0, limit = 20, search, startDate, endDate, tpp_id, lfi_id } = queryBody;
 
@@ -232,14 +232,98 @@ export class ProfileService {
       .lean()
       .exec();
 
-    return {
-      log,
-      pagination: {
-        offset,
-        limit,
-        total
+    let result;
+
+    if (downloadCsv) {
+      try {
+        // Define the CSV headers
+        const flattenedLog = log.map(({ _id, ...entry }) => ({
+          timestamp: moment
+            .utc(entry.raw_api_log_data.timestamp)   // Parse as UTC
+            .tz(timezone)                            // Convert to local timezone
+            .format('YYYY-MM-DD HH:mm:ss'),
+          lfi_id: entry.raw_api_log_data.lfi_id,
+          lfi_name: entry.raw_api_log_data.lfi_name,
+          tpp_id: entry.raw_api_log_data.tpp_id,
+          tpp_name: entry.raw_api_log_data.tpp_name,
+          tpp_client_id: entry.raw_api_log_data.tpp_client_id,
+          api_set_sub: entry.raw_api_log_data.api_set_sub,
+          http_method: entry.raw_api_log_data.http_method,
+          url: entry.raw_api_log_data.url,
+          tpp_response_code_group: entry.raw_api_log_data.tpp_response_code_group,
+          execution_time: entry.raw_api_log_data.execution_time,
+          interaction_id: entry.raw_api_log_data.interaction_id,
+          resource_name: entry.raw_api_log_data.resource_name,
+          lfi_response_code_group: entry.raw_api_log_data.lfi_response_code_group,
+          is_attended: entry.raw_api_log_data.is_attended,
+          records: entry.raw_api_log_data.records,
+          payment_type: entry.raw_api_log_data.payment_type,
+          payment_id: entry.raw_api_log_data.payment_id,
+          merchant_id: entry.raw_api_log_data.merchant_id,
+          psu_id: entry.raw_api_log_data.psu_id,
+          is_large_corporate: entry.raw_api_log_data.is_large_corporate,
+          user_type: entry.raw_api_log_data.user_type,
+          purpose: entry.raw_api_log_data.purpose,
+          status: entry.payment_logs.status,
+          currency: entry.payment_logs.currency,
+          amount: entry.payment_logs.amount,
+          payment_consent_type: entry.payment_logs.payment_consent_type,
+          transaction_id: entry.payment_logs.transaction_id,
+          number_of_successful_transactions: entry.payment_logs.number_of_successful_transactions,
+          international_payment: entry.payment_logs.international_payment,
+          chargeable: entry.chargeable,
+          lfiChargable: entry.lfiChargable,
+          success: entry.success,
+          group: entry.group,
+          type: entry.type,
+          discountType: entry.discountType,
+          api_category: entry.api_category,
+          discounted: entry.discounted,
+          api_hub_fee: entry.api_hub_fee,
+          applicableApiHubFee: entry.applicableApiHubFee,
+          apiHubVolume: entry.apiHubVolume,
+          calculatedFee: entry.calculatedFee,
+          applicableFee: entry.applicableFee,
+          unit_price: entry.unit_price,
+          volume: entry.volume,
+          appliedLimit: entry.appliedLimit,
+          limitApplied: entry.limitApplied,
+          isCapped: entry.isCapped,
+          cappedAt: entry.cappedAt,
+          numberOfPages: entry.numberOfPages,
+          duplicate: entry.duplicate,
+        }));
+
+        const outputPath = './output/log_detail.csv';
+
+        const directory = outputPath.substring(0, outputPath.lastIndexOf('/'));
+        if (!fs.existsSync(directory)) {
+          fs.mkdirSync(directory, { recursive: true });
+        }
+
+        // Define the CSV headers
+        const fields = Object.keys(flattenedLog[0]); // Dynamically generate headers from data keys
+        const parser = new Parser({ fields });
+        const csv = parser.parse(flattenedLog);
+
+        // Write the CSV file
+        fs.writeFileSync(outputPath, csv, 'utf8');
+        result = outputPath;
+      } catch (error) {
+        console.error("Error creating CSV file:", error);
       }
-    };
+    } else {
+      result = {
+        log,
+        pagination: {
+          offset,
+          limit,
+          total
+        }
+      };
+    }
+    return result;
+
   }
 
 

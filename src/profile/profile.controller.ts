@@ -55,9 +55,10 @@ export class ProfileController {
     }
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('logs')
   @Claims(Claim.LOG_VIEW)
-  async getLogDataWithAllFilter(@Req() req: any, @Body(ValidationPipe) queryBody: any, ) {
+  async getLogDataWithAllFilter(@Req() req: any, @Body(ValidationPipe) queryBody: any,) {
     try {
       const logData = await this.profileService.getLogDataNew(
         queryBody
@@ -67,6 +68,25 @@ export class ProfileController {
         result: logData,
         statusCode: HttpStatus.OK
       }
+    } catch (error) {
+      throw error;
+    }
+  }
+  @UseGuards(JwtAuthGuard)
+  @Post('logs/download')
+  @Claims(Claim.LOG_VIEW)
+  async downloadLogDataWithAllFilter(@Res() res: Response, @Req() req: any, @Body(ValidationPipe) queryBody: any,) {
+    try {
+      let downloadCsv = true;
+      const logData = await this.profileService.getLogDataNew(
+        queryBody, downloadCsv
+      );
+      res.download('./output/log_detail.csv', 'Log Detail.csv', (err) => {
+        if (err) {
+          console.error('Error while downloading file:', err);
+          res.status(HttpStatus.INTERNAL_SERVER_ERROR).send('Failed to download file.');
+        }
+      });
     } catch (error) {
       throw error;
     }
