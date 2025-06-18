@@ -348,7 +348,8 @@ export class UploadService {
     };
 
     const paymentDataMap = new Map<string, any>();
-    file2Data.forEach(async (paymentRecord, index) => {
+    // file2Data.forEach(async (paymentRecord, index) => {
+    for (const [index, paymentRecord] of file2Data.entries()) {
       let errorPayType = !this.paymentTypes.includes(paymentRecord.paymentType)
       if (errorPayType) {
         await this.uploadLog.findByIdAndUpdate(
@@ -422,28 +423,28 @@ export class UploadService {
       if (paymentId) {
         paymentDataMap.set(paymentId, paymentRecord);
       }
-    });
+    };
 
     const mergedData = await Promise.all(
       file1Data.map(async (rawApiRecord, index) => {
-        let errorTppLfi = rawApiRecord.lfiId === "" || rawApiRecord.tppName === "" || rawApiRecord.tppId === "" || rawApiRecord.lfiName === "";
+        let errorTppLfi = !rawApiRecord.lfiId || !rawApiRecord.tppName || !rawApiRecord.tppId || !rawApiRecord.lfiName;
         if (errorTppLfi) {
-          await this.uploadLog.findByIdAndUpdate(
-            logUpdate._id,
-            {
-              $set: {
-                status: 'Failed',
-                remarks: `Failed to validate 'Raw Log File`,
-              },
-              $push: {
-                log: {
-                  description: `Validation error occurred in row ${index + 2} for the field 'lfiId/lfiName/tppId/tppName' in the 'Raw Log File': the value is empty`,
-                  status: 'Failed',
-                  errorDetail: null,
-                },
-              },
-            }
-          );
+          // await this.uploadLog.findByIdAndUpdate(
+          //   logUpdate._id,
+          //   {
+          //     $set: {
+          //       status: 'Failed',
+          //       remarks: `Failed to validate 'Raw Log File`,
+          //     },
+          //     $push: {
+          //       log: {
+          //         description: `Validation error occurred in row ${index + 2} for the field 'lfiId/lfiName/tppId/tppName' in the 'Raw Log File': the value is empty`,
+          //         status: 'Failed',
+          //         errorDetail: null,
+          //       },
+          //     },
+          //   }
+          // );
           throw new HttpException({
             message: `Validation error occurred in row ${index + 2} for the field 'lfiId/lfiName/tppId/tppName' in the 'Raw Log File': the value is empty`,
             status: 400
@@ -454,22 +455,22 @@ export class UploadService {
         if (paymentId) {
           paymentRecord = paymentDataMap.get(paymentId);
           if (!paymentRecord) {
-            await this.uploadLog.findByIdAndUpdate(
-              logUpdate._id,
-              {
-                $set: {
-                  status: 'Failed',
-                  remarks: `Failed to validate 'Raw Log File`,
-                },
-                $push: {
-                  log: {
-                    description: `Validation Error: No matching record found in Payment Log file for paymentId '${paymentId}' at row ${index + 2}.`,
-                    status: 'Failed',
-                    errorDetail: null,
-                  },
-                },
-              }
-            );
+            // await this.uploadLog.findByIdAndUpdate(
+            //   logUpdate._id,
+            //   {
+            //     $set: {
+            //       status: 'Failed',
+            //       remarks: `Failed to validate 'Raw Log File`,
+            //     },
+            //     $push: {
+            //       log: {
+            //         description: `Validation Error: No matching record found in Payment Log file for paymentId '${paymentId}' at row ${index + 2}.`,
+            //         status: 'Failed',
+            //         errorDetail: null,
+            //       },
+            //     },
+            //   }
+            // );
             throw new Error(
               `Validation Error: No matching record found in Payment Log file for paymentId '${paymentId}' at row ${index + 2}.`
             );
@@ -522,7 +523,20 @@ export class UploadService {
           [`payment_logs.international_payment`]: paymentRecord?.internationalPayment == 'TRUE' ? true : false,
         };
       })
-    );
+    ).catch(async error => {
+      // Handle the error, e.g., update logs
+      await this.uploadLog.findByIdAndUpdate(logUpdate._id, {
+        $set: { status: 'Failed', remarks: 'Validation failed during processing' },
+        $push: {
+          log: {
+            description: error.message,
+            status: 'Failed',
+            errorDetail: error.stack,
+          },
+        },
+      });
+      throw error; // Re-throw to propagate the failure
+    });
 
     // return mergedData;
 
@@ -666,38 +680,6 @@ export class UploadService {
         }
       }
       return processedRecords.length
-
-      // Perform insert or update based on interaction_id
-      //   const bulkOps = totalHubFeecalculation.map((record) => ({
-      //     updateOne: {
-      //       filter: { "raw_api_log_data.interaction_id": record["raw_api_log_data.interaction_id"] },
-      //       update: { $set: record },
-      //       upsert: true, // Ensures that a new record is created if no match is found
-      //     },
-      //   }));
-
-      //   if (bulkOps.length) {
-      //     const bulkWriteResult = await this.logModel.bulkWrite(bulkOps);
-      //     if (bulkWriteResult.upsertedCount || bulkWriteResult.modifiedCount) {
-      //       await this.uploadLog.findByIdAndUpdate(
-      //         logUpdate._id,
-      //         {
-      //           $set: {
-      //             status: 'Completed',
-      //             remarks: 'Database Process Completed',
-      //           },
-      //           $push: {
-      //             log: {
-      //               description: `Filtering Completed and the Latest Merged Data Updated In the Database`,
-      //               status: 'Completed',
-      //               errorDetail: null,
-      //             },
-      //           },
-      //         }
-      //       );
-      //     }
-      //     return bulkWriteResult;
-      //   }
 
     }
 
