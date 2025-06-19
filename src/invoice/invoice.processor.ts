@@ -6,17 +6,27 @@ import { InvoiceService } from './invoice.service';
 export class InvoiceProcessor {
     constructor(private readonly invoiceService: InvoiceService) { }
 
-    @Process('generate-invoice')
-    async handleInvoice(job: Job) {
+    @Process('generate-invoice-tpp')
+    async handleInvoiceForTpp(job: Job) {
         console.log("GENERATE-INVOICE")
         const invoice = await this.invoiceService.invoiceCreationMonthlyTpp(job.data.tpp);
-        // await job.queue.add('generate-pdf', { invoice });
+        console.log("INVOICE", invoice)
+        await job.queue.add('generate-pdf', { invoice ,key: 'tpp' });
+    }
+
+    @Process('generate-invoice-lfi')
+    async handleInvoiceForLfi(job: Job) {
+        console.log("GENERATE-INVOICE")
+        const invoice = await this.invoiceService.invoiceCreationMonthlyLfi(job.data.lfi);
+        console.log("INVOICE", invoice)
+        await job.queue.add('generate-pdf', { invoice, key: 'lfi' });
     }
 
     @Process('generate-pdf')
     async handlePdf(job: Job) {
-        const pdf = await this.invoiceService.generatePdf(job.data.invoice);
-        await job.queue.add('send-email', { invoice: job.data.invoice, pdf });
+        console.log("ENTERING TO PDF")
+        const pdf = await this.invoiceService.generatePdf(job.data.invoice, job.data.key);
+        // await job.queue.add('send-email', { invoice: job.data.invoice, pdf });
     }
 
     @Process('send-email')

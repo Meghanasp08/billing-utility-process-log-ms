@@ -2331,7 +2331,7 @@ export class InvoiceService {
 
         // Get yesterday's start and end timestamps
         // const fromDate = moment().subtract(2, 'day').startOf('day').toDate();
-        const fromDate = moment().subtract(2, 'day').startOf('day').toDate();
+        const fromDate = moment().subtract(100, 'day').startOf('day').toDate();
         const toDate = moment().subtract(2, 'day').endOf('day').toDate();
         const generated_for = moment().subtract(2, 'day').toDate();
 
@@ -2360,8 +2360,6 @@ export class InvoiceService {
         const vatDecimal = vatPercent / 100;
         nonLargeValueMerchantBps = Number(nonLargeValueMerchantBps) / 10000;
 
-        const tppData = await this.tppDataModel.find();
-        console.log('TPP_DATA', tppData)
 
         const currentDate = new Date();
 
@@ -3037,16 +3035,15 @@ export class InvoiceService {
         for (const obj of result_of_lfi) {
             console.log(obj)
             const tpp_id = tpp?.tpp_id; // replace with your actual ID
-            let collection_memo_data = await this.collectionMemoModel.findOne(
+            let collection_memo_data = await this.singleDayCollectionMemoModel.findOne(
                 {
                     lfi_id: obj?._id,
-                    // month: month,
-                    // year: year
+                    month: month,
+                    year: year
                 }
             );
 
             if (collection_memo_data) {
-                console.log("LOG_ID1")
 
                 const new_tpp_data = {
                     tpp_id: tpp_id,
@@ -3057,17 +3054,12 @@ export class InvoiceService {
                     date: new Date()
                 };
 
-                for (const memo of collection_memo_data) {
-                    const tppExists = memo.tpp.some((t: any) => t.tpp_id === tpp_id);
-                    console.log("LOG_ID2")
-                    if (!tppExists) {
-                        console.log("LOG_ID3")
-                        memo.tpp.push(new_tpp_data);
-                        await memo.save();
-                    } else {
-                        console.log("LOG_ID4")
-                    }
+                const tppExists = collection_memo_data.tpp.some((t: any) => t.tpp_id === tpp_id);
+                if (!tppExists) {
+                    collection_memo_data.tpp.push(new_tpp_data);
+                    await collection_memo_data.save();
                 }
+
             } else {
 
                 const lfiData = await this.lfiDataModel.findOne({ lfi_id: obj?._id });
@@ -3106,9 +3098,6 @@ export class InvoiceService {
         const futureDate = new Date();
         const currentDate = new Date();
         futureDate.setDate(currentDate.getDate() + 30);
-
-        const tppData = await this.tppDataModel.find();
-        console.log('TPP_DATA', tppData)
 
         const day = moment();
         const month = day.month() + 1; // Months are 0-indexed in Moment.js
@@ -3470,7 +3459,8 @@ export class InvoiceService {
         const total = Number(invoice_total) + Number(lfi_total);
         const roundedTotal = Math.round(total * 100) / 100;
         const roundedVat = Math.round(vat * 100) / 100;
-        //
+
+        const updated_result = await this.ensureCategories(result_of_tpp[0]?.invoice_items);
         const invoice_data = {
             invoice_number: await this.generateInvoiceNumber(),
             tpp_id: tpp?.tpp_id,
@@ -3490,7 +3480,7 @@ export class InvoiceService {
             generated_at: new Date(),        // Generate Date
             currency: 'AED',         //AED default
             tpp_usage_per_lfi: result_of_tpp[0]?.tpp_usage_per_lfi,
-            invoice_items: result_of_tpp[0]?.invoice_items,
+            invoice_items: updated_result,
             vat_percent: vatPercent, // Default 5 percent
             vat_total: roundedVat,  // vat percent of invoice total
             total_amount: roundedTotal,  // total of invoice array
@@ -3500,163 +3490,168 @@ export class InvoiceService {
             notes: 'Invoice Added',
         }
         const invoice = new this.invoiceModel(invoice_data)
-        await invoice.save();
-
+        const invoice_save = await invoice.save();
+        console.log(invoice_save)
+        return invoice_save
         // }
 
     }
 
-    async invoiceCreationMonthlyLfi(): Promise<any> {
+    async invoiceCreationMonthlyLfi(lfi): Promise<any> {
 
         const startDate = moment().subtract(1, 'months').startOf('month');
-        const endDate = moment().subtract(1, 'months').endOf('month');
-        const lfiData = await this.lfiDataModel.find();
+        // const endDate = moment().subtract(1, 'months').endOf('month');
+         const endDate = moment().endOf('month').toDate();
+        // const lfiData = await this.lfiDataModel.find();
 
-        for (const obj of lfiData) {
+        // for (const obj of lfiData) {
 
-            const result_of_collection_memo = await this.singleDayCollectionMemoModel.aggregate(
-                [
-                    {
-                        '$match': {
-                            'lfi_id': obj.lfi_id,
-                            'createdAt': {
-                                $gte: startDate,
-                                $lte: endDate
-                            }
-                        }
-                    }, {
-                        '$unwind': '$tpp'
-                    }, {
-                        '$unwind': '$tpp.collection_memo_subitem'
-                    }, {
-                        '$group': {
-                            '_id': {
-                                'tpp_id': '$tpp.tpp_id',
-                                'tpp_name': '$tpp.tpp_name'
-                            },
-                            'collection_memo_subitem': {
-                                '$push': {
-                                    'label': '$tpp.collection_memo_subitem.label',
-                                    'quantity': {
-                                        '$round': [
-                                            '$tpp.collection_memo_subitem.quantity', 4
-                                        ]
-                                    },
-                                    'unit_price': {
-                                        '$round': [
-                                            '$tpp.collection_memo_subitem.unit_price', 4
-                                        ]
-                                    },
-                                    'total': {
-                                        '$round': [
-                                            '$tpp.collection_memo_subitem.total', 4
-                                        ]
-                                    }
+        const result_of_collection_memo = await this.singleDayCollectionMemoModel.aggregate(
+            [
+                {
+                    '$match': {
+                        'lfi_id': lfi.lfi_id,
+                        // 'createdAt': {
+                        //     $gte: startDate,
+                        //     $lte: endDate
+                        // }
+                    }
+                }, {
+                    '$unwind': '$tpp'
+                }, {
+                    '$unwind': '$tpp.collection_memo_subitem'
+                }, {
+                    '$group': {
+                        '_id': {
+                            'tpp_id': '$tpp.tpp_id',
+                            'tpp_name': '$tpp.tpp_name'
+                        },
+                        'collection_memo_subitem': {
+                            '$push': {
+                                'label': '$tpp.collection_memo_subitem.label',
+                                'quantity': {
+                                    '$round': [
+                                        '$tpp.collection_memo_subitem.quantity', 4
+                                    ]
+                                },
+                                'unit_price': {
+                                    '$round': [
+                                        '$tpp.collection_memo_subitem.unit_price', 4
+                                    ]
+                                },
+                                'total': {
+                                    '$round': [
+                                        '$tpp.collection_memo_subitem.total', 4
+                                    ]
                                 }
-                            },
-                            'full_total': {
-                                '$sum': '$tpp.collection_memo_subitem.total'
-                            },
-                            'generated_for': {
-                                '$first': '$tpp.date'
-                            },
-                            'generated_at': {
-                                '$first': '$createdAt'
                             }
-                        }
-                    }, {
-                        '$addFields': {
-                            'full_total': {
-                                '$round': [
-                                    '$full_total', 4
-                                ]
-                            },
-                            'vat_percent': 5,
-                            'vat': {
-                                '$round': [
-                                    {
-                                        '$multiply': [
-                                            '$full_total', 0.05
-                                        ]
-                                    }, 4
-                                ]
-                            },
-                            'actual_total': {
-                                '$round': [
-                                    {
-                                        '$add': [
-                                            '$full_total', {
-                                                '$multiply': [
-                                                    '$full_total', 0.05
-                                                ]
-                                            }
-                                        ]
-                                    }, 4
-                                ]
-                            }
-                        }
-                    }, {
-                        '$group': {
-                            '_id': '1221',
-                            'tpp': {
-                                '$push': {
-                                    'tpp_id': '$_id.tpp_id',
-                                    'tpp_name': '$_id.tpp_name',
-                                    'collection_memo_subitem': '$collection_memo_subitem',
-                                    'full_total': '$full_total',
-                                    'vat_percent': '$vat_percent',
-                                    'vat': '$vat',
-                                    'actual_total': '$actual_total',
-                                    'date': '$generated_at'
-                                }
-                            },
-                            'generated_for': {
-                                '$first': '$generated_for'
-                            },
-                            'generated_at': {
-                                '$first': '$generated_at'
-                            }
-                        }
-                    }, {
-                        '$project': {
-                            '_id': 0,
-                            'lfi_id': '$_id',
-                            'generated_at': 1,
-                            'generated_for': 1,
-                            'tpp': 1
+                        },
+                        'full_total': {
+                            '$sum': '$tpp.collection_memo_subitem.total'
+                        },
+                        'generated_for': {
+                            '$first': '$tpp.date'
+                        },
+                        'generated_at': {
+                            '$first': '$createdAt'
                         }
                     }
-                ]
-            )
-            const total = result_of_collection_memo[0]?.tpp.reduce((sum, item) => sum + item.full_total, 0);
+                }, {
+                    '$addFields': {
+                        'full_total': {
+                            '$round': [
+                                '$full_total', 4
+                            ]
+                        },
+                        'vat_percent': 5,
+                        'vat': {
+                            '$round': [
+                                {
+                                    '$multiply': [
+                                        '$full_total', 0.05
+                                    ]
+                                }, 4
+                            ]
+                        },
+                        'actual_total': {
+                            '$round': [
+                                {
+                                    '$add': [
+                                        '$full_total', {
+                                            '$multiply': [
+                                                '$full_total', 0.05
+                                            ]
+                                        }
+                                    ]
+                                }, 4
+                            ]
+                        }
+                    }
+                }, {
+                    '$group': {
+                        '_id': lfi.lfi_id,
+                        'tpp': {
+                            '$push': {
+                                'tpp_id': '$_id.tpp_id',
+                                'tpp_name': '$_id.tpp_name',
+                                'collection_memo_subitem': '$collection_memo_subitem',
+                                'full_total': '$full_total',
+                                'vat_percent': '$vat_percent',
+                                'vat': '$vat',
+                                'actual_total': '$actual_total',
+                                'date': '$generated_at'
+                            }
+                        },
+                        'generated_for': {
+                            '$first': '$generated_for'
+                        },
+                        'generated_at': {
+                            '$first': '$generated_at'
+                        }
+                    }
+                }, {
+                    '$project': {
+                        '_id': 0,
+                        'lfi_id': '$_id',
+                        'generated_at': 1,
+                        'generated_for': 1,
+                        'tpp': 1
+                    }
+                }
+            ]
+        )
+        const total = result_of_collection_memo[0]?.tpp.reduce((sum, item) => sum + item.full_total, 0);
 
-            const vat = total * 0.05;
+        const vat = total * 0.05;
 
-            const roundedTotal = Math.round(total * 100) / 100; // 0.23
-            const roundedVat = Math.round(vat * 100) / 100;
-            const lfiData = await this.lfiDataModel.findOne({ lfi_id: obj?._id });
-            const coll_memo_tpp = new this.collectionMemoModel({
-                invoice_number: await this.generateCollectionMemoInvNumber(),
-                lfi_id: obj?._id,
-                lfi_name: lfiData.lfi_name,
-                billing_period_start: startDate,  // Month First
-                billing_period_end: endDate,   // Month Last
-                generated_at: new Date(),        // Generate Date
-                currency: 'AED',         //AED default
-                tpp: result_of_collection_memo[0].tpp,
-                vat_percent: 5, // Default 5 percent
-                vat_total: roundedVat,  // vat percent of invoice total
-                total_amount: roundedTotal,  // total of invoice array
-                status: 1,
-            })
-            await coll_memo_tpp.save();
-        }
-        return 'completed';
+        const roundedTotal = Math.round(total * 100) / 100; // 0.23
+        const roundedVat = Math.round(vat * 100) / 100;
+        const lfiData = await this.lfiDataModel.findOne({ lfi_id: lfi?.lfi_id });
+
+        const coll_memo_tpp = new this.collectionMemoModel({
+            invoice_number: await this.generateCollectionMemoInvNumber(),
+            lfi_id: lfi?.lfi_id,
+            lfi_name: lfiData.lfi_name,
+            billing_period_start: startDate,  // Month First
+            billing_period_end: endDate,   // Month Last
+            generated_at: new Date(),        // Generate Date
+            currency: 'AED',         //AED default
+            tpp: result_of_collection_memo[0].tpp,
+            vat_percent: 5, // Default 5 percent
+            vat_total: roundedVat,  // vat percent of invoice total
+            total_amount: roundedTotal,  // total of invoice array
+            status: 1,
+        })
+        const collectionMemo = await coll_memo_tpp.save();
+        
+        // }
+        return collectionMemo;
     }
     async invoiceTppAggregation(data: any) {
         let tpp_id = data.tpp_id
-        let month = data.month
-        let year = data.year
+        let month = data.month ?? data.invoice_month
+        let year = data.year ?? data.invoice_year
+
         const tppData = await this.tppDataModel.findOne({ tpp_id: data.tpp_id }).lean<any>();
         if (!tppData)
             throw new NotFoundException('Invalid Tpp-ID');
@@ -3667,13 +3662,18 @@ export class InvoiceService {
             invoice_month: month,
             invoice_year: year
         })
+        console.log({
+            tpp_id: tpp_id,
+            invoice_month: month,
+            invoice_year: year
+        })
 
         return result
     }
     async invoiceLfi_PDF_Aggregation(data: any) {
         let lfi_id = data.lfi_id
-        let month = data.month
-        let year = data.year;
+        let month = data.month??data.invoice_month
+        let year = data.year??data.invoice_year;
 
         const lfiData = await this.lfiDataModel.findOne({ lfi_id: lfi_id }).lean<any>();
         if (!lfiData)
@@ -3684,7 +3684,6 @@ export class InvoiceService {
             invoice_month: month,
             invoice_year: year
         })
-
         return result
     }
 
@@ -3703,8 +3702,9 @@ export class InvoiceService {
         const timestamp = currentDate.getTime();
         const invoice_data = await this.invoiceTppAggregation(data)
         let attachment_html = await this.invoiceTemplate(invoice_data)
+        console.log("HTML", attachment_html)
         const attachmentPath = `./temp/invoice${timestamp}.pdf`
-
+        console.log("LOG!")
         const browser = await puppeteer.launch({
             headless: 'new',
             args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -3716,7 +3716,7 @@ export class InvoiceService {
         });
         await page.content();
 
-
+        console.log("PDF")
         // Generate PDF with header and footer
         const pdfBuffer = await page.pdf({
             path: attachmentPath,
@@ -3825,10 +3825,12 @@ export class InvoiceService {
             </tr>`;
         }
 
-        const dataSharingItem = data?.invoice_items.find(item => item.category === 'data_sharing');
+        const dataSharingItem = data?.invoice_items.find(item => item.category === 'data_sharing') ?? [];
         let data_sharing = ''
+        console.log("CHECK", dataSharingItem)
+        for (const data_items of dataSharingItem?.items) {
+            console.log("CHECK1")
 
-        for (const data_items of dataSharingItem.items) {
             data_sharing += ` <tr>
                 <td>${data_items.description}</td>
                 <td class="table-total">${data_items.quantity}</td>
@@ -3839,6 +3841,7 @@ export class InvoiceService {
                 <td class="table-total">${data_items.full_total}</td>
             </tr>`;
         }
+        console.log("CHECK2")
 
         let collection_memo = ''
         let displayIndex = 0;
@@ -4375,6 +4378,7 @@ export class InvoiceService {
                 <div class="billing-label">Period: </div>
                 <div class="billing-sub-label">${firstDay} to ${lastDay}
 
+            </div>
         </div>
 
 
@@ -4966,9 +4970,14 @@ export class InvoiceService {
     }
 
 
-    async generatePdf(invoice: any) {
+    async generatePdf(invoice: any, key: string) {
         // Use puppeteer / pdfkit to generate PDF and return file path or buffer
-        await this.generateInvoicePDFTpp(invoice, true);
+        if (key === 'tpp') {
+            await this.generateInvoicePDFTpp(invoice, true);
+        } else {
+            console.log("LFI-PDF")
+            await this.generateInvoicePDFLfi(invoice, true);
+        }
     }
 
     async sendEmail(invoice: any, pdf: Buffer) {
@@ -4990,13 +4999,33 @@ export class InvoiceService {
 
     // @Cron('*/5 * * * * *') // Every 5 seconds
     // @Cron('0 0 1 * *') // Every month start
-    // @Cron('0 20 9 * * *') // 8:50:00 AM every day
+    // @Cron('0 57 14 * * *') // 8:50:00 AM every day
     async handleDailyCron() {
         console.log("CRONEEEE")
-        const allTPPs = await this.tppDataModel.find();
+        const allTPPs = await this.tppDataModel.find({ tpp_id: "8857656" }).limit(1);
         for (const tpp of allTPPs) {
-            console.log("LOOP-ENTER")
+            console.log("LOOP-ENTER", allTPPs)
             await this.invoiceQueue.add('generate-invoice-daily', { tpp });
+        }
+    }
+
+    // @Cron('30 12 12 * * *') // 8:50:00 AM every day
+    async handleMonthlyCronForTPP() {
+        console.log("CRONEEEE")
+        const allTPPs = await this.tppDataModel.find({ tpp_id: "8857656" }).limit(1);
+        for (const tpp of allTPPs) {
+            console.log("LOOP-ENTER", allTPPs)
+            await this.invoiceQueue.add('generate-invoice-tpp', { tpp });
+        }
+    }
+
+    // @Cron('00 53 14 * * *') // 8:50:00 AM every day
+    async handleMonthlyCronForLFI() {
+        console.log("CRONEEEE")
+        const allLfis = await this.lfiDataModel.find({ lfi_id: "12332987" }).limit(1);
+        for (const lfi of allLfis) {
+            console.log("LOOP-ENTER", allLfis)
+            await this.invoiceQueue.add('generate-invoice-lfi', { lfi });
         }
     }
 
