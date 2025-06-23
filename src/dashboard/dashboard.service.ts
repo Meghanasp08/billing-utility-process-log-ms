@@ -21,7 +21,9 @@ export class DashboardService {
       noOfLfisResult,
       apiHubFee,
       lfiToTppFee,
-      paidUnpaidInvoicesResult
+      paidUnpaidInvoicesResult,
+      invoicePaidCount,
+      invoiceUnPaidCount,
     ] = await Promise.all([
       this.getTotalInvoices(),
       this.getTotalRevenue(),
@@ -31,7 +33,9 @@ export class DashboardService {
       this.getNoOfLfis(),
       this.getApiHubFee(),
       this.getLfiToTppFee(),
-      this.getPaidUnpaidInvoices()
+      this.getPaidUnpaidInvoices(),
+      this.invoicePaidCount(),
+      this.invoiceUnPaidCount()
     ]);
 
     return {
@@ -44,6 +48,9 @@ export class DashboardService {
       apiHubFee,
       lfiToTppFee,
       paidUnpaidInvoices: paidUnpaidInvoicesResult[0],
+      invoicePaidCount: invoicePaidCount[0]?.total || 0,
+      invoiceUnPaidCount: invoiceUnPaidCount[0]?.total || 0,
+
     };
   }
 
@@ -177,6 +184,30 @@ export class DashboardService {
       { $match: { status: 1 } },
       { $group: { _id: null, totalPaid: { $sum: "$total_amount" } } }
     ]).exec()
+  }
+
+  async invoicePaidCount() {
+    return await this.invoiceModel.aggregate([
+      { $match: { status: 1 } },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+        },
+      },
+    ]).exec();
+  }
+
+  async invoiceUnPaidCount() {
+    return await this.invoiceModel.aggregate([
+      { $match: { status: 2 } },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+        },
+      },
+    ]).exec();
   }
 
 }
