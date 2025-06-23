@@ -49,7 +49,8 @@ export class UploadService {
     dataLargeCorporateMdp?: any; // 0.4 aed
     paymentApiHubFee?: any; // 0.025 aed
     discountApiHubFee?: any; // 0.005 aed
-    insuranceApiHubFee?: any; // 0.125 aed
+    insuranceQuoteApiHubFee?: any; // 0.125 aed
+    insuranceDataApiHubFee?: any; // 0.025 aed
     discountHourValue?: any; // 2 hour
   } = {};
 
@@ -102,8 +103,11 @@ export class UploadService {
           case 'discountApiHubFee':
             this.variables.discountApiHubFee = obj;
             break;
-          case 'insuranceApiHubFee':
-            this.variables.insuranceApiHubFee = obj;
+          case 'insuranceQuoteApiHubFee':
+            this.variables.insuranceQuoteApiHubFee = obj;
+            break;
+          case 'insuranceDataApiHubFee':
+            this.variables.insuranceDataApiHubFee = obj;
             break;
           case 'discountHourValue':
             this.variables.discountHourValue = obj;
@@ -1314,8 +1318,10 @@ export class UploadService {
             discounted = true;
           }
         }
-      } else if (record.chargeable && record.success && group === 'insurance') {
-        api_hub_fee = this.variables.insuranceApiHubFee.value;
+      } else if (record.chargeable && record.success && group === 'insurance' && groupData?.api_category === 'Insurance Data Sharing') {
+        api_hub_fee = this.variables.insuranceDataApiHubFee.value;
+      } else if (record.chargeable && record.success && group === 'insurance' && groupData?.api_category === 'Insurance Quote Sharing') {
+        api_hub_fee = this.variables.insuranceQuoteApiHubFee.value;
       } else if (!record.chargeable || !record.success) {
         api_hub_fee = 0;
       }
