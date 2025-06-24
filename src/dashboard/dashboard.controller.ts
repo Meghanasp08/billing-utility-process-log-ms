@@ -1,4 +1,4 @@
-import { Controller, Get, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Query, UseGuards, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guard/jwt-auth-guard';
 import { DashboardService } from './dashboard.service';
@@ -10,9 +10,9 @@ export class DashboardController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Get()
-  async findAll() {
+  async findAll(@Query() data: any) {
     try {
-      const result = await this.dashboardService.findAll();;
+      const result = await this.dashboardService.findAll(data);
       return {
         message: 'Success',
         result: result ? result : {},
