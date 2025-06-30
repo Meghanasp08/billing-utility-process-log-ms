@@ -15,6 +15,7 @@ import { SingleDayTppInvoiceSchema } from './schemas/single-day-invoice-tpp.sche
 import { SingleDayCollectionMemoSchema } from './schemas/single_day_collection-memo.schems';
 import { BullModule } from '@nestjs/bull';
 import { InvoiceProcessor } from './invoice.processor';
+import { JobLogModule } from 'src/job-log/job-log.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { InvoiceProcessor } from './invoice.processor';
     ]),
     MailModule,
     AuthModule,
+    JobLogModule,
     BullModule.forRoot({
       redis: {
         host: 'localhost',
