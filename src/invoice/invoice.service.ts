@@ -3460,7 +3460,7 @@ export class InvoiceService {
         const roundedTotal = Math.round(total * 100) / 100;
         const roundedVat = Math.round(vat * 100) / 100;
 
-        const updated_result = await this.ensureCategories(result_of_tpp[0]?.invoice_items);
+        // const updated_result = await this.ensureCategories(result_of_tpp[0]?.invoice_items);
         const invoice_data = {
             invoice_number: await this.generateInvoiceNumber(),
             tpp_id: tpp?.tpp_id,
@@ -3480,7 +3480,7 @@ export class InvoiceService {
             generated_at: new Date(),        // Generate Date
             currency: 'AED',         //AED default
             tpp_usage_per_lfi: result_of_tpp[0]?.tpp_usage_per_lfi,
-            invoice_items: updated_result,
+            invoice_items: result_of_tpp[0]?.invoice_items,
             vat_percent: vatPercent, // Default 5 percent
             vat_total: roundedVat,  // vat percent of invoice total
             total_amount: roundedTotal,  // total of invoice array
@@ -3501,7 +3501,7 @@ export class InvoiceService {
 
         const startDate = moment().subtract(1, 'months').startOf('month');
         // const endDate = moment().subtract(1, 'months').endOf('month');
-         const endDate = moment().endOf('month').toDate();
+        const endDate = moment().endOf('month').toDate();
         // const lfiData = await this.lfiDataModel.find();
 
         // for (const obj of lfiData) {
@@ -3643,7 +3643,7 @@ export class InvoiceService {
             status: 1,
         })
         const collectionMemo = await coll_memo_tpp.save();
-        
+
         // }
         return collectionMemo;
     }
@@ -3672,8 +3672,8 @@ export class InvoiceService {
     }
     async invoiceLfi_PDF_Aggregation(data: any) {
         let lfi_id = data.lfi_id
-        let month = data.month??data.invoice_month
-        let year = data.year??data.invoice_year;
+        let month = data.month ?? data.invoice_month
+        let year = data.year ?? data.invoice_year;
 
         const lfiData = await this.lfiDataModel.findOne({ lfi_id: lfi_id }).lean<any>();
         if (!lfiData)
@@ -3763,38 +3763,40 @@ export class InvoiceService {
     }
 
     async invoiceTemplate(data: any): Promise<any> {
-        let nebras_taxable_amount = data.invoice_items?.reduce((sum, item) => sum + item.sub_total, 0);
+        try {
 
-        let lfi_list = ''
-        let lfi_count = 2;
+            let nebras_taxable_amount = data.invoice_items?.reduce((sum, item) => sum + item.sub_total, 0);
 
-        let total_due = Number(data.total_amount);
+            let lfi_list = ''
+            let lfi_count = 2;
 
-        const monthName = moment().month(data.invoice_month - 1).format('MMMM');
-        const firstDay = moment(`${data?.invoice_year}-${data?.invoice_month}`, 'YYYY-M').startOf('month').format('Do MMMM YYYY');
-        const lastDay = moment(`${data?.invoice_year}-${data?.invoice_month}`, 'YYYY-M').endOf('month').format('Do MMMM YYYY');
-        console.log("DAY", firstDay, lastDay);
+            let total_due = Number(data.total_amount);
 
-        for (const item of data?.tpp_usage_per_lfi) {
-            lfi_list += `<tr>
+            const monthName = moment().month(data.invoice_month - 1).format('MMMM');
+            const firstDay = moment(`${data?.invoice_year}-${data?.invoice_month}`, 'YYYY-M').startOf('month').format('Do MMMM YYYY');
+            const lastDay = moment(`${data?.invoice_year}-${data?.invoice_month}`, 'YYYY-M').endOf('month').format('Do MMMM YYYY');
+
+            for (const item of data?.tpp_usage_per_lfi) {
+                lfi_list += `<tr>
                         <td class="table-td">00${lfi_count}</td>
                         <td class="table-td">${item?._id} - ${monthName} ${data.invoice_year}</td>
                         <td class="table-total">${item.full_total} </td>
                     </tr>`
-            lfi_count++
+                lfi_count++
 
 
-            // invoice_phase += `<tr>
-            //     <td class="right-align">${invoice?.tranche}</td>
-            //     <td class="right-align">${item?.invoice_number}</td>
-            //     <td class="right-align">AED ${await this.formatWithCommas(item?.gross_value)}</td>
-            //     <td class="right-align">${moment(item?.invoice_date).format('DD-MMM-YY')}</td>
-            // </tr>`;
-        }
-        let tableHtml = '';
+                // invoice_phase += `<tr>
+                //     <td class="right-align">${invoice?.tranche}</td>
+                //     <td class="right-align">${item?.invoice_number}</td>
+                //     <td class="right-align">AED ${await this.formatWithCommas(item?.gross_value)}</td>
+                //     <td class="right-align">${moment(item?.invoice_date).format('DD-MMM-YY')}</td>
+                // </tr>`;
+            }
 
-        if (lfi_list && lfi_list.trim() !== '') {
-            tableHtml = `
+            let tableHtml = '';
+
+            if (lfi_list && lfi_list.trim() !== '') {
+                tableHtml = `
                 <table>
                 <thead>
                     <tr>
@@ -3808,13 +3810,13 @@ export class InvoiceService {
                 </tbody>
                 </table>
             `;
-        }
+            }
 
-        const serviceInitiationItem = data?.invoice_items.find(item => item.category === 'service_initiation');
-        let service_initiation = ''
+            const serviceInitiationItem = data?.invoice_items.find(item => item.category === 'service_initiation');
+            let service_initiation = ''
 
-        for (const service_items of serviceInitiationItem.items) {
-            service_initiation += ` <tr>
+            for (const service_items of serviceInitiationItem.items) {
+                service_initiation += ` <tr>
                 <td>${service_items.description}</td>
                 <td class="table-total">${service_items.quantity}</td>
                 <td class="table-total">${service_items.unit_price}</td>
@@ -3823,15 +3825,15 @@ export class InvoiceService {
                 <td class="table-total">${service_items.vat_amount}</td>
                 <td class="table-total">${service_items.full_total}</td>
             </tr>`;
-        }
+            }
 
-        const dataSharingItem = data?.invoice_items.find(item => item.category === 'data_sharing') ?? [];
-        let data_sharing = ''
-        console.log("CHECK", dataSharingItem)
-        for (const data_items of dataSharingItem?.items) {
-            console.log("CHECK1")
+            const dataSharingItem = data?.invoice_items.find(item => item.category === 'data_sharing') ?? [];
+            let data_sharing = ''
+            console.log("CHECK", dataSharingItem)
+            for (const data_items of dataSharingItem?.items) {
+                console.log("CHECK1")
 
-            data_sharing += ` <tr>
+                data_sharing += ` <tr>
                 <td>${data_items.description}</td>
                 <td class="table-total">${data_items.quantity}</td>
                 <td class="table-total">${data_items.unit_price}</td>
@@ -3840,14 +3842,14 @@ export class InvoiceService {
                 <td class="table-total">${data_items.vat_amount}</td>
                 <td class="table-total">${data_items.full_total}</td>
             </tr>`;
-        }
-        console.log("CHECK2")
+            }
+            console.log("CHECK2")
 
-        let collection_memo = ''
-        let displayIndex = 0;
-        for (const memo of data?.tpp_usage_per_lfi || []) {
-            displayIndex++;
-            collection_memo += ` 
+            let collection_memo = ''
+            let displayIndex = 0;
+            for (const memo of data?.tpp_usage_per_lfi || []) {
+                displayIndex++;
+                collection_memo += ` 
             <div class="new-page-section">
 
             <div class="">
@@ -3881,9 +3883,9 @@ export class InvoiceService {
                 <tbody>
             `;
 
-            for (const label of memo.labels || []) {
+                for (const label of memo.labels || []) {
 
-                collection_memo += `
+                    collection_memo += `
                     <tr>
                       <td>${label.label} ${label?.capped === true ? '**' : ''} </td>
                       <td class="table-total">${label.quantity}</td>
@@ -3891,9 +3893,9 @@ export class InvoiceService {
                       <td class="table-total">${label.total.toFixed(2)}</td>
                     </tr>
               `;
-            }
+                }
 
-            collection_memo += `
+                collection_memo += `
                     <tr>
                       <td class="sub-total-row" colspan="3">SUB TOTAL</td>
                       <td class="table-total">${memo.full_total.toFixed(2)}</td>
@@ -3922,9 +3924,9 @@ export class InvoiceService {
               
               
             `;
-        }
+            }
 
-        return `
+            return `
         <!DOCTYPE html>
 <html lang="en">
 
@@ -4569,7 +4571,10 @@ export class InvoiceService {
 
 </html>
         `
-
+        } catch (err) {
+            console.log(err)
+            // await this.jobLogService.log(tppId, 'INVOICE_GENERATION', 'FAILED', err.message, { stack: err.stack });
+        }
     }
 
     async generateInvoicePDFLfi(data: any, mail: boolean = false) {
@@ -5009,7 +5014,7 @@ export class InvoiceService {
         }
     }
 
-    // @Cron('30 12 12 * * *') // 8:50:00 AM every day
+    // @Cron('00 57 11 * * *') // 8:50:00 AM every day
     async handleMonthlyCronForTPP() {
         console.log("CRONEEEE")
         const allTPPs = await this.tppDataModel.find({ tpp_id: "8857656" }).limit(1);

@@ -1,17 +1,26 @@
 import { Processor, Process } from '@nestjs/bull';
 import { Job } from 'bull';
 import { InvoiceService } from './invoice.service';
+import { JobLogService } from 'src/job-log/job-log.service';
 
 @Processor('invoice')
 export class InvoiceProcessor {
-    constructor(private readonly invoiceService: InvoiceService) { }
+    constructor(
+        private readonly invoiceService: InvoiceService,
+        private readonly jobLogService: JobLogService,
+    ) { }
 
     @Process('generate-invoice-tpp')
     async handleInvoiceForTpp(job: Job) {
-        console.log("GENERATE-INVOICE")
-        const invoice = await this.invoiceService.invoiceCreationMonthlyTpp(job.data.tpp);
-        console.log("INVOICE", invoice)
-        await job.queue.add('generate-pdf', { invoice ,key: 'tpp' });
+        const tppId  = job.data.tpp.tpp_id;
+        try {
+            console.log("GENERATE-INVOICE FOR",tppId)
+            const invoice = await this.invoiceService.invoiceCreationMonthlyTpp(job.data.tpp);
+            console.log("INVOICE", invoice)
+            await job.queue.add('generate-pdf', { invoice, key: 'tpp' });
+        } catch (err) {
+            await this.jobLogService.log(tppId, 'INVOICE_GENERATION', 'FAILED', err.message, { stack: err.stack });
+        }
     }
 
     @Process('generate-invoice-lfi')
