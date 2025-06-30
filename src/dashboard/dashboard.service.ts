@@ -31,8 +31,8 @@ export class DashboardService {
       percentageOfRevenueFromPreviousMonth,
       revenueTrendLine
     ] = await Promise.all([
-      this.getTotalInvoices(),
-      this.getTotalRevenue(),
+      this.getTotalInvoices(data),
+      this.getTotalRevenue(data),
       this.getAvgInvoiceAmount(),
       this.invoicePaid(),
       this.getNoOfTpps(),
@@ -80,8 +80,18 @@ export class DashboardService {
   //   }
   // }
 
-  async getTotalInvoices() {
+  async getTotalInvoices(data) {
+    const now = new Date();
+    const selectedMonth = data?.month ?? now.getMonth() ; // JavaScript months are 1-based here
+    const selectedYear = data?.year ?? now.getFullYear();
+    console.log("LOGGING",selectedMonth)
     return await this.invoiceModel.aggregate([
+       {
+        $match: {
+          invoice_month: selectedMonth,
+          invoice_year: selectedYear
+        }
+      }, 
       {
         $group: {
           _id: null,
@@ -91,8 +101,18 @@ export class DashboardService {
     ]).exec();
   }
 
-  async getTotalRevenue() {
+  async getTotalRevenue(data) {
+    const now = new Date();
+    const selectedMonth = data?.month ?? now.getMonth() ; // JavaScript months are 1-based here
+    const selectedYear = data?.year ?? now.getFullYear();
+
     return await this.invoiceModel.aggregate([
+      {
+        $match: {
+          invoice_month: selectedMonth,
+          invoice_year: selectedYear
+        }
+      }, 
       {
         $group: {
           _id: null,
