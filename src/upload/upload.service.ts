@@ -33,6 +33,7 @@ export class UploadService {
   private readonly peer_to_peer_types = AppConfig.peerToPeerTypes;
   private readonly nonLargeValueCapMerchantCheck = AppConfig.highValueMerchantcapCheck;
   private readonly paymentTypes = AppConfig.paymentTypes;
+  private readonly paymentStatus = AppConfig.paymentStatus;
 
   private variables: {
     nonLargeValueCapMerchant?: any; //50 aed
@@ -1325,7 +1326,9 @@ export class UploadService {
       } else if (!record.chargeable || !record.success) {
         api_hub_fee = 0;
       }
-
+      if (record.success && (groupData?.key_name === 'payment-bulk' || groupData?.key_name === 'payment-non-bulk')) {
+        record.success = this.paymentStatus.includes(record['payment_logs.status'])
+      }
       return {
         ...record,
         group,

@@ -23,6 +23,7 @@ export const AppConfig = {
     aedConstant: 100,
     highValueMerchantcapCheck: 20000,
     paymentTypes: ['Collection', 'LargeValueCollection', 'PushP2P', 'PullP2PPayment', 'Me2Me', ''],
+    paymentStatus: ['AcceptedSettlementCompleted', 'AcceptedCreditSettlementCompleted', 'AcceptedWithoutPosting']
 };
 
 export const invoice_config = {
@@ -140,8 +141,8 @@ export const paymentLabelFilters = [
             { key: "chargeable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
             { key: "api_category", operator: "ne", value: "setup" },
-            { key: "discount_type", operator: "ne", value: "cop"},
-            { key: "discount_type", operator: "ne", value:"balance"},
+            { key: "discount_type", operator: "ne", value: "cop" },
+            { key: "discount_type", operator: "ne", value: "balance" },
             { key: "type", operator: "ne", value: "corporate" }
         ]
     },
@@ -152,7 +153,7 @@ export const paymentLabelFilters = [
         Label: "Merchant Collection",
         filterParams: [
             { key: "group", operator: "eq", value: "payment-bulk" },
-            { key: "group", operator: "eq", value:  "payment-non-bulk"},
+            { key: "group", operator: "eq", value: "payment-non-bulk" },
             { key: "type", operator: "eq", value: "merchant" },
             { key: "lfiChargable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
@@ -166,7 +167,7 @@ export const paymentLabelFilters = [
         Label: "Peer-to-Peer",
         filterParams: [
             { key: "group", operator: "eq", value: "payment-bulk" },
-            { key: "group", operator: "eq", value:  "payment-non-bulk"},
+            { key: "group", operator: "eq", value: "payment-non-bulk" },
             { key: "type", operator: "eq", value: "peer-2-peer" },
             { key: "lfiChargable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
@@ -180,7 +181,7 @@ export const paymentLabelFilters = [
         Label: "Me-to-Me Transfer",
         filterParams: [
             { key: "group", operator: "eq", value: "payment-bulk" },
-            { key: "group", operator: "eq", value:  "payment-non-bulk"},
+            { key: "group", operator: "eq", value: "payment-non-bulk" },
             { key: "type", operator: "eq", value: "me-2-me" },
             { key: "lfiChargable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
@@ -194,7 +195,7 @@ export const paymentLabelFilters = [
         Label: "Large Value Collection",
         filterParams: [
             { key: "group", operator: "eq", value: "payment-bulk" },
-            { key: "group", operator: "eq", value:  "payment-non-bulk"},
+            { key: "group", operator: "eq", value: "payment-non-bulk" },
             { key: "raw_api_log_data.payment_type", operator: "eq", value: "LargeValueCollection" },
             { key: "lfiChargable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
