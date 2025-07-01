@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import * as moment from 'moment';
 
 @Injectable()
 export class DashboardService {
@@ -44,7 +45,7 @@ export class DashboardService {
       this.invoiceUnPaidCount(data),
       this.totalRevenue(data),
       this.percentageOfRevenueFromPreviousMonth(),
-      this.revenueTrendLine()
+      this.revenueTrendLine(data)
     ]);
 
     return {
@@ -82,16 +83,16 @@ export class DashboardService {
 
   async getTotalInvoices(data) {
     const now = new Date();
-    const selectedMonth = data?.month ?? now.getMonth() ; // JavaScript months are 1-based here
+    const selectedMonth = data?.month ?? now.getMonth(); // JavaScript months are 1-based here
     const selectedYear = data?.year ?? now.getFullYear();
-    console.log("LOGGING",selectedMonth)
+    console.log("LOGGING", selectedMonth)
     return await this.invoiceModel.aggregate([
-       {
+      {
         $match: {
           invoice_month: selectedMonth,
           invoice_year: selectedYear
         }
-      }, 
+      },
       {
         $group: {
           _id: null,
@@ -103,7 +104,7 @@ export class DashboardService {
 
   async getTotalRevenue(data) {
     const now = new Date();
-    const selectedMonth = data?.month ?? now.getMonth() ; // JavaScript months are 1-based here
+    const selectedMonth = data?.month ?? now.getMonth(); // JavaScript months are 1-based here
     const selectedYear = data?.year ?? now.getFullYear();
 
     return await this.invoiceModel.aggregate([
@@ -112,7 +113,7 @@ export class DashboardService {
           invoice_month: selectedMonth,
           invoice_year: selectedYear
         }
-      }, 
+      },
       {
         $group: {
           _id: null,
@@ -316,11 +317,33 @@ export class DashboardService {
     return Number(percentage.toFixed(2));
   }
 
-  async revenueTrendLine() {
+  async revenueTrendLine(data) {
     const now = new Date();
-    const oneMonthAgo = new Date(now);
-    oneMonthAgo.setDate(now.getDate() - 30);
+    // const oneMonthAgo = new Date(now);
+    // oneMonthAgo.setDate(now.getDate() - 30);
 
+    // const selectedYear = data?.year ?? now.getFullYear();
+    // const selectedMonth = (data?.month ?? now.getMonth()-1); // JS months are 0-based
+    // console.log("HHH", selectedYear, selectedMonth)
+    // const start = new Date(selectedYear, selectedMonth , 1);
+    // const end = new Date(selectedYear, selectedMonth, 1);
+    // console.log("LL", start, end)
+
+    const startDate = data?.startDate
+      ? new Date(
+        moment(data.startDate.toString()).startOf('day').format()
+      )
+      : new Date(moment().subtract(1, 'months').startOf('month').format())
+
+    const endDate = data?.endDate
+      ? new Date(
+        moment(data.endDate.toString()).startOf('day').format()
+      ) 
+      : new Date(
+         moment().subtract(1, 'months').endOf('month').format()
+      )
+      
+    console.log("HHH",startDate,endDate)
     const sixMonthsAgo = new Date(now);
     sixMonthsAgo.setMonth(now.getMonth() - 5);
     sixMonthsAgo.setDate(1); // from beginning of the 6th month ago
@@ -330,8 +353,18 @@ export class DashboardService {
       this.logsModel.aggregate([
         {
           $match: {
-            'raw_api_log_data.timestamp': { $gte: oneMonthAgo, $lte: now }
-          }
+
+            $and: [
+              startDate && endDate
+                ? {
+                  'raw_api_log_data.timestamp': {
+                    $gte: startDate,
+                    $lte: endDate
+                  }
+                }
+                : {}
+            ]
+          },
         },
         {
           $group: {
@@ -353,7 +386,7 @@ export class DashboardService {
                 day: "$_id.day"
               }
             },
-            revenue: 1
+            revenue:{ $round: ["$revenue", 3]}
           }
         },
         { $sort: { date: 1 } }
@@ -385,7 +418,7 @@ export class DashboardService {
                 day: 1
               }
             },
-            revenue: 1
+            revenue: { $round: ["$revenue", 3]}
           }
         },
         { $sort: { date: 1 } }
