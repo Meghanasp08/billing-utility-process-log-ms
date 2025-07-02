@@ -33,6 +33,9 @@ export class TppData {
     @Prop({ required: false })
     contact_type: string;
 
+    @Prop({ required: true, default: false })
+    serviceStatus: boolean;
+
     // @Prop({
     //     type: [
     //         {

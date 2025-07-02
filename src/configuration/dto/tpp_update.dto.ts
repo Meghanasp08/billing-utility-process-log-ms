@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsNumber } from 'class-validator';
 
 export class UpdateTppDataDto {
     @ApiProperty({
@@ -10,4 +10,13 @@ export class UpdateTppDataDto {
     @IsNumber()
     @IsNotEmpty()
     brokerage_fee: number;
+
+    @ApiProperty({
+        description: 'Allow Nebras to collect Service Fee status.',
+        example: false,
+        required: true,
+    })
+    @IsBoolean()
+    @IsNotEmpty()
+    serviceStatus: boolean;
 }
