@@ -957,8 +957,8 @@ export class InvoiceService {
                 vat_percent: vatPercent, // Default 5 percent
                 vat_total: roundedVat,  // vat percent of invoice total
                 total_amount: roundedTotal,  // total of invoice array
-                invoice_total: invoice_total,
-                lfi_total: lfi_total,
+                invoice_total: Number(invoice_total.toFixed(3)),
+                lfi_total: Number(lfi_total.toFixed(3)),
                 status: 2,
                 notes: 'Invoice Added',
             }
@@ -2341,6 +2341,12 @@ export class InvoiceService {
         const result = await this.invoiceModel.findById(new Types.ObjectId(id)).exec()
         if (!result) {
             throw new BadRequestException('Invoice Detail not found');
+        }
+        if (result.invoice_total != null) {
+            result.invoice_total = Number(result.invoice_total.toFixed(3));
+        }
+        if (result.lfi_total != null) {
+            result.lfi_total = Number(result.lfi_total.toFixed(3));
         }
         return result;
     }
@@ -4353,7 +4359,12 @@ export class InvoiceService {
             invoice_month: month,
             invoice_year: year
         })
-
+        if (result.invoice_total != null) {
+            result.invoice_total = Number(result.invoice_total.toFixed(3));
+        }
+        if (result.lfi_total != null) {
+            result.lfi_total = Number(result.lfi_total.toFixed(3));
+        }
         return result
     }
     async invoiceLfi_PDF_Aggregation(data: any) {
@@ -5103,7 +5114,7 @@ export class InvoiceService {
                 
 
             <div class="total-row">
-                Total due <b>${total_due.toFixed(4)}</b> by <b>${moment(data.due_date).format('Do MMMM YYYY')}</b>
+                Total due <b>${total_due.toFixed(3)}</b> by <b>${moment(data.due_date).format('Do MMMM YYYY')}</b>
             </div>
         </div>
 
