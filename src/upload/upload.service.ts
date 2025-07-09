@@ -434,22 +434,22 @@ export class UploadService {
       file1Data.map(async (rawApiRecord, index) => {
         let errorTppLfi = !rawApiRecord.lfiId || !rawApiRecord.tppName || !rawApiRecord.tppId || !rawApiRecord.lfiName;
         if (errorTppLfi) {
-          // await this.uploadLog.findByIdAndUpdate(
-          //   logUpdate._id,
-          //   {
-          //     $set: {
-          //       status: 'Failed',
-          //       remarks: `Failed to validate 'Raw Log File`,
-          //     },
-          //     $push: {
-          //       log: {
-          //         description: `Validation error occurred in row ${index + 2} for the field 'lfiId/lfiName/tppId/tppName' in the 'Raw Log File': the value is empty`,
-          //         status: 'Failed',
-          //         errorDetail: null,
-          //       },
-          //     },
-          //   }
-          // );
+          await this.uploadLog.findByIdAndUpdate(
+            logUpdate._id,
+            {
+              $set: {
+                status: 'Failed',
+                remarks: `Failed to validate 'Raw Log File`,
+              },
+              $push: {
+                log: {
+                  description: `Validation error occurred in row ${index + 2} for the field 'lfiId/lfiName/tppId/tppName' in the 'Raw Log File': the value is empty`,
+                  status: 'Failed',
+                  errorDetail: null,
+                },
+              },
+            }
+          );
           throw new HttpException({
             message: `Validation error occurred in row ${index + 2} for the field 'lfiId/lfiName/tppId/tppName' in the 'Raw Log File': the value is empty`,
             status: 400
@@ -460,22 +460,22 @@ export class UploadService {
         if (paymentId) {
           paymentRecord = paymentDataMap.get(paymentId);
           if (!paymentRecord) {
-            // await this.uploadLog.findByIdAndUpdate(
-            //   logUpdate._id,
-            //   {
-            //     $set: {
-            //       status: 'Failed',
-            //       remarks: `Failed to validate 'Raw Log File`,
-            //     },
-            //     $push: {
-            //       log: {
-            //         description: `Validation Error: No matching record found in Payment Log file for paymentId '${paymentId}' at row ${index + 2}.`,
-            //         status: 'Failed',
-            //         errorDetail: null,
-            //       },
-            //     },
-            //   }
-            // );
+            await this.uploadLog.findByIdAndUpdate(
+              logUpdate._id,
+              {
+                $set: {
+                  status: 'Failed',
+                  remarks: `Failed to validate 'Raw Log File`,
+                },
+                $push: {
+                  log: {
+                    description: `Validation Error: No matching record found in Payment Log file for paymentId '${paymentId}' at row ${index + 2}.`,
+                    status: 'Failed',
+                    errorDetail: null,
+                  },
+                },
+              }
+            );
             throw new Error(
               `Validation Error: No matching record found in Payment Log file for paymentId '${paymentId}' at row ${index + 2}.`
             );
