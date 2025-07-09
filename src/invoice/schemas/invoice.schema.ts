@@ -30,7 +30,7 @@ export const InvoiceSchema = new mongoose.Schema(
     total_amount: Number,  // total of invoice array
     invoice_total: Number,
     lfi_total: Number,
-    status: { type: Number, default: InvoiceStatus.PAID },
+    status: { type: Number, default: InvoiceStatus.UNPAID },
     status_description:String,
     notes: String,
   },

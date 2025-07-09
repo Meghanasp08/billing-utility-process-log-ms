@@ -956,7 +956,7 @@ export class InvoiceService {
                 total_amount: roundedTotal,  // total of invoice array
                 invoice_total: invoice_total,
                 lfi_total: lfi_total,
-                status: 1,
+                status: 2,
                 notes: 'Invoice Added',
             }
 
@@ -4790,7 +4790,7 @@ export class InvoiceService {
         for (const tpp_data of data.tpp || []) {
             revenue_data += `<tr class="tpp-name">
                 <td rowspan="${(tpp_data.collection_memo_subitem?.length || 0) + 2}">
-                ${tpp_data.tpp_id}  (${tpp_data.tpp_name})
+                ${tpp_data.tpp_name}
                 </td>
             </tr>`;
 
