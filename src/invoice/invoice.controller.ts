@@ -198,6 +198,25 @@ export class InvoiceController {
     }
   }
 
+  @ApiOperation({ summary: 'Billing API for a TPP' })
+  @Get('billing-tpp-csv/:tpp_id')
+  @Claims(Claim.BILLING_TPP_VIEW)
+  async getbillingTppCSV(@Res() res: Response,@Param('tpp_id') tpp_id: string, @Query(ValidationPipe) invoiceDto: commonDto): Promise<any> {
+    try {
+      const result = await this.invoiceService.billingTppCsv(tpp_id, invoiceDto);
+      res.download('./output/log_detail.csv', 'Log Detail.csv', (err) => {
+        if (err) {
+          console.error('Error while downloading file:', err);
+          res.status(HttpStatus.INTERNAL_SERVER_ERROR).send('Failed to download file.');
+        }
+      });
+     
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
+  }
+
   @ApiOperation({ summary: 'Billing API for a LFI' })
   @Get('billing-lfi/:lf_id')
   @Claims(Claim.BILLING_LFI_VIEW)
@@ -209,6 +228,25 @@ export class InvoiceController {
         result: result,
         statusCode: HttpStatus.OK,
       };
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
+  }
+
+  @ApiOperation({ summary: 'Billing API for a LFI' })
+  @Get('billing-lfi-csv/:lf_id')
+  @Claims(Claim.BILLING_LFI_VIEW)
+  async getbillingLfisCSV(@Res() res: Response,@Param('lf_id') lf_id: string, @Query(ValidationPipe) invoiceDto: commonDto): Promise<any> {
+    try {
+      const result = await this.invoiceService.billingLfiStatementCSV(lf_id, invoiceDto);
+      res.download('./output/log_detail.csv', 'Log-LFI Detail.csv', (err) => {
+        if (err) {
+          console.error('Error while downloading file:', err);
+          res.status(HttpStatus.INTERNAL_SERVER_ERROR).send('Failed to download file.');
+        }
+      });
+     
     } catch (error) {
       console.log(error);
       throw error;
