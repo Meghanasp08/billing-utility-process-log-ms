@@ -118,6 +118,10 @@ export class invoiceGenerateDto {
     @IsPositive()
     year: number;
 
+    tpp_id:string
+
+    lfi_id:string
+
 }
 
 export class commonDto {

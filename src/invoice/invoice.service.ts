@@ -1217,7 +1217,695 @@ export class InvoiceService {
         );
 
     }
+    async invoiceTppCsv(data: any) {
+        const timezone: string = moment.tz.guess();
+        const result_tpp = await this.logsModel.aggregate(
+            [
+                {
+                    $match: {
+                        "raw_api_log_data.tpp_id": data?.tpp_id,
+                        "chargeable": true,
+                        "success": true,
+                        $expr: {
+                            $and: [
+                                {
+                                    $eq: [
+                                        {
+                                            $month: "$raw_api_log_data.timestamp"
+                                        },
+                                        data?.month
+                                    ]
+                                },
+                                {
+                                    $eq: [
+                                        {
+                                            $year: "$raw_api_log_data.timestamp"
+                                        },
+                                        data?.year
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    $addFields: {
+                        paymentTypeLabel: {
+                            $switch: {
+                                branches: [
+                                    {
+                                        case: {
+                                            $eq: ["$group", "payment-bulk"]
+                                        },
+                                        then: "Corporate Payment"   //-- paymentApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $eq: [
+                                                "$group",
+                                                "payment-non-bulk"
+                                            ]
+                                        },
+                                        then: "Payment Initiation"    //--paymentApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $eq: ["$group", "insurance"]
+                                        },
+                                        then: "Insurance"    //-- insuranceApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: ["$group", "data"]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$api_category",
+                                                        "setup"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "Setup and Consent"    //-- paymentApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: ["$group", "data"]
+                                                },
+                                                {
+                                                    $eq: ["$type", "corporate"]
+                                                }
+                                            ]
+                                        },
+                                        then: "Corporate Data"   //-- paymentApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: ["$group", "data"]
+                                                },
+                                                {
+                                                    $eq: ["$discount_type", "cop"]
+                                                }
+                                            ]
+                                        },
+                                        then: "Confirmation of Payee(Discounted)"  //-- discountApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: ["$group", "data"]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$discount_type",
+                                                        "balance"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "Balance(Discounted)"  //-- discountApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $eq: ["$group", "data"]
+                                        },
+                                        then: "Bank Data Sharing"   //--paymentApiHubFee
+                                    }
+                                ],
+                                default: null
+                            }
+                        }
+                    }
+                },
+                {
+                    $addFields: {
+                        category: {
+                            $cond: {
+                                if: {
+                                    $in: [
+                                        "$paymentTypeLabel",
+                                        [
+                                            "Corporate Payment",
+                                            "Payment Initiation"
+                                        ]
+                                    ]
+                                },
+                                then: "service_initiation",
+                                else: "data_sharing"
+                            }
+                        }
+                    }
+                },
+                {
+                    $match: {
+                        paymentTypeLabel: {
+                            $ne: null
+                        }
+                    }
+                },
 
+
+            ]
+        );
+        const result_of_lfi = await this.logsModel.aggregate(
+            [
+                {
+                    $match: {
+                        "raw_api_log_data.tpp_id": data?.tpp_id,
+                        lfiChargable: true,
+                        success: true,
+                        $expr: {
+                            $and: [
+                                {
+                                    $eq: [
+                                        {
+                                            $month:
+                                                "$raw_api_log_data.timestamp"
+                                        },
+                                        data?.month
+                                    ]
+                                },
+                                {
+                                    $eq: [
+                                        {
+                                            $year:
+                                                "$raw_api_log_data.timestamp"
+                                        },
+                                        data?.year
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    $addFields: {
+                        category: {
+                            $switch: {
+                                branches: [
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $in: [
+                                                        "$group",
+                                                        [
+                                                            "payment-bulk",
+                                                            "payment-non-bulk"
+                                                        ]
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$type", "merchant"]
+                                                },
+                                                {
+                                                    $ne: [
+                                                        "$raw_api_log_data.payment_type",
+                                                        "LargeValueCollection"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "Merchant Collection"   //-- nonLargeValueMerchantBps/10000
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $in: [
+                                                        "$group",
+                                                        [
+                                                            "payment-bulk",
+                                                            "payment-non-bulk"
+                                                        ]
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$type", "peer-2-peer"]
+                                                },
+                                                {
+                                                    $ne: [
+                                                        "$raw_api_log_data.payment_type",
+                                                        "LargeValueCollection"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "Peer-to-Peer"   //paymentNonLargevalueFeePeer
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $in: [
+                                                        "$group",
+                                                        [
+                                                            "payment-bulk",
+                                                            "payment-non-bulk"
+                                                        ]
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$type", "me-2-me"]
+                                                },
+                                                {
+                                                    $ne: [
+                                                        "$raw_api_log_data.payment_type",
+                                                        "LargeValueCollection"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "Me-to-Me Transfer"  //paymentFeeMe2me
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $in: [
+                                                        "$group",
+                                                        [
+                                                            "payment-bulk",
+                                                            "payment-non-bulk"
+                                                        ]
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$raw_api_log_data.payment_type",
+                                                        "LargeValueCollection"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "Large Value Collection"  // paymentLargeValueFee
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: [
+                                                        "$group",
+                                                        "payment-bulk"
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$type", "corporate"]
+                                                }
+                                            ]
+                                        },
+                                        then: "Corporate Payments" // bulkLargeCorporatefee
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: ["$group", "data"]
+                                                },
+                                                {
+                                                    $eq: ["$type", "corporate"]
+                                                }
+                                            ]
+                                        },
+                                        then: "Corporate Treasury Data" // dataLargeCorporateMdp
+                                    },
+                                    {
+                                        case: {
+                                            $eq: ["$group", "data"]
+                                        },
+                                        then: "Customer Data"       //Take mppRate from lfi
+                                    }
+                                ],
+                                default: "Others"
+                            }
+                        }
+                    }
+                },
+                {
+                    $match: {
+                        total: { $ne: 0 }
+                    }
+                },
+            ]
+        )
+        console.log(result_tpp)
+        const log = [...result_tpp, ...result_of_lfi];
+        let result;
+        try {
+            // Define the CSV headers
+            const flattenedLog = log.map(({ _id, ...entry }) => ({
+                timestamp: moment
+                    .utc(entry.raw_api_log_data.timestamp)   // Parse as UTC
+                    .tz(timezone)                            // Convert to local timezone
+                    .format('YYYY-MM-DD HH:mm:ss'),
+                lfi_id: entry.raw_api_log_data.lfi_id,
+                lfi_name: entry.raw_api_log_data.lfi_name,
+                tpp_id: entry.raw_api_log_data.tpp_id,
+                tpp_name: entry.raw_api_log_data.tpp_name,
+                tpp_client_id: entry.raw_api_log_data.tpp_client_id,
+                api_set_sub: entry.raw_api_log_data.api_set_sub,
+                http_method: entry.raw_api_log_data.http_method,
+                url: entry.raw_api_log_data.url,
+                tpp_response_code_group: entry.raw_api_log_data.tpp_response_code_group,
+                execution_time: entry.raw_api_log_data.execution_time,
+                interaction_id: entry.raw_api_log_data.interaction_id,
+                resource_name: entry.raw_api_log_data.resource_name,
+                lfi_response_code_group: entry.raw_api_log_data.lfi_response_code_group,
+                is_attended: entry.raw_api_log_data.is_attended,
+                records: entry.raw_api_log_data.records,
+                payment_type: entry.raw_api_log_data.payment_type,
+                payment_id: entry.raw_api_log_data.payment_id,
+                merchant_id: entry.raw_api_log_data.merchant_id,
+                psu_id: entry.raw_api_log_data.psu_id,
+                is_large_corporate: entry.raw_api_log_data.is_large_corporate,
+                user_type: entry.raw_api_log_data.user_type,
+                purpose: entry.raw_api_log_data.purpose,
+                status: entry.payment_logs.status,
+                currency: entry.payment_logs.currency,
+                amount: entry.payment_logs.amount,
+                payment_consent_type: entry.payment_logs.payment_consent_type,
+                transaction_id: entry.payment_logs.transaction_id,
+                number_of_successful_transactions: entry.payment_logs.number_of_successful_transactions,
+                international_payment: entry.payment_logs.international_payment,
+                chargeable: entry.chargeable,
+                lfiChargable: entry.lfiChargable,
+                success: entry.success,
+                group: entry.group,
+                type: entry.type,
+                discountType: entry.discountType,
+                api_category: entry.api_category,
+                discounted: entry.discounted,
+                api_hub_fee: entry.api_hub_fee,
+                applicableApiHubFee: entry.applicableApiHubFee,
+                apiHubVolume: entry.apiHubVolume,
+                calculatedFee: entry.calculatedFee,
+                applicableFee: entry.applicableFee,
+                unit_price: entry.unit_price,
+                volume: entry.volume,
+                appliedLimit: entry.appliedLimit,
+                limitApplied: entry.limitApplied,
+                isCapped: entry.isCapped,
+                cappedAt: entry.cappedAt,
+                numberOfPages: entry.numberOfPages,
+                duplicate: entry.duplicate,
+                category: entry?.category,
+            }));
+
+            const outputPath = './output/log_detail.csv';
+
+            const directory = outputPath.substring(0, outputPath.lastIndexOf('/'));
+            if (!fs.existsSync(directory)) {
+                fs.mkdirSync(directory, { recursive: true });
+            }
+
+            // Define the CSV headers
+            const fields = Object.keys(flattenedLog[0]); // Dynamically generate headers from data keys
+            const parser = new Parser({ fields });
+            const csv = parser.parse(flattenedLog);
+
+            // Write the CSV file
+            fs.writeFileSync(outputPath, csv, 'utf8');
+            result = outputPath;
+        } catch (error) {
+            console.error("Error creating CSV file:", error);
+        }
+
+        // return log;
+    }
+
+    async invoiceLfiCsv(data: any) {
+        const timezone: string = moment.tz.guess();
+        const log = await this.logsModel.aggregate(
+            [
+                {
+                    $match: {
+                        "raw_api_log_data.lfi_id": data?.lfi_id,
+                        lfiChargable: true,
+                        success: true,
+                        $expr: {
+                            $and: [
+                                {
+                                    $eq: [
+                                        {
+                                            $month:
+                                                "$raw_api_log_data.timestamp"
+                                        },
+                                        data?.month
+                                    ]
+                                },
+                                {
+                                    $eq: [
+                                        {
+                                            $year:
+                                                "$raw_api_log_data.timestamp"
+                                        },
+                                        data?.year
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    $addFields: {
+                        category: {
+                            $switch: {
+                                branches: [
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $in: [
+                                                        "$group",
+                                                        [
+                                                            "payment-bulk",
+                                                            "payment-non-bulk"
+                                                        ]
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$type", "merchant"]
+                                                },
+                                                {
+                                                    $ne: [
+                                                        "$raw_api_log_data.payment_type",
+                                                        "LargeValueCollection"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "Merchant Collection"   //-- nonLargeValueMerchantBps/10000
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $in: [
+                                                        "$group",
+                                                        [
+                                                            "payment-bulk",
+                                                            "payment-non-bulk"
+                                                        ]
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$type", "peer-2-peer"]
+                                                },
+                                                {
+                                                    $ne: [
+                                                        "$raw_api_log_data.payment_type",
+                                                        "LargeValueCollection"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "Peer-to-Peer"   //paymentNonLargevalueFeePeer
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $in: [
+                                                        "$group",
+                                                        [
+                                                            "payment-bulk",
+                                                            "payment-non-bulk"
+                                                        ]
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$type", "me-2-me"]
+                                                },
+                                                {
+                                                    $ne: [
+                                                        "$raw_api_log_data.payment_type",
+                                                        "LargeValueCollection"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "Me-to-Me Transfer"  //paymentFeeMe2me
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $in: [
+                                                        "$group",
+                                                        [
+                                                            "payment-bulk",
+                                                            "payment-non-bulk"
+                                                        ]
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$raw_api_log_data.payment_type",
+                                                        "LargeValueCollection"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "Large Value Collection"  // paymentLargeValueFee
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: [
+                                                        "$group",
+                                                        "payment-bulk"
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$type", "corporate"]
+                                                }
+                                            ]
+                                        },
+                                        then: "Corporate Payments" // bulkLargeCorporatefee
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: ["$group", "data"]
+                                                },
+                                                {
+                                                    $eq: ["$type", "corporate"]
+                                                }
+                                            ]
+                                        },
+                                        then: "Corporate Treasury Data" // dataLargeCorporateMdp
+                                    },
+                                    {
+                                        case: {
+                                            $eq: ["$group", "data"]
+                                        },
+                                        then: "Customer Data"       //Take mppRate from lfi
+                                    }
+                                ],
+                                default: "Others"
+                            }
+                        }
+                    }
+                },
+                {
+                    $match: {
+                        total: { $ne: 0 }
+                    }
+                },
+            ]
+        )
+
+        let result;
+        try {
+            // Define the CSV headers
+            const flattenedLog = log.map(({ _id, ...entry }) => ({
+                timestamp: moment
+                    .utc(entry.raw_api_log_data.timestamp)   // Parse as UTC
+                    .tz(timezone)                            // Convert to local timezone
+                    .format('YYYY-MM-DD HH:mm:ss'),
+                lfi_id: entry.raw_api_log_data.lfi_id,
+                lfi_name: entry.raw_api_log_data.lfi_name,
+                tpp_id: entry.raw_api_log_data.tpp_id,
+                tpp_name: entry.raw_api_log_data.tpp_name,
+                tpp_client_id: entry.raw_api_log_data.tpp_client_id,
+                api_set_sub: entry.raw_api_log_data.api_set_sub,
+                http_method: entry.raw_api_log_data.http_method,
+                url: entry.raw_api_log_data.url,
+                tpp_response_code_group: entry.raw_api_log_data.tpp_response_code_group,
+                execution_time: entry.raw_api_log_data.execution_time,
+                interaction_id: entry.raw_api_log_data.interaction_id,
+                resource_name: entry.raw_api_log_data.resource_name,
+                lfi_response_code_group: entry.raw_api_log_data.lfi_response_code_group,
+                is_attended: entry.raw_api_log_data.is_attended,
+                records: entry.raw_api_log_data.records,
+                payment_type: entry.raw_api_log_data.payment_type,
+                payment_id: entry.raw_api_log_data.payment_id,
+                merchant_id: entry.raw_api_log_data.merchant_id,
+                psu_id: entry.raw_api_log_data.psu_id,
+                is_large_corporate: entry.raw_api_log_data.is_large_corporate,
+                user_type: entry.raw_api_log_data.user_type,
+                purpose: entry.raw_api_log_data.purpose,
+                status: entry.payment_logs.status,
+                currency: entry.payment_logs.currency,
+                amount: entry.payment_logs.amount,
+                payment_consent_type: entry.payment_logs.payment_consent_type,
+                transaction_id: entry.payment_logs.transaction_id,
+                number_of_successful_transactions: entry.payment_logs.number_of_successful_transactions,
+                international_payment: entry.payment_logs.international_payment,
+                chargeable: entry.chargeable,
+                lfiChargable: entry.lfiChargable,
+                success: entry.success,
+                group: entry.group,
+                type: entry.type,
+                discountType: entry.discountType,
+                api_category: entry.api_category,
+                discounted: entry.discounted,
+                api_hub_fee: entry.api_hub_fee,
+                applicableApiHubFee: entry.applicableApiHubFee,
+                apiHubVolume: entry.apiHubVolume,
+                calculatedFee: entry.calculatedFee,
+                applicableFee: entry.applicableFee,
+                unit_price: entry.unit_price,
+                volume: entry.volume,
+                appliedLimit: entry.appliedLimit,
+                limitApplied: entry.limitApplied,
+                isCapped: entry.isCapped,
+                cappedAt: entry.cappedAt,
+                numberOfPages: entry.numberOfPages,
+                duplicate: entry.duplicate,
+                category: entry?.category,
+            }));
+
+            const outputPath = './output/log_detail.csv';
+
+            const directory = outputPath.substring(0, outputPath.lastIndexOf('/'));
+            if (!fs.existsSync(directory)) {
+                fs.mkdirSync(directory, { recursive: true });
+            }
+
+            // Define the CSV headers
+            const fields = Object.keys(flattenedLog[0]); // Dynamically generate headers from data keys
+            const parser = new Parser({ fields });
+            const csv = parser.parse(flattenedLog);
+
+            // Write the CSV file
+            fs.writeFileSync(outputPath, csv, 'utf8');
+            result = outputPath;
+        } catch (error) {
+            console.error("Error creating CSV file:", error);
+        }
+
+        // return log;
+    }
 
     async billingTpp(
         tpp_id: any,

@@ -127,6 +127,39 @@ export class InvoiceController {
     }
   }
 
+  @ApiOperation({ summary: 'Generate invoices from logs' })
+  @Post('invoice-tpp-csv')
+  async invoiceTppCsv(@Res() res: Response,@Body(ValidationPipe) invoiceDto: invoiceGenerateDto,): Promise<any> {
+    try {
+      const result = await this.invoiceService.invoiceTppCsv(invoiceDto);
+      res.download('./output/log_detail.csv', 'Log Detail.csv', (err) => {
+        if (err) {
+          console.error('Error while downloading file:', err);
+          res.status(HttpStatus.INTERNAL_SERVER_ERROR).send('Failed to download file.');
+        }
+      });
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
+  }
+
+  @Post('invoice-lfi-csv')
+  async invoiceLfiCsv(@Res() res: Response,@Body(ValidationPipe) invoiceDto: invoiceGenerateDto,): Promise<any> {
+    try {
+      const result = await this.invoiceService.invoiceLfiCsv(invoiceDto);
+      res.download('./output/log_detail.csv', 'Log Detail.csv', (err) => {
+        if (err) {
+          console.error('Error while downloading file:', err);
+          res.status(HttpStatus.INTERNAL_SERVER_ERROR).send('Failed to download file.');
+        }
+      });
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
+  }
+
   // @UseGuards(JwtAuthGuard)
   // @ApiBearerAuth()
   // @ApiOperation({ summary: 'Its not functional' })
