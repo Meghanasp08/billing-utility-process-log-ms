@@ -31,6 +31,7 @@ export class UploadService {
   ) { }
 
   private readonly peer_to_peer_types = AppConfig.peerToPeerTypes;
+  private readonly paymentTypesForMerchant = AppConfig.paymentTypesForMerchant;
   private readonly nonLargeValueCapMerchantCheck = AppConfig.highValueMerchantcapCheck;
   private readonly paymentTypes = AppConfig.paymentTypes;
   private readonly paymentStatus = AppConfig.paymentStatus;
@@ -432,29 +433,29 @@ export class UploadService {
 
     const mergedData = await Promise.all(
       file1Data.map(async (rawApiRecord, index) => {
-        let errorTppLfi = !rawApiRecord.lfiId || !rawApiRecord.tppName || !rawApiRecord.tppId || !rawApiRecord.lfiName;
-        if (errorTppLfi) {
-          await this.uploadLog.findByIdAndUpdate(
-            logUpdate._id,
-            {
-              $set: {
-                status: 'Failed',
-                remarks: `Failed to validate 'Raw Log File`,
-              },
-              $push: {
-                log: {
-                  description: `Validation error occurred in row ${index + 2} for the field 'lfiId/lfiName/tppId/tppName' in the 'Raw Log File': the value is empty`,
-                  status: 'Failed',
-                  errorDetail: null,
-                },
-              },
-            }
-          );
-          throw new HttpException({
-            message: `Validation error occurred in row ${index + 2} for the field 'lfiId/lfiName/tppId/tppName' in the 'Raw Log File': the value is empty`,
-            status: 400
-          }, HttpStatus.BAD_REQUEST);
-        }
+        // let errorTppLfi = !rawApiRecord.lfiId || !rawApiRecord.tppName || !rawApiRecord.tppId || !rawApiRecord.lfiName;
+        // if (errorTppLfi) {
+        //   await this.uploadLog.findByIdAndUpdate(
+        //     logUpdate._id,
+        //     {
+        //       $set: {
+        //         status: 'Failed',
+        //         remarks: `Failed to validate 'Raw Log File`,
+        //       },
+        //       $push: {
+        //         log: {
+        //           description: `Validation error occurred in row ${index + 2} for the field 'lfiId/lfiName/tppId/tppName' in the 'Raw Log File': the value is empty`,
+        //           status: 'Failed',
+        //           errorDetail: null,
+        //         },
+        //       },
+        //     }
+        //   );
+        //   throw new HttpException({
+        //     message: `Validation error occurred in row ${index + 2} for the field 'lfiId/lfiName/tppId/tppName' in the 'Raw Log File': the value is empty`,
+        //     status: 400
+        //   }, HttpStatus.BAD_REQUEST);
+        // }
         const paymentId = rawApiRecord.paymentId?.trim();
         let paymentRecord: any = null;
         if (paymentId) {
@@ -545,7 +546,7 @@ export class UploadService {
 
     // return mergedData;
 
-    const chargeFile = await this.chargableConvertion(mergedData);
+    const chargeFile = await this.chargableConvertion(mergedData, logUpdate._id);
     console.log('stage 1 completed');
 
     const feeApplied = await this.calculateFee(chargeFile);
@@ -637,7 +638,9 @@ export class UploadService {
           "isCapped",
           "cappedAt",
           "numberOfPages",
-          "duplicate"
+          "duplicate",
+          "brokerage_fee",
+          "serviceStatus"
         ];
 
         // Convert JSON to CSV
@@ -1066,7 +1069,7 @@ export class UploadService {
 
       for (const transaction of data) {
         // if (!transaction.lfiChargable && !transaction.success) continue; // Skip if not chargeable
-        if (transaction.lfiChargable && transaction.success) {
+        if (transaction.lfiChargable && transaction.success && transaction["payment_logs.merchant_id"] != null) {
 
           const merchantId = transaction["payment_logs.merchant_id"];
           const timestamp = transaction["raw_api_log_data.timestamp"];
@@ -1142,7 +1145,6 @@ export class UploadService {
 
           // MERCHANT CALCULATION
           if (record.type === "merchant") {
-
             if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
               if (record.group == 'payment-non-bulk') {
                 calculatedFee = this.variables.paymentLargeValueFee.value
@@ -1158,10 +1160,10 @@ export class UploadService {
 
 
             } else {
+
               const date = new Date(record["raw_api_log_data.timestamp"]).toISOString().split("T")[0];
               const key = `${record["payment_logs.merchant_id"]}_${date}`;
               const merchantGroup = merchantGroupedMap[key];
-
               if (merchantGroup) {
                 result = [merchantGroup]; // For consistency if needed in frontend
                 if (result.length > 0) {
@@ -1183,6 +1185,15 @@ export class UploadService {
                   cappedAt = isCapped ? this.variables.nonLargeValueCapMerchant.value : 0;
 
                 }
+              } else {
+                calculatedFee = parseFloat((parseInt(record["payment_logs.amount"]) * (this.variables.nonLargeValueMerchantBps.value / 10000)).toFixed(3));
+                applicableFee = parseFloat((parseInt(record["payment_logs.amount"]) > this.nonLargeValueCapMerchantCheck ? this.variables.nonLargeValueCapMerchant.value : calculatedFee).toFixed(3));
+                unit_price = (this.variables.nonLargeValueMerchantBps.value / 10000);
+                volume = parseInt(record["payment_logs.amount"]) ?? 0;
+                appliedLimit = 0;
+                limitApplied = false;
+                isCapped = parseInt(record["payment_logs.amount"]) > this.nonLargeValueCapMerchantCheck; // Assign boolean value
+                cappedAt = isCapped ? this.variables.nonLargeValueCapMerchant.value : 0;
               }
             }
 
@@ -1191,36 +1202,36 @@ export class UploadService {
           // PEER-2-PEER
           else if (record.type === 'peer-2-peer') {
             if (record.group === 'payment-bulk') {
-              if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
-                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.paymentLargeValueFee.value).toFixed(3));
-                applicableFee = calculatedFee
-                unit_price = this.variables.paymentLargeValueFee.value;
-                volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
+              // if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
+              //   calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.paymentLargeValueFee.value).toFixed(3));
+              //   applicableFee = calculatedFee
+              //   unit_price = this.variables.paymentLargeValueFee.value;
+              //   volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
 
-              } else {
-                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.paymentNonLargevalueFeePeer.value).toFixed(3));
+              // } else {
+              calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.paymentNonLargevalueFeePeer.value).toFixed(3));
 
-                applicableFee = parseFloat((calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? this.variables.bulkMe2mePeer2PeerCap.value : calculatedFee).toFixed(3));
-                unit_price = this.variables.paymentNonLargevalueFeePeer.value;
-                volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
-                isCapped = calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? true : false // Assign boolean value
-                cappedAt = isCapped ? this.variables.bulkMe2mePeer2PeerCap.value : 0;
-              }
+              applicableFee = parseFloat((calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? this.variables.bulkMe2mePeer2PeerCap.value : calculatedFee).toFixed(3));
+              unit_price = this.variables.paymentNonLargevalueFeePeer.value;
+              volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
+              isCapped = calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? true : false // Assign boolean value
+              cappedAt = isCapped ? this.variables.bulkMe2mePeer2PeerCap.value : 0;
+              // }
             }
             else if (record.group === 'payment-non-bulk') {
-              if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
-                calculatedFee = parseFloat((this.variables.paymentLargeValueFee.value).toFixed(3));
-                applicableFee = calculatedFee
-                unit_price = this.variables.paymentLargeValueFee.value;
-                volume = 1;
+              // if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
+              //   calculatedFee = parseFloat((this.variables.paymentLargeValueFee.value).toFixed(3));
+              //   applicableFee = calculatedFee
+              //   unit_price = this.variables.paymentLargeValueFee.value;
+              //   volume = 1;
 
-              } else {
-                calculatedFee = parseFloat(this.variables.paymentNonLargevalueFeePeer.value.toFixed(3));
+              // } else {
+              calculatedFee = parseFloat(this.variables.paymentNonLargevalueFeePeer.value.toFixed(3));
 
-                applicableFee = calculatedFee;
-                unit_price = this.variables.paymentNonLargevalueFeePeer.value;
-                volume = 1;
-              }
+              applicableFee = calculatedFee;
+              unit_price = this.variables.paymentNonLargevalueFeePeer.value;
+              volume = 1;
+              // }
             }
 
           }
@@ -1292,7 +1303,7 @@ export class UploadService {
 
           if (!existingMerchant) {
             await this.merchantLimitModel.insertMany(merchant);
-            console.log(`Inserted merchant with ID ${merchant.merchantId}`);
+            // console.log(`Inserted merchant with ID ${merchant.merchantId}`);
           } else {
             console.log(`Merchant with ID ${merchant.merchantId} already exists. Skipping insertion.`);
           }
@@ -1308,7 +1319,7 @@ export class UploadService {
   }
 
 
-  async determineChargeableAndSuccess(data: any[], apiData: any[]) {
+  async determineChargeableAndSuccess(data: any[], apiData: any[], logId: string) {
     // Convert API data into lists of chargeable URLs with their methods
     const chargableUrls = apiData
       .filter(api => api.chargeable_api_hub_fee === true)
@@ -1320,7 +1331,7 @@ export class UploadService {
 
 
 
-    return await Promise.all(data.map(async record => {
+    return await Promise.all(data.map(async (record, index) => {
       const rawDataEndpoint = await this.matchTemplateVersionUrl(record["raw_api_log_data.url"]);
       const rawDataMethod = record["raw_api_log_data.http_method"];
 
@@ -1344,6 +1355,32 @@ export class UploadService {
       // Determine if the record is successful based on response codes
       const success = /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.tpp_response_code_group"]) &&
         /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.lfi_response_code_group"]);
+
+      if (islfiChargable || isChargeable) {
+        let errorTppLfi = !record["raw_api_log_data.tpp_id"] || !record["raw_api_log_data.tpp_name"] || !record["raw_api_log_data.lfi_id"] || !record["raw_api_log_data.lfi_name"];
+        if (errorTppLfi) {
+          await this.uploadLog.findByIdAndUpdate(
+            logId,
+            {
+              $set: {
+                status: 'Failed',
+                remarks: `Failed to validate 'Raw Log File`,
+              },
+              $push: {
+                log: {
+                  description: `Validation error at row ${index + 2} in the 'Raw Log File': 'lfiId', 'lfiName', 'tppId', or 'tppName' is missing or empty.`,
+                  status: 'Failed',
+                  errorDetail: null,
+                },
+              },
+            }
+          );
+          throw new HttpException({
+            message: `Validation error at row ${index + 2} in the 'Raw Log File': 'lfiId', 'lfiName', 'tppId', or 'tppName' is missing or empty.`,
+            status: 400
+          }, HttpStatus.BAD_REQUEST);
+        }
+      }
 
       return {
         ...record,
@@ -1425,7 +1462,7 @@ export class UploadService {
     return null; // Return null if no match is found
   }
 
-  async chargableConvertion(data: any) {
+  async chargableConvertion(data: any, logId: string) {
     try {
       // console.log(globalData)
       const apiData = await this.apiModel.find({
@@ -1435,13 +1472,13 @@ export class UploadService {
         ]
       });
 
-      const processedData = await this.determineChargeableAndSuccess(data, apiData);
+      const processedData = await this.determineChargeableAndSuccess(data, apiData, logId);
       const updatedData = await this.calculateApiHubFee(processedData, apiData,);
 
       return updatedData;
     } catch (error) {
       console.error("Error in chargableConvertion:", error);
-      throw new Error("Chargeable conversion failed");
+      throw new Error(error);
     }
   }
 
@@ -1449,7 +1486,7 @@ export class UploadService {
 
   getType(logEntry: any) {
     let type = "NA";
-    if (logEntry["payment_logs.merchant_id"] != null) {
+    if (logEntry["payment_logs.merchant_id"] != null || this.paymentTypesForMerchant.includes(logEntry["raw_api_log_data.payment_type"])) {
       type = "merchant";
     } else if (this.peer_to_peer_types.includes(logEntry["raw_api_log_data.payment_type"])) {
       type = "peer-2-peer";

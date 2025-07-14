@@ -9,10 +9,12 @@ export const AppConfig = {
         "/open-finance/insurance/v1.1/insurance-consents:GET",
     ],
     peerToPeerTypes: [
-        "Collection",
-        "LargeValueCollection",
         "PushP2P",
         "PullP2PPayment",
+    ],
+    paymentTypesForMerchant: [
+        "Collection",
+        "LargeValueCollection",
     ],
     paymentTypeConsents: [
         "single-immediate-payment",
