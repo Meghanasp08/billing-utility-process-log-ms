@@ -779,6 +779,8 @@ export class ProfileService {
       cappedAt: entry.cappedAt,
       numberOfPages: entry.numberOfPages,
       duplicate: entry.duplicate,
+      brokerage_fee: entry.brokerage_fee,
+      serviceStatus: entry.serviceStatus,
     }));
 
     const outputPath = './output/log_data.csv';
