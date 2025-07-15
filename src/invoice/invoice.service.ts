@@ -101,15 +101,16 @@ export class InvoiceService {
         });
 
         const globalConfiData = await this.globalModel.find();
-        const paymentApiHubFee = globalConfiData.find(item => item.key === "paymentApiHubFee")?.value;
-        const insuranceApiHubFee = globalConfiData.find(item => item.key === "insuranceApiHubFee")?.value;
-        const discountApiHubFee = globalConfiData.find(item => item.key === "discountApiHubFee")?.value;
-        let nonLargeValueMerchantBps = globalConfiData.find(item => item.key === "nonLargeValueMerchantBps")?.value;
-        const paymentLargeValueFeePeer = globalConfiData.find(item => item.key === "paymentNonLargevalueFeePeer")?.value;
-        const paymentFeeMe2me = globalConfiData.find(item => item.key === "paymentFeeMe2me")?.value;
-        const paymentLargeValueFee = globalConfiData.find(item => item.key === "paymentLargeValueFee")?.value;
-        const bulkLargeCorporatefee = globalConfiData.find(item => item.key === "bulkLargeCorporatefee")?.value;
-        const dataLargeCorporateMdp = globalConfiData.find(item => item.key === "dataLargeCorporateMdp")?.value;
+        const paymentApiHubFee = globalConfiData.find(item => item.key === "paymentApiHubFee")?.value ?? 0;
+        const insuranceQuoteApiHubFee = globalConfiData.find(item => item.key === "insuranceQuoteApiHubFee")?.value ?? 0;
+        const insuranceDataApiHubFee = globalConfiData.find(item => item.key === "insuranceDataApiHubFee")?.value ?? 0;
+        const discountApiHubFee = globalConfiData.find(item => item.key === "discountApiHubFee")?.value ?? 0;
+        let nonLargeValueMerchantBps = globalConfiData.find(item => item.key === "nonLargeValueMerchantBps")?.value ?? 0;
+        const paymentLargeValueFeePeer = globalConfiData.find(item => item.key === "paymentNonLargevalueFeePeer")?.value ?? 0;
+        const paymentFeeMe2me = globalConfiData.find(item => item.key === "paymentFeeMe2me")?.value ?? 0;
+        const paymentLargeValueFee = globalConfiData.find(item => item.key === "paymentLargeValueFee")?.value ?? 0;
+        const bulkLargeCorporatefee = globalConfiData.find(item => item.key === "bulkLargeCorporatefee")?.value ?? 0;
+        const dataLargeCorporateMdp = globalConfiData.find(item => item.key === "dataLargeCorporateMdp")?.value ?? 0;
 
         const vatPercent = vat?.value ?? 5
         const vatDecimal = vatPercent / 100;
@@ -180,6 +181,40 @@ export class InvoiceService {
                                             then: "Insurance"    //-- insuranceApiHubFee
                                         },
                                         {
+                                            case:
+                                            {
+                                                $and: [
+                                                    {
+                                                        $eq: ["$group", "insurance"]
+                                                    },
+                                                    {
+                                                        $eq: [
+                                                            "$api_category",
+                                                            "Insurance Data Sharing"
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            then: "Insurance Data Sharing"    //-- insuranceApiHubFee
+                                        },
+                                        {
+                                            case:
+                                            {
+                                                $and: [
+                                                    {
+                                                        $eq: ["$group", "insurance"]
+                                                    },
+                                                    {
+                                                        $eq: [
+                                                            "$api_category",
+                                                            "Insurance Quote Sharing"
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            then: "Insurance Quote Sharing"    //-- insuranceApiHubFee
+                                        },
+                                        {
                                             case: {
                                                 $and: [
                                                     {
@@ -188,7 +223,7 @@ export class InvoiceService {
                                                     {
                                                         $eq: [
                                                             "$api_category",
-                                                            "setup"
+                                                            "Setup and Consent"             //////
                                                         ]
                                                     }
                                                 ]
@@ -300,15 +335,15 @@ export class InvoiceService {
                                 description: "$_id.description",
                                 quantity: "$quantity",
                                 unit_price: {
-                                    $round: ["$unit_price", 3]
+                                    $round: ["$unit_price", 4]
                                 },
                                 total: {
-                                    $round: ["$total", 3]
+                                    $round: ["$total", 2]
                                 },
                                 vat_amount: {
                                     $round: [
                                         { $multiply: ["$total", vatDecimal] },
-                                        3
+                                        2
                                     ]
                                 },
                                 full_total: {
@@ -321,7 +356,7 @@ export class InvoiceService {
                                                 }
                                             ]
                                         },
-                                        3
+                                        2
                                     ]
                                 }
                             }
@@ -347,7 +382,8 @@ export class InvoiceService {
                                         "Payment Initiation"
                                     ],
                                     else: [
-                                        "Insurance",
+                                        "Insurance Data Sharing",
+                                        "Insurance Quote Sharing",
                                         "Setup and Consent",
                                         "Corporate Data",
                                         "Confirmation of Payee(Discounted)",
@@ -389,7 +425,8 @@ export class InvoiceService {
                                                         branches: [
                                                             { case: { $eq: ["$$desc", "Corporate Payment"] }, then: "corporate_payment" },
                                                             { case: { $eq: ["$$desc", "Payment Initiation"] }, then: "payment_initiation" },
-                                                            { case: { $eq: ["$$desc", "Insurance"] }, then: "insurance" },
+                                                            { case: { $eq: ["$$desc", "Insurance Data Sharing"] }, then: "insurance_data_sharing" },
+                                                            { case: { $eq: ["$$desc", "Insurance Quote Sharing"] }, then: "insurance_quote_sharing" },
                                                             { case: { $eq: ["$$desc", "Setup and Consent"] }, then: "setup_and_consent" },
                                                             { case: { $eq: ["$$desc", "Corporate Data"] }, then: "corporate_data" },
                                                             { case: { $eq: ["$$desc", "Confirmation of Payee(Discounted)"] }, then: "confirmation_of_payee_discounted" },
@@ -420,8 +457,12 @@ export class InvoiceService {
                                                                         then: paymentApiHubFee
                                                                     },
                                                                     {
-                                                                        case: { $eq: ["$$desc", "Insurance"] },
-                                                                        then: insuranceApiHubFee
+                                                                        case: { $eq: ["$$desc", "Insurance Data Sharing"] },
+                                                                        then: insuranceDataApiHubFee
+                                                                    },
+                                                                    {
+                                                                        case: { $eq: ["$$desc", "Insurance Quote Sharing"] },
+                                                                        then: insuranceQuoteApiHubFee
                                                                     },
                                                                     {
                                                                         case: { $eq: ["$$desc", "Setup and Consent"] },
@@ -488,7 +529,7 @@ export class InvoiceService {
                                     {
                                         $multiply: ["$sub_total", vatDecimal]
                                     },
-                                    3
+                                    2
                                 ]
                             },
                             category_total: {
@@ -501,7 +542,7 @@ export class InvoiceService {
                                             }
                                         ]
                                     },
-                                    3
+                                    2
                                 ]
                             }
                         }
@@ -728,7 +769,7 @@ export class InvoiceService {
                                         $round: ["$unit_price", 4]
                                     },
                                     total: {
-                                        $round: ["$total", 3]
+                                        $round: ["$total", 2]
                                     },
                                     capped: "$capped",
                                 }
@@ -869,7 +910,7 @@ export class InvoiceService {
                     //                         }
                     //                     ]
                     //                 }
-                    //             }
+                    //             } 
                     //         }
                     //     }
                     // },
@@ -880,7 +921,7 @@ export class InvoiceService {
                                     {
                                         $sum: "$labels.total"
                                     },
-                                    3
+                                    2
                                 ]
                             },
                             'lfi_name': '$lfi_data.lfi_name'
@@ -957,8 +998,8 @@ export class InvoiceService {
                 vat_percent: vatPercent, // Default 5 percent
                 vat_total: roundedVat,  // vat percent of invoice total
                 total_amount: roundedTotal,  // total of invoice array
-                invoice_total: Number(invoice_total.toFixed(3)),
-                lfi_total: Number(lfi_total.toFixed(3)),
+                invoice_total: Number(invoice_total.toFixed(2)),
+                lfi_total: Number(lfi_total.toFixed(2)),
                 status: 2,
                 notes: 'Invoice Added',
             }
@@ -1042,17 +1083,27 @@ export class InvoiceService {
     async ensureCategories(inputArray) {
         // Define default values for each category
         const globalConfiData = await this.globalModel.find();
-        const paymentApiHubFee = globalConfiData.find(item => item.key === "paymentApiHubFee")?.value;
-        const insuranceApiHubFee = globalConfiData.find(item => item.key === "insuranceApiHubFee")?.value;
-        const discountApiHubFee = globalConfiData.find(item => item.key === "discountApiHubFee")?.value;
+        const paymentApiHubFee = globalConfiData.find(item => item.key === "paymentApiHubFee")?.value ?? 0;
+        const insuranceQuoteApiHubFee = globalConfiData.find(item => item.key === "insuranceQuoteApiHubFee")?.value ?? 0;
+        const insuranceDataApiHubFee = globalConfiData.find(item => item.key === "insuranceDataApiHubFee")?.value ?? 0;
+        const discountApiHubFee = globalConfiData.find(item => item.key === "discountApiHubFee")?.value ?? 0;
         const categoryDefaults = {
             data_sharing: {
                 "items": [
                     {
-                        "description": "Insurance",
-                        "key": "insurance",
+                        "description": "Insurance Quote Sharing",
+                        "key": "insurance_quote_sharing",
                         "quantity": 0,
-                        "unit_price": insuranceApiHubFee,
+                        "unit_price": insuranceQuoteApiHubFee,
+                        "total": 0,
+                        "vat_amount": 0,
+                        "full_total": 0
+                    },
+                    {
+                        "description": "Insurance Data Sharing",
+                        "key": "Insurance_data_sharing",
+                        "quantity": 0,
+                        "unit_price": insuranceDataApiHubFee,
                         "total": 0,
                         "vat_amount": 0,
                         "full_total": 0
@@ -1269,10 +1320,38 @@ export class InvoiceService {
                                         then: "Payment Initiation"    //--paymentApiHubFee
                                     },
                                     {
-                                        case: {
-                                            $eq: ["$group", "insurance"]
+                                        case:
+                                        {
+                                            $and: [
+                                                {
+                                                    $eq: ["$group", "insurance"]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$api_category",
+                                                        "Insurance Data Sharing"
+                                                    ]
+                                                }
+                                            ]
                                         },
-                                        then: "Insurance"    //-- insuranceApiHubFee
+                                        then: "Insurance Data Sharing"    //-- insuranceApiHubFee
+                                    },
+                                    {
+                                        case:
+                                        {
+                                            $and: [
+                                                {
+                                                    $eq: ["$group", "insurance"]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$api_category",
+                                                        "Insurance Quote Sharing"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "Insurance Quote Sharing"    //-- insuranceApiHubFee
                                     },
                                     {
                                         case: {
@@ -1283,7 +1362,7 @@ export class InvoiceService {
                                                 {
                                                     $eq: [
                                                         "$api_category",
-                                                        "setup"
+                                                        "Setup and Consent"             //////
                                                     ]
                                                 }
                                             ]
@@ -1953,93 +2032,123 @@ export class InvoiceService {
                             '$switch': {
                                 'branches': [
                                     {
-                                        'case': {
-                                            '$eq': [
-                                                '$group', 'payment-bulk'
+                                        case: {
+                                            $eq: ["$group", "payment-bulk"]
+                                        },
+                                        then: "Corporate Payment"   //-- paymentApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $eq: [
+                                                "$group",
+                                                "payment-non-bulk"
                                             ]
                                         },
-                                        'then': 'Corporate Payment'
-                                    }, {
-                                        'case': {
-                                            '$eq': [
-                                                '$group', 'payment-non-bulk'
-                                            ]
+                                        then: "Payment Initiation"    //--paymentApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $eq: ["$group", "insurance"]
                                         },
-                                        'then': 'Payment Initiation'
-                                    }, {
-                                        'case': {
-                                            '$eq': [
-                                                '$group', 'insurance'
-                                            ]
-                                        },
-                                        'then': 'Insurance'
-                                    }, {
-                                        'case': {
-                                            '$and': [
+                                        then: "Insurance"    //-- insuranceApiHubFee
+                                    },
+                                    {
+                                        case:
+                                        {
+                                            $and: [
                                                 {
-                                                    '$eq': [
-                                                        '$group', 'data'
-                                                    ]
-                                                }, {
-                                                    '$eq': [
-                                                        '$api_category', 'setup'
+                                                    $eq: ["$group", "insurance"]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$api_category",
+                                                        "Insurance Data Sharing"
                                                     ]
                                                 }
                                             ]
                                         },
-                                        'then': 'Setup and Consent'
-                                    }, {
-                                        'case': {
-                                            '$and': [
+                                        then: "Insurance Data Sharing"    //-- insuranceApiHubFee
+                                    },
+                                    {
+                                        case:
+                                        {
+                                            $and: [
                                                 {
-                                                    '$eq': [
-                                                        '$group', 'data'
-                                                    ]
-                                                }, {
-                                                    '$eq': [
-                                                        '$type', 'corporate'
+                                                    $eq: ["$group", "insurance"]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$api_category",
+                                                        "Insurance Quote Sharing"
                                                     ]
                                                 }
                                             ]
                                         },
-                                        'then': 'Corporate Payment Data'
-                                    }, {
-                                        'case': {
-                                            '$and': [
+                                        then: "Insurance Quote Sharing"    //-- insuranceApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
                                                 {
-                                                    '$eq': [
-                                                        '$group', 'data'
-                                                    ]
-                                                }, {
-                                                    '$eq': [
-                                                        '$discount_type', 'cop'
+                                                    $eq: ["$group", "data"]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$api_category",
+                                                        "Setup and Consent"
                                                     ]
                                                 }
                                             ]
                                         },
-                                        'then': 'Confirmation of Payee(Discounted)'
-                                    }, {
-                                        'case': {
-                                            '$and': [
+                                        then: "Setup and Consent"    //-- paymentApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
                                                 {
-                                                    '$eq': [
-                                                        '$group', 'data'
-                                                    ]
-                                                }, {
-                                                    '$eq': [
-                                                        '$discount_type', 'balance'
+                                                    $eq: ["$group", "data"]
+                                                },
+                                                {
+                                                    $eq: ["$type", "corporate"]
+                                                }
+                                            ]
+                                        },
+                                        then: "Corporate Data"   //-- paymentApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: ["$group", "data"]
+                                                },
+                                                {
+                                                    $eq: ["$discount_type", "cop"]
+                                                }
+                                            ]
+                                        },
+                                        then: "Confirmation of Payee(Discounted)"  //-- discountApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: ["$group", "data"]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$discount_type",
+                                                        "balance"
                                                     ]
                                                 }
                                             ]
                                         },
-                                        'then': 'Balance(Discounted)'
-                                    }, {
-                                        'case': {
-                                            '$eq': [
-                                                '$group', 'data'
-                                            ]
+                                        then: "Balance(Discounted)"  //-- discountApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $eq: ["$group", "data"]
                                         },
-                                        'then': 'Bank Data Sharing'
+                                        then: "Bank Data Sharing"   //--paymentApiHubFee
                                     }
                                 ],
                                 'default': null
@@ -2093,12 +2202,12 @@ export class InvoiceService {
                             'quantity': '$quantity',
                             'unit_price': {
                                 '$round': [
-                                    '$unit_price', 3
+                                    '$unit_price', 4
                                 ]
                             },
                             'total': {
                                 '$round': [
-                                    '$total', 3
+                                    '$total', 2
                                 ]
                             }
                         }
@@ -2126,7 +2235,8 @@ export class InvoiceService {
                                                     branches: [
                                                         { case: { $eq: ["$$item.description", "Corporate Payment"] }, then: "corporate_payment" },
                                                         { case: { $eq: ["$$item.description", "Payment Initiation"] }, then: "payment_initiation" },
-                                                        { case: { $eq: ["$$item.description", "Insurance"] }, then: "insurance" },
+                                                        { case: { $eq: ["$$item.description", "Insurance Data Sharing"] }, then: "insurance_data_sharing" },
+                                                        { case: { $eq: ["$$item.description", "Insurance Quote Sharing"] }, then: "insurance_quote_sharing" },
                                                         { case: { $eq: ["$$item.description", "Setup and Consent"] }, then: "setup_consent" },
                                                         { case: { $eq: ["$$item.description", "Corporate Payment Data"] }, then: "corporate_payment_data" },
                                                         { case: { $eq: ["$$item.description", "Confirmation of Payee(Discounted)"] }, then: "cop_discounted" },
@@ -2156,7 +2266,7 @@ export class InvoiceService {
                                     'Corporate Payment', 'Payment Initiation'
                                 ],
                                 'else': [
-                                    'Insurance', 'Setup and Consent', 'Corporate Payment Data', 'Confirmation of Payee(Discounted)', 'Balance(Discounted)', 'Bank Data Sharing'
+                                    'Insurance Data Sharing','Insurance Quote Sharing', 'Setup and Consent', 'Corporate Payment Data', 'Confirmation of Payee(Discounted)', 'Balance(Discounted)', 'Bank Data Sharing'
                                 ]
                             }
                         }
@@ -2400,7 +2510,7 @@ export class InvoiceService {
                                     $round: ["$unit_price", 4]
                                 },
                                 total: {
-                                    $round: ["$total", 3]
+                                    $round: ["$total", 2]
                                 },
                                 capped: "$capped",
                             }
@@ -2429,7 +2539,7 @@ export class InvoiceService {
                             '$round': [
                                 {
                                     '$sum': '$labels.total'
-                                }, 3
+                                }, 2
                             ]
                         }
                     }
@@ -2516,10 +2626,6 @@ export class InvoiceService {
         const roundedVat = Math.round(vat * 100) / 100;
         invoice_total = invoice_total.toFixed(2)
         lfi_total = lfi_total.toFixed(2)
-        // let updated_result = []
-        // if (result.length != 0) {
-        //     updated_result = await this.ensureCategories(result);
-        // }
 
         const invoice_data = {
             tpp_id: tpp_id,
@@ -3255,7 +3361,7 @@ export class InvoiceService {
                                 $round: ["$unit_price", 4]
                             },
                             total: {
-                                $round: ["$total", 3]
+                                $round: ["$total", 2]
                             },
                             capped: "$capped",
                         }
@@ -3333,7 +3439,7 @@ export class InvoiceService {
                         '$round': [
                             {
                                 '$sum': '$labels.total'
-                            }, 3
+                            }, 2
                         ]
                     }
                 }
@@ -3983,7 +4089,7 @@ export class InvoiceService {
                                                                 "$$desc"
                                                             ]
                                                         }
-                                                    }
+                                                    } 
                                                 }
                                             }
                                         },
