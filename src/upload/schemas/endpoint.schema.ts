@@ -26,6 +26,9 @@ export class ApiData {
 
     @Prop({ required: false })
     api_category: string;
+
+    @Prop({ type: Boolean, default: false })
+    quote_status: boolean;
 }
 
 export const ApiDataSchema = SchemaFactory.createForClass(ApiData);

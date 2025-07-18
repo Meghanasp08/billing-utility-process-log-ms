@@ -257,6 +257,9 @@ export class Log {
   serviceStatus: boolean;
 
   @Prop()
+  successfullQuote: boolean;
+
+  @Prop()
   createdAt: Date; // Explicitly define the createdAt field
 
   @Prop()

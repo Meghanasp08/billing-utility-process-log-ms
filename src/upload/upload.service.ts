@@ -1329,6 +1329,10 @@ export class UploadService {
       .filter(api => api.chargeable_LFI_TPP_fee === true)
       .map(api => ({ endpoint: api.api_endpoint, method: api.api_operation.toUpperCase() }));
 
+    const QuotChargableUrls = apiData
+      .filter(api => api.quote_status === true)
+      .map(api => ({ endpoint: api.api_endpoint, method: api.api_operation.toUpperCase() }));
+
 
 
     return await Promise.all(data.map(async (record, index) => {
@@ -1352,6 +1356,15 @@ export class UploadService {
           return urlMatch && methodMatch;
         })
       ).then((results) => results.some((result) => result));
+
+      const successQuote = await Promise.all(
+        QuotChargableUrls.map(async (api) => {
+          const urlMatch = await this.matchTemplateUrl(api.endpoint, rawDataEndpoint);
+          const methodMatch = api.method.toUpperCase() === rawDataMethod.toUpperCase();
+          return urlMatch && methodMatch;
+        })
+      ).then((results) => results.some((result) => result));
+
       // Determine if the record is successful based on response codes
       const success = /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.tpp_response_code_group"]) &&
         /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.lfi_response_code_group"]);
@@ -1386,6 +1399,7 @@ export class UploadService {
         ...record,
         chargeable: isChargeable,
         lfiChargable: islfiChargable,
+        successfullQuote: successQuote,
         success,
       };
     }));
@@ -1468,10 +1482,10 @@ export class UploadService {
       const apiData = await this.apiModel.find({
         $or: [
           { chargeable_api_hub_fee: true },
-          { chargeable_LFI_TPP_fee: true }
+          { chargeable_LFI_TPP_fee: true },
+          { quote_status: true },
         ]
       });
-
       const processedData = await this.determineChargeableAndSuccess(data, apiData, logId);
       const updatedData = await this.calculateApiHubFee(processedData, apiData,);
 
