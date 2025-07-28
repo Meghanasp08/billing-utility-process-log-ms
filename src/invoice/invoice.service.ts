@@ -173,12 +173,6 @@ export class InvoiceService {
                                             then: "Payment Initiation"    //--paymentApiHubFee
                                         },
                                         {
-                                            case: {
-                                                $eq: ["$group", "insurance"]
-                                            },
-                                            then: "Insurance"    //-- insuranceApiHubFee
-                                        },
-                                        {
                                             case:
                                             {
                                                 $and: [
@@ -326,6 +320,19 @@ export class InvoiceService {
                         }
                     },
                     {
+                        '$addFields': {
+                            'vat_amount': {
+                                '$round': [
+                                    {
+                                        '$multiply': [
+                                            '$total', vatDecimal
+                                        ]
+                                    }, 2
+                                ]
+                            }
+                        }
+                    },
+                    {
                         $project: {
                             _id: 0,
                             category: "$_id.category",
@@ -338,23 +345,14 @@ export class InvoiceService {
                                 total: {
                                     $round: ["$total", 2]
                                 },
-                                vat_amount: {
-                                    $round: [
-                                        { $multiply: ["$total", vatDecimal] },
-                                        2
-                                    ]
-                                },
-                                full_total: {
-                                    $round: [
+                                'vat_amount': '$vat_amount',
+                                'full_total': {
+                                    '$round': [
                                         {
-                                            $add: [
-                                                "$total",
-                                                {
-                                                    $multiply: ["$total", vatDecimal]
-                                                }
+                                            '$add': [
+                                                '$total', '$vat_amount'
                                             ]
-                                        },
-                                        2
+                                        }, 2
                                     ]
                                 }
                             }
@@ -2045,12 +2043,6 @@ export class InvoiceService {
                                         },
                                         then: "Payment Initiation"    //--paymentApiHubFee
                                     },
-                                    // {
-                                    //     case: {
-                                    //         $eq: ["$group", "insurance"]
-                                    //     },
-                                    //     then: "Insurance"    //-- insuranceApiHubFee
-                                    // },
                                     {
                                         case:
                                         {
@@ -3081,6 +3073,100 @@ export class InvoiceService {
             console.error("Error creating CSV file:", error);
         }
         // return merged
+    }
+
+    async tppBranchCases() {
+        return [
+            {
+                'case': {
+                    '$eq': [
+                        '$group', 'payment-bulk'
+                    ]
+                },
+                'then': 'Corporate Payment'
+            }, {
+                'case': {
+                    '$eq': [
+                        '$group', 'payment-non-bulk'
+                    ]
+                },
+                'then': 'Payment Initiation'
+            }, {
+                'case': {
+                    '$eq': [
+                        '$group', 'insurance'
+                    ]
+                },
+                'then': 'Insurance'
+            }, {
+                'case': {
+                    '$and': [
+                        {
+                            '$eq': [
+                                '$group', 'data'
+                            ]
+                        }, {
+                            '$eq': [
+                                '$api_category', 'setup'
+                            ]
+                        }
+                    ]
+                },
+                'then': 'Setup and Consent'
+            }, {
+                'case': {
+                    '$and': [
+                        {
+                            '$eq': [
+                                '$group', 'data'
+                            ]
+                        }, {
+                            '$eq': [
+                                '$type', 'corporate'
+                            ]
+                        }
+                    ]
+                },
+                'then': 'Corporate Payment Data'
+            }, {
+                'case': {
+                    '$and': [
+                        {
+                            '$eq': [
+                                '$group', 'data'
+                            ]
+                        }, {
+                            '$eq': [
+                                '$discount_type', 'cop'
+                            ]
+                        }
+                    ]
+                },
+                'then': 'Confirmation of Payee(Discounted)'
+            }, {
+                'case': {
+                    '$and': [
+                        {
+                            '$eq': [
+                                '$group', 'data'
+                            ]
+                        }, {
+                            '$eq': [
+                                '$discount_type', 'balance'
+                            ]
+                        }
+                    ]
+                },
+                'then': 'Balance(Discounted)'
+            }, {
+                'case': {
+                    '$eq': [
+                        '$group', 'data'
+                    ]
+                },
+                'then': 'Bank Data Sharing'
+            }
+        ]
     }
 
     async generateInvoiceNumberOld(key = 'INV'): Promise<string> {
