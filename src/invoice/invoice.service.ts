@@ -959,13 +959,13 @@ export class InvoiceService {
                 ]
             )
             const invoice_total = result.reduce((sum, item) => sum + item.category_total, 0);
-            const vat = invoice_total * vatDecimal;
+            const vat = result.reduce((sum, item) => sum + item.vat_amount, 0); 
 
             const lfi_total = result_of_lfi.reduce((sum, item) => sum + item.full_total, 0);
-
             const total = Number(invoice_total) + Number(lfi_total);
-            const roundedTotal = Math.round(total * 100) / 100;
-            const roundedVat = Math.round(vat * 100) / 100;
+
+            const roundedTotal = Number(total.toFixed(2));
+            const roundedVat = Number(vat.toFixed(2));
 
             const updated_result = await this.ensureCategories(result);
 
