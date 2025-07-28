@@ -391,6 +391,7 @@ export class ProfileService {
             ...filter,
             chargeable: true,
             success: true,
+            duplicate: false,
           },
         },
         {

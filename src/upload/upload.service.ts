@@ -770,9 +770,10 @@ export class UploadService {
           }, {
             brokerage_fee: 1,
             serviceStatus: 1,
+            _id: 0
           }).lean();
           if (tppDoc) {
-            brokerage_fee = tppDoc.brokerage_fee
+            brokerage_fee = tppDoc.brokerage_fee || 0;
             serviceStatus = tppDoc.serviceStatus;
           }
         }
