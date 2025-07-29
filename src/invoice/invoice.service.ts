@@ -6406,16 +6406,16 @@ export class InvoiceService {
                 revenue_data += `
                 <tr>
                     <td>${item.label} ${item?.capped === true ? '**' : ''}</td>
-                    <td>${item.quantity}</td>
-                    <td>${item.unit_price}</td>
-                    <td>${item.total}</td>
+                    <td class="table-total">${item.quantity}</td>
+                    <td class="table-total">${item.unit_price}</td>
+                    <td class="table-total">${item.total?.toFixed(2)}</td>
                 </tr>`;
             }
 
             revenue_data += `
                 <tr class="sub-total">
                 <td colspan="3">Sub Total</td>
-                <td class="table-total">${tpp_data?.full_total}</td>
+                <td class="table-total">${tpp_data?.full_total.toFixed(2)}</td>
                 </tr>`;
         }
 
@@ -6495,6 +6495,10 @@ export class InvoiceService {
             background-color: #c2c1eb !important;
         }
 
+        .table-total {
+            text-align: right;
+
+        }
 
         .sub-total,
         .vat {
@@ -6515,12 +6519,23 @@ export class InvoiceService {
         }
         .lif-details{
             color: #1b194f;
-    font-weight: 600;
+            font-weight: 600;
         }
         .date{
             font-weight: 600;  
             color: #1b194f;
 
+        }
+        .info-row {
+            display: flex;
+            gap: 5px;
+            color: #1b194f;
+            margin: 4px 0;
+        }
+        .label {    min-width: 130px;   }
+
+        .value {
+            flex: 1;
         }
 
         @media print {
@@ -6543,16 +6558,22 @@ export class InvoiceService {
         <div class="header">
             <div>
                 <h1>LFI STATEMENT OF FEE</h1>
-                <p style="color: #1b194f;"><strong>Fee Statement #001</strong><br><strong>${moment(data.createdAt).format('DD MMMM YYYY')}</strong> </p>
+                <p style="color: #1b194f;"><strong>Fee Statement 001</strong><br><strong>${moment(data.createdAt).format('DD MMMM YYYY')}</strong> </p>
                 <p class="lif-details"><br>${data.lfi_name}<br>${data.lfi_id}<br>Address1</p>
-                <p class="lif-details">Invoice Currency : AED</p>
+                <div class="info-row lif-details">
+                    <span >Invoice Currency</span>
+                    <span class="value">: AED</span>
+                </div>
             </div>
 
         </div>
 
         <div class="section">
-            <h2>Fee Summary:</h2>
-            <p class="date">Billing Period: ${firstDay} to ${lastDay}</p>
+            <h2>Fee Summary</h2>
+            <div class="info-row date">
+                <span class="label">Billing Period</span>
+                <span class="value">: ${firstDay} to ${lastDay}</span>
+            </div>
         </div>
 
         <table>
@@ -6569,7 +6590,7 @@ export class InvoiceService {
                 ${revenue_data}
                 <tr class="sub-total">
                     <td class="" colspan="4">Grand Total</td>
-                    <td class="table-total">${grand_total}</td>
+                    <td class="table-total">${grand_total?.toFixed(2)}</td>
                 </tr>
             </tbody>
         </table>
