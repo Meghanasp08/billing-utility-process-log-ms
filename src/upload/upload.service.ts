@@ -761,7 +761,7 @@ export class UploadService {
         }
 
         //Get TPP ID and fetch from DB
-        const tppId = record["raw_api_log_data.tpp_id"];
+        const tppId = record.successfullQuote && record.success ? record["raw_api_log_data.tpp_id"] : null;
         let brokerage_fee = 0;
         let serviceStatus: boolean = false;
         if (tppId) {
