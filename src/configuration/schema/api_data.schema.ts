@@ -27,7 +27,7 @@ export class ApiDataConfiguration {
     api_category: string;
 
     @Prop({ type: Boolean, default: false })
-    quote_status: boolean;
+    chargeable_quote_fee: boolean;
 }
 
 export const ApiDataConfigurationSchema = SchemaFactory.createForClass(ApiDataConfiguration);
