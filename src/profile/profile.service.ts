@@ -70,6 +70,9 @@ export class ProfileService {
     if (queryParameters.success) {
       filter["success"] = queryParameters.success
     }
+    if (queryParameters.duplicate) {
+      filter["duplicate"] = queryParameters.duplicate
+    }
 
     if (queryParameters.search) {
       const searchRegex = new RegExp(queryParameters.search, "i");

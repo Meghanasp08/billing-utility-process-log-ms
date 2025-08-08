@@ -93,14 +93,13 @@ export class UpdateApiDto {
     @IsBoolean()
     chargeable_LFI_TPP_fee: boolean;
 
-    // @ApiProperty({
-    //     description: 'The key name associated with this API.',
-    //     example: 'setup',
-    //     required: true,
-    // })
-    // @IsString()
-    // @IsNotEmpty()
-    // key_name: string;
+    @ApiProperty({
+        description: 'Indicates if the Brokerage fee is chargeable.',
+        example: false,
+        required: true,
+    })
+    @IsBoolean()
+    chargeable_quote_fee: boolean;
 
     @ApiProperty({
         description: 'The key name for the API.',
@@ -164,6 +163,14 @@ export class CreateApiDto {
     @IsBoolean()
     chargeable_LFI_TPP_fee: boolean;
 
+    @ApiProperty({
+        description: 'Indicates if the Brokerage fee is chargeable.',
+        example: false,
+        required: true,
+    })
+    @IsBoolean()
+    chargeable_quote_fee: boolean;
+
     // @ApiProperty({
     //     description: 'The key name associated with this API.',
     //     example: 'setup',
@@ -171,6 +178,7 @@ export class CreateApiDto {
     // })
     // @IsString()
     // @IsNotEmpty()
+
     // key_name: string;
 
     @ApiProperty({

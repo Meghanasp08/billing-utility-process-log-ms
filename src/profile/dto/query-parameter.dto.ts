@@ -99,4 +99,14 @@ export class QueryParametersDTO {
     @IsBoolean()
     @Transform(({ value }) => value === 'true')
     success?: boolean;
+
+    @ApiPropertyOptional({
+        description: 'Filter for API duplicate items',
+        type: Boolean,
+        example: false,
+    })
+    @IsOptional()
+    @IsBoolean()
+    @Transform(({ value }) => value === 'true')
+    duplicate?: boolean;
 }

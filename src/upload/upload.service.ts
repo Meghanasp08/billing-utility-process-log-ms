@@ -54,6 +54,8 @@ export class UploadService {
     insuranceQuoteApiHubFee?: any; // 0.125 aed
     insuranceDataApiHubFee?: any; // 0.025 aed
     discountHourValue?: any; // 2 hour
+    fxQuoteApiHubFee?: any; // 0.2 aed
+    fxQuotelfiFee?: any; // 0.5 aed
   } = {};
 
   async mergeCsvFiles(userEmail: string, file1Path: string, file2Path: string, downloadCsv: boolean = false,) {
@@ -93,9 +95,12 @@ export class UploadService {
           case 'nonLargeValueMerchantBps':
             this.variables.nonLargeValueMerchantBps = obj;
             break;
-          // case 'bulkPeernonLargeValueCap':
-          //   this.variables.bulkPeernonLargeValueCap = obj;
-          //   break;
+          case 'fxQuoteApiHubFee':
+            this.variables.fxQuoteApiHubFee = obj;
+            break;
+          case 'fxQuotelfiFee':
+            this.variables.fxQuotelfiFee = obj;
+            break;
           case 'dataLargeCorporateMdp':
             this.variables.dataLargeCorporateMdp = obj;
             break;
@@ -1254,6 +1259,12 @@ export class UploadService {
               volume = 1;
             }
           }
+          else if (record.group == 'fx') {
+            calculatedFee = this.variables.fxQuotelfiFee.value;
+            applicableFee = this.variables.fxQuotelfiFee.value;
+            unit_price = this.variables.fxQuotelfiFee.value;
+            volume = 1
+          }
 
           // OTHER
           else if (record.type === 'NA') {
@@ -1445,6 +1456,8 @@ export class UploadService {
         api_hub_fee = this.variables.insuranceDataApiHubFee.value;
       } else if (record.chargeable && record.success && group === 'insurance' && groupData?.api_category === 'Insurance Quote Sharing') {
         api_hub_fee = this.variables.insuranceQuoteApiHubFee.value;
+      } else if (record.chargeable && record.success && group === 'fx') {
+        api_hub_fee = this.variables.fxQuoteApiHubFee.value;
       } else if (!record.chargeable || !record.success) {
         api_hub_fee = 0;
       }
