@@ -915,7 +915,7 @@ export class InvoiceService {
                     // },
                     {
                         $addFields: {
-                            full_total: {
+                            full_total_data: {
                                 $round: [
                                     {
                                         $sum: "$labels.total"
@@ -1038,7 +1038,7 @@ export class InvoiceService {
                                     },
                                     {
                                         case: { $eq: ["$_id.category", "FX Quotes"] },
-                                        then: "FX Quotes"
+                                        then: "FX Brokerage Collection"
                                     }
                                 ],
                                 default: "$_id.category"
@@ -1135,7 +1135,7 @@ export class InvoiceService {
                                 },
                                 {
                                     case: { $eq: ["$_id.label", "FX Quotes"] },
-                                    then: "FX Quotes"
+                                    then: "FX Brokerage Collection"
                                 }
                             ],
                             default: "$_id.label"
@@ -1185,6 +1185,8 @@ export class InvoiceService {
                     _id: "$_id.lfi_id",
                     commissions: {
                         $push: {
+                            key: "$key",
+                            brokerage: true,
                             label: "$description",
                             quantity: "$quantity",
                             unit_price: {
@@ -1213,7 +1215,7 @@ export class InvoiceService {
 
             {
                 $addFields: {
-                    full_total: {
+                    full_total_commission: {
                         $round: [
                             {
                                 $sum: {
@@ -1229,7 +1231,7 @@ export class InvoiceService {
                     },
                     lfi_name: "$lfi_data.lfi_name"
                 }
-            }
+            },
             ])
             if (serviceFee.length > 0) {
                 const sub_total = serviceFee.reduce((sum, item) => sum + item.total, 0);
@@ -1308,14 +1310,17 @@ export class InvoiceService {
                     const new_tpp_data = {
                         tpp_id: tpp_id,
                         tpp_name: tpp?.tpp_name,
-                        collection_memo_subitem: obj.labels,
+                        collection_memo_subitem: [
+                            ...(obj?.labels || []),
+                            ...(obj?.commissions || [])
+                        ],
                         full_total: obj?.full_total,
                         vat_percent: vatPercent,
                         // vat: obj?.vat,
                         // actual_total: obj?.actual_total,
                         date: new Date()
                     };
-
+                    // new_tpp_data.collection_memo_subitem.push(obj.commissions);
                     const tppExists = collection_memo_data.tpp.some((t: any) => t.tpp_id === tpp_id);
                     console.log("LOG_ID2")
                     if (!tppExists) {
@@ -1346,7 +1351,10 @@ export class InvoiceService {
                         tpp: [{
                             tpp_id: tpp_id,
                             tpp_name: tpp?.tpp_name,
-                            collection_memo_subitem: obj?.labels,
+                            collection_memo_subitem: [
+                                ...(obj?.labels || []),
+                                ...(obj?.commissions || [])
+                            ],
                             full_total: obj?.full_total,
                             vat_percent: 5,
                             // vat: obj?.vat,
@@ -1364,25 +1372,35 @@ export class InvoiceService {
         }
     }
 
-    async lfiCommissionMerge(lfiData: any, commissionData: any) {
+
+    async lfiCommissionMerge(lfiData: any[], commissionData: any[]) {
         const resultMap = new Map();
 
-        // Add from array1
-        lfiData.forEach((item: { _id: any; }) => {
+        // Step 1: Merge without calculating
+        lfiData.forEach(item => {
             resultMap.set(item._id, { ...item });
         });
 
-        // Merge from array2
         commissionData.forEach(item => {
             if (resultMap.has(item._id)) {
-                Object.assign(resultMap.get(item._id), item); // merge if ID exists
+                const existing = resultMap.get(item._id);
+                const merged = { ...existing, ...item };
+                resultMap.set(item._id, merged);
             } else {
-                resultMap.set(item._id, { ...item }); // insert if new
+                resultMap.set(item._id, { ...item });
             }
+        });
+
+        // Step 2: Now calculate full_total after merge
+        resultMap.forEach((merged, id) => {
+            merged.full_total = (merged.full_total_data || 0) - (merged.full_total_commission || 0);
+            resultMap.set(id, merged);
         });
 
         return Array.from(resultMap.values());
     }
+
+
     async ensureCategories(inputArray) {
         // Define default values for each category
         const globalConfiData = await this.globalModel.find();
