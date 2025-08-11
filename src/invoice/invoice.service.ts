@@ -5777,6 +5777,21 @@ export class InvoiceService {
             </tr>`;
             }
 
+            const serviceFeeItem = data?.invoice_items.find(item => item.category === 'service_fee');
+            let service_fee = ''
+
+            for (const service_fee_items of serviceFeeItem.items) {
+                service_fee += ` <tr>
+                <td>${service_fee_items.description}</td>
+                <td class="table-total">${service_fee_items.quantity ?? 0}</td>
+                <td class="table-total">${service_fee_items.unit_price ?? 0}</td>
+                <td class="table-total">${service_fee_items.total ?? 0}</td>
+                <td class="table-total">5</td>
+                <td class="table-total">${service_fee_items.vat_amount ?? 0}</td>
+                <td class="table-total">${service_fee_items.full_total ?? 0}</td>
+            </tr>`;
+            }
+
             let collection_memo = ''
             let displayIndex = 0;
             for (const memo of data?.tpp_usage_per_lfi || []) {
@@ -6485,6 +6500,7 @@ export class InvoiceService {
                             </tr>
                         </tbody>
                     </table>
+                    
                 </div>
 
                 <div class="section">
@@ -6511,12 +6527,38 @@ export class InvoiceService {
                                 <td class="sub-total-row" colspan="6">SUB TOTAL</td>
                                 <td class="table-total">${dataSharingItem?.sub_total ?? 0}</td>
                             </tr>
-                            <tr class="vat-row">
-                                <td class="sub-total-row" colspan="6">VAT</td>
-                                <td class="table-total">${dataSharingItem?.vat_amount ?? 0}</td>
+                            
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">
+                        <span>Service Fee</span>
+                        
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Description </th>
+                                <th class="table-total">Vol</th>
+                                <th class="table-total">Unit Price</th>
+                                <th class="table-total">Taxable Amount </th>
+                                <th class="table-total">VAT % </th>
+                                <th class="table-total">VAT Amount  </th>
+                                <th class="table-total">Gross Amount </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${service_fee}
+                            <tr class="">
+                                <td class="sub-total-row " colspan="6">SUB TOTAL</td>
+                                <td class="table-total">${serviceFeeItem?.category_total ?? 0}</td>
                             </tr>
                         </tbody>
                     </table>
+                    
                 </div>
 
                 <div class="invoice-total">
