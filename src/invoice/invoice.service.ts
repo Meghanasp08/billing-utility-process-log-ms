@@ -6960,7 +6960,7 @@ export class InvoiceService {
                 lfi_list += `<tr>
                         <td class="table-td">00${lfi_count}</td>
                         <td class="table-td">${item?.lfi_data?.lfi_name} - ${item?.lfi_data?.lfi_id} (${item.full_total >= 0 ? 'Debit' : 'Credit'})</td>
-                        <td class="table-total">${ Math.abs(item.full_total)} </td>
+                        <td class="table-total">${Math.abs(item.full_total)} </td>
                     </tr>`
                 lfi_count++
 
@@ -7065,17 +7065,22 @@ export class InvoiceService {
                 <div class="collection-summary">
                     <div class="summary-title">${memo.lfi_name} Collection Summary:</div>
                     <div class="billing-period">Billing Period: ${firstDay} to ${lastDay}</div>
-                    <table>
-                    <thead>
-                        <tr>
-                        <th>Charge Type</th>
-                        <th class="table-total">Vol</th>
-                        <th class="table-total">Unit Price</th>
-                        <th class="table-total">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
+                `;
+
+                if (memo?.labels && memo?.labels.length != 0) {
+                    collection_memo += ` 
+                        <table>
+                        <thead>
+                            <tr>
+                            <th>Charge Type</th>
+                            <th class="table-total">Vol</th>
+                            <th class="table-total">Unit Price</th>
+                            <th class="table-total">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                    `;
+
 
                     for (const label of memo.labels || []) {
 
@@ -7086,13 +7091,16 @@ export class InvoiceService {
                         <td class="table-total">${label?.unit_price.toFixed(3) ?? 0}</td>
                         <td class="table-total">${label?.total.toFixed(2) ?? 0}</td>
                         </tr>
-                `;
+                        `;
                     }
-
-                if(memo?.commissions && memo?.commissions.length != 0){   
                     collection_memo += `
                         </tbody>
                         </table> 
+                    `
+                }
+
+                if (memo?.commissions && memo?.commissions.length != 0) {
+                    collection_memo += `
                         <div class="summary-title">Commissions</div>
                         <table>
                         <thead>
@@ -7108,7 +7116,7 @@ export class InvoiceService {
 
                     for (const label of memo.commissions || []) {
 
-                            collection_memo += `
+                        collection_memo += `
                             <tr>
                             <td>${label.label} </td>
                             <td class="table-total">${label?.quantity ?? 0}</td>
@@ -7116,13 +7124,14 @@ export class InvoiceService {
                             <td class="table-total">${label?.total.toFixed(2) ?? 0}</td>
                             </tr>
                     `;
-                    }     
-                }        
-                 
+                    }
+                    collection_memo += `
+                        </tbody>
+                        </table> 
+                    `
+                }
+
                 collection_memo += `
-                    </tbody>
-                    </table>
-            
                     <div class="invoice-summary-wrapper">
                         <div class="invoice-total">
                             <span class="invoice-total-label">SUB TOTAL (${memo.full_total >= 0 ? 'Debit' : 'Credit'})</span>
@@ -7137,7 +7146,6 @@ export class InvoiceService {
                 <div class="note">
                     Note- This is a collection memo on behalf of the LFIs and Nebras is authorized to collect fees on behalf of the Licensed Financial Institutes.
                 </div>
-                
 
             </div>
             </div>
@@ -7660,7 +7668,7 @@ export class InvoiceService {
                 
 
             <div class="total-row">
-                Total due <b>${ Math.abs(total_due).toFixed(2)}</b> by <b>${moment(data.due_date).format('Do MMMM YYYY')}</b>
+                Total due <b>${Math.abs(total_due).toFixed(2)}</b> by <b>${moment(data.due_date).format('Do MMMM YYYY')}</b>
             </div>
         </div>
 
@@ -8238,10 +8246,6 @@ export class InvoiceService {
             </thead>
             <tbody>
                 ${revenue_data}
-                <tr class="sub-total">
-                    <td class="" colspan="4">VAT</td>
-                    <td class="table-total">-</td>
-                </tr>
                 <tr class="sub-total">
                     <td class="" colspan="4">Grand Total</td>
                     <td class="table-total">${Math.abs(grand_total)?.toFixed(2)}</td>
