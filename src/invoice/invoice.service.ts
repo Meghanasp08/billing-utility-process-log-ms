@@ -5840,7 +5840,7 @@ export class InvoiceService {
 
                         collection_memo += `
                         <tr>
-                        <td>${label.label} ${label?.capped === true ? '**' : ''} </td>
+                        <td>${label.label} ${label?.key === 'merchant_collection_non_capped' ? '**' : ''} </td>
                         <td class="table-total">${label?.quantity ?? 0}</td>
                         <td class="table-total">${label?.unit_price.toFixed(3) ?? 0}</td>
                         <td class="table-total">${label?.total.toFixed(2) ?? 0}</td>
