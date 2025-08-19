@@ -8059,7 +8059,7 @@ export class InvoiceService {
 
             revenue_data += `
                 <tr class="sub-total">
-                <td colspan="3">Sub Total</td>
+                <td colspan="3">Net Total</td>
                 <td class="table-total">${Math.abs(tpp_data?.full_total).toFixed(2)}</td>
                 </tr>`;
         }
