@@ -760,7 +760,7 @@ export class UploadService {
             apiHubVolume = record.numberOfPages;
             totalApiHubFee *= apiHubVolume;
           } else {
-            apiHubVolume = record.volume ?? 1;
+            apiHubVolume = record.numberOfPages ?? 1;
             totalApiHubFee *= apiHubVolume;
           }
         }
@@ -964,7 +964,7 @@ export class UploadService {
             const lfiData = await this.lfiModel.findOne({
               lfi_id: record["raw_api_log_data.lfi_id"],
             });
-
+            console.log('iam lfi data', lfiData)
             if (!lfiData) return record;
 
             const psuId = record["raw_api_log_data.psu_id"];
@@ -984,6 +984,8 @@ export class UploadService {
                   ? lfiData.free_limit_unattended
                   : 0;
             const lfiMdpMultiplier = record['raw_api_log_data.is_large_corporate'] ? this.variables.dataLargeCorporateMdp.value : lfiData.mdp_rate;
+
+            console.log('iam lfi multiplier', lfiMdpMultiplier)
 
             const chargesData = psuGroupedMap[key];
 
@@ -1274,7 +1276,6 @@ export class UploadService {
               applicableFee = calculatedFee;
             } else if (record.group === 'data') {
               numberOfPages = Math.ceil(parseInt(record["raw_api_log_data.records"] ?? "0") / 100);
-              // Future LFI logic would be called here
             } else {
               calculatedFee = 0;
               applicableFee = calculatedFee;
@@ -1431,7 +1432,9 @@ export class UploadService {
       if (groupData?.key_name === 'balance' || groupData?.key_name === 'confirmation') {
         group = "data";
       }
-
+      if (record.success && (groupData?.key_name === 'payment-bulk' || groupData?.key_name === 'payment-non-bulk')) {
+        record.success = this.paymentStatus.includes(record['payment_logs.status'])
+      }
       if (record.chargeable && record.success &&
         (record["raw_api_log_data.url"].includes('confirmation-of-payee') || record["raw_api_log_data.url"].includes('balances'))) {
         const filterData = processedData.filter(logData =>
@@ -1462,9 +1465,7 @@ export class UploadService {
       } else if (!record.chargeable || !record.success) {
         api_hub_fee = 0;
       }
-      if (record.success && (groupData?.key_name === 'payment-bulk' || groupData?.key_name === 'payment-non-bulk')) {
-        record.success = this.paymentStatus.includes(record['payment_logs.status'])
-      }
+
       return {
         ...record,
         group,
