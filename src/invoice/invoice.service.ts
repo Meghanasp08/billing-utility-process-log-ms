@@ -112,7 +112,7 @@ export class InvoiceService {
         const dataServiceFeePercentage = globalConfiData.find(item => item.key === "serviceFeePercentage")?.value ?? 0;
         const nonLargeValueCapMerchant = globalConfiData.find(item => item.key === "nonLargeValueCapMerchant")?.value ?? 0;
 
-        const vatPercent = vat?.value ?? 5
+        const vatPercent = vat?.value ?? 5 ;
         const vatDecimal = vatPercent / 100;
         nonLargeValueMerchantBps = Number(nonLargeValueMerchantBps) / 10000
         const tppData = await this.tppDataModel.find();
