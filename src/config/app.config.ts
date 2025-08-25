@@ -192,36 +192,36 @@ export const paymentLabelFilters = [
             { key: "type", operator: "ne", value: "corporate" }
         ]
     },
-    {
-        key: "insurance_brokerage_collection",
-        Label: "Insurance Brokerage Collection",
-        filterParams: [
-            { key: "group", operator: "eq", value: "data" },
-            { key: "successfullQuote", operator: "eq", value: true },
-            { key: "chargeable", operator: "eq", value: true },
-            { key: "success", operator: "eq", value: true },
-            { key: "duplicate", operator: "eq", value: false },
-            { key: "api_category", operator: "eq", value: "Insurance Quote Sharing" },
-            { key: "discount_type", operator: "ne", value: "cop" },
-            { key: "discount_type", operator: "ne", value: "balance" },
-            { key: "type", operator: "ne", value: "corporate" }
-        ]
-    },
-    {
-        key: "fx_brokerage_collection",
-        Label: "FX Brokerage Collection",
-        filterParams: [
-            { key: "group", operator: "eq", value: "data" },
-            { key: "successfullQuote", operator: "eq", value: true },
-            { key: "chargeable", operator: "eq", value: true },
-            { key: "success", operator: "eq", value: true },
-            { key: "duplicate", operator: "eq", value: false },
-            { key: "api_category", operator: "eq", value: "FX Quotes" },
-            { key: "discount_type", operator: "ne", value: "cop" },
-            { key: "discount_type", operator: "ne", value: "balance" },
-            { key: "type", operator: "ne", value: "corporate" }
-        ]
-    },
+    // {
+    //     key: "insurance_brokerage_collection",
+    //     Label: "Insurance Brokerage Collection",
+    //     filterParams: [
+    //         { key: "group", operator: "eq", value: "data" },
+    //         { key: "successfullQuote", operator: "eq", value: true },
+    //         { key: "chargeable", operator: "eq", value: true },
+    //         { key: "success", operator: "eq", value: true },
+    //         { key: "duplicate", operator: "eq", value: false },
+    //         { key: "api_category", operator: "eq", value: "Insurance Quote Sharing" },
+    //         { key: "discount_type", operator: "ne", value: "cop" },
+    //         { key: "discount_type", operator: "ne", value: "balance" },
+    //         { key: "type", operator: "ne", value: "corporate" }
+    //     ]
+    // },
+    // {
+    //     key: "fx_brokerage_collection",
+    //     Label: "FX Brokerage Collection",
+    //     filterParams: [
+    //         { key: "group", operator: "eq", value: "data" },
+    //         { key: "successfullQuote", operator: "eq", value: true },
+    //         { key: "chargeable", operator: "eq", value: true },
+    //         { key: "success", operator: "eq", value: true },
+    //         { key: "duplicate", operator: "eq", value: false },
+    //         { key: "api_category", operator: "eq", value: "FX Quotes" },
+    //         { key: "discount_type", operator: "ne", value: "cop" },
+    //         { key: "discount_type", operator: "ne", value: "balance" },
+    //         { key: "type", operator: "ne", value: "corporate" }
+    //     ]
+    // },
 
     //LFI
     {
