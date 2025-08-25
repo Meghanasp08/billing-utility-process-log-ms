@@ -56,8 +56,24 @@ export const paymentLabelFilters = [
         Label: "Corporate Payment",
         filterParams: [
             { key: "group", operator: "eq", value: "payment-bulk" },
+            { key: "successfullQuote", operator: "eq", value: false },
             { key: "chargeable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
+            { key: "api_category", operator: "eq", value: null },
+            { key: "discount_type", operator: "eq", value: null },
+            { key: "type", operator: "eq", value: null }
+        ]
+    },
+    {
+        key: "payment_data",
+        Label: "Payment Data",
+        filterParams: [
+            { key: "group", operator: "eq", value: "payment-data" },
+            { key: "successfullQuote", operator: "eq", value: false },
+            { key: "chargeable", operator: "eq", value: true },
+            { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
             { key: "api_category", operator: "eq", value: null },
             { key: "discount_type", operator: "eq", value: null },
             { key: "type", operator: "eq", value: null }
@@ -68,21 +84,39 @@ export const paymentLabelFilters = [
         Label: "Payment Initiation",
         filterParams: [
             { key: "group", operator: "eq", value: "payment-non-bulk" },
+            { key: "successfullQuote", operator: "eq", value: false },
             { key: "chargeable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
             { key: "api_category", operator: "eq", value: null },
             { key: "discount_type", operator: "eq", value: null },
             { key: "type", operator: "eq", value: null }
         ]
     },
     {
-        key: "insurance",
-        Label: "Insurance",
+        key: "insurance_data_sharing",
+        Label: "Insurance Data Sharing",
         filterParams: [
             { key: "group", operator: "eq", value: "insurance" },
+            { key: "successfullQuote", operator: "eq", value: false },
             { key: "chargeable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
-            { key: "api_category", operator: "eq", value: null },
+            { key: "duplicate", operator: "eq", value: false },
+            { key: "api_category", operator: "eq", value: 'Insurance Data Sharing' },
+            { key: "discount_type", operator: "eq", value: null },
+            { key: "type", operator: "eq", value: null }
+        ]
+    },
+    {
+        key: "insurance_quote_sharing",
+        Label: "Insurance Quote Sharing",
+        filterParams: [
+            { key: "group", operator: "eq", value: "insurance" },
+            { key: "successfullQuote", operator: "eq", value: false },
+            { key: "chargeable", operator: "eq", value: true },
+            { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
+            { key: "api_category", operator: "eq", value: 'Insurance Quote Sharing' },
             { key: "discount_type", operator: "eq", value: null },
             { key: "type", operator: "eq", value: null }
         ]
@@ -92,8 +126,10 @@ export const paymentLabelFilters = [
         Label: "Setup and Consent",
         filterParams: [
             { key: "group", operator: "eq", value: "data" },
+            { key: "successfullQuote", operator: "eq", value: false },
             { key: "chargeable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
             { key: "api_category", operator: "eq", value: "setup" },
             { key: "discount_type", operator: "eq", value: null },
             { key: "type", operator: "eq", value: null }
@@ -104,8 +140,10 @@ export const paymentLabelFilters = [
         Label: "Corporate Data",
         filterParams: [
             { key: "group", operator: "eq", value: "data" },
+            { key: "successfullQuote", operator: "eq", value: false },
             { key: "chargeable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
             { key: "api_category", operator: "eq", value: null },
             { key: "discount_type", operator: "eq", value: null },
             { key: "type", operator: "eq", value: "corporate" }
@@ -116,8 +154,10 @@ export const paymentLabelFilters = [
         Label: "Confirmation of Payee(Discounted)",
         filterParams: [
             { key: "group", operator: "eq", value: "data" },
+            { key: "successfullQuote", operator: "eq", value: false },
             { key: "chargeable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
             { key: "api_category", operator: "eq", value: null },
             { key: "discount_type", operator: "eq", value: "cop" },
             { key: "type", operator: "eq", value: null }
@@ -128,8 +168,10 @@ export const paymentLabelFilters = [
         Label: "Balance(Discounted)",
         filterParams: [
             { key: "group", operator: "eq", value: "data" },
+            { key: "successfullQuote", operator: "eq", value: false },
             { key: "chargeable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
             { key: "api_category", operator: "eq", value: null },
             { key: "discount_type", operator: "eq", value: "balance" },
             { key: "type", operator: "eq", value: null }
@@ -140,9 +182,41 @@ export const paymentLabelFilters = [
         Label: "Bank Data Sharing",
         filterParams: [
             { key: "group", operator: "eq", value: "data" },
+            { key: "successfullQuote", operator: "eq", value: false },
             { key: "chargeable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
             { key: "api_category", operator: "ne", value: "setup" },
+            { key: "discount_type", operator: "ne", value: "cop" },
+            { key: "discount_type", operator: "ne", value: "balance" },
+            { key: "type", operator: "ne", value: "corporate" }
+        ]
+    },
+    {
+        key: "insurance_brokerage_collection",
+        Label: "Insurance Brokerage Collection",
+        filterParams: [
+            { key: "group", operator: "eq", value: "data" },
+            { key: "successfullQuote", operator: "eq", value: true },
+            { key: "chargeable", operator: "eq", value: true },
+            { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
+            { key: "api_category", operator: "eq", value: "Insurance Quote Sharing" },
+            { key: "discount_type", operator: "ne", value: "cop" },
+            { key: "discount_type", operator: "ne", value: "balance" },
+            { key: "type", operator: "ne", value: "corporate" }
+        ]
+    },
+    {
+        key: "fx_brokerage_collection",
+        Label: "FX Brokerage Collection",
+        filterParams: [
+            { key: "group", operator: "eq", value: "data" },
+            { key: "successfullQuote", operator: "eq", value: true },
+            { key: "chargeable", operator: "eq", value: true },
+            { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
+            { key: "api_category", operator: "eq", value: "FX Quotes" },
             { key: "discount_type", operator: "ne", value: "cop" },
             { key: "discount_type", operator: "ne", value: "balance" },
             { key: "type", operator: "ne", value: "corporate" }
@@ -151,14 +225,34 @@ export const paymentLabelFilters = [
 
     //LFI
     {
-        key: "merchant_collection",
-        Label: "Merchant Collection",
+        key: "merchant_collection_capped",
+        Label: "Merchant Collection Capped",
         filterParams: [
             { key: "group", operator: "eq", value: "payment-bulk" },
             { key: "group", operator: "eq", value: "payment-non-bulk" },
             { key: "type", operator: "eq", value: "merchant" },
+            { key: "isCapped", operator: "eq", value: true },
+            { key: "successfullQuote", operator: "eq", value: false },
             { key: "lfiChargable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
+            { key: "raw_api_log_data.payment_type", operator: "ne", value: "LargeValueCollection" },
+            { key: "api_category", operator: "eq", value: null },
+            { key: "discount_type", operator: "eq", value: null }
+        ]
+    },
+    {
+        key: "merchant_collection_non_capped",
+        Label: "Merchant Collection Non-Capped",
+        filterParams: [
+            { key: "group", operator: "eq", value: "payment-bulk" },
+            { key: "group", operator: "eq", value: "payment-non-bulk" },
+            { key: "type", operator: "eq", value: "merchant" },
+            { key: "isCapped", operator: "eq", value: false },
+            { key: "successfullQuote", operator: "eq", value: false },
+            { key: "lfiChargable", operator: "eq", value: true },
+            { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
             { key: "raw_api_log_data.payment_type", operator: "ne", value: "LargeValueCollection" },
             { key: "api_category", operator: "eq", value: null },
             { key: "discount_type", operator: "eq", value: null }
@@ -171,8 +265,10 @@ export const paymentLabelFilters = [
             { key: "group", operator: "eq", value: "payment-bulk" },
             { key: "group", operator: "eq", value: "payment-non-bulk" },
             { key: "type", operator: "eq", value: "peer-2-peer" },
+            { key: "successfullQuote", operator: "eq", value: false },
             { key: "lfiChargable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
             { key: "raw_api_log_data.payment_type", operator: "ne", value: "LargeValueCollection" },
             { key: "api_category", operator: "eq", value: null },
             { key: "discount_type", operator: "eq", value: null }
@@ -185,8 +281,10 @@ export const paymentLabelFilters = [
             { key: "group", operator: "eq", value: "payment-bulk" },
             { key: "group", operator: "eq", value: "payment-non-bulk" },
             { key: "type", operator: "eq", value: "me-2-me" },
+            { key: "successfullQuote", operator: "eq", value: false },
             { key: "lfiChargable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
             { key: "raw_api_log_data.payment_type", operator: "ne", value: "LargeValueCollection" },
             { key: "api_category", operator: "eq", value: null },
             { key: "discount_type", operator: "eq", value: null }
@@ -199,8 +297,10 @@ export const paymentLabelFilters = [
             { key: "group", operator: "eq", value: "payment-bulk" },
             { key: "group", operator: "eq", value: "payment-non-bulk" },
             { key: "raw_api_log_data.payment_type", operator: "eq", value: "LargeValueCollection" },
+            { key: "successfullQuote", operator: "eq", value: false },
             { key: "lfiChargable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
             { key: "api_category", operator: "eq", value: null },
             { key: "discount_type", operator: "eq", value: null },
             { key: "type", operator: "eq", value: null }
@@ -212,8 +312,10 @@ export const paymentLabelFilters = [
         filterParams: [
             { key: "group", operator: "eq", value: "payment-bulk" },
             { key: "type", operator: "eq", value: "corporate" },
+            { key: "successfullQuote", operator: "eq", value: false },
             { key: "lfiChargable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
             { key: "api_category", operator: "eq", value: null },
             { key: "discount_type", operator: "eq", value: null }
         ]
@@ -224,8 +326,10 @@ export const paymentLabelFilters = [
         filterParams: [
             { key: "group", operator: "eq", value: "data" },
             { key: "type", operator: "eq", value: "corporate" },
+            { key: "successfullQuote", operator: "eq", value: false },
             { key: "lfiChargable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
             { key: "api_category", operator: "eq", value: null },
             { key: "discount_type", operator: "eq", value: null }
         ]
@@ -234,15 +338,50 @@ export const paymentLabelFilters = [
         key: "customer_data",
         Label: "Customer Data",
         filterParams: [
-            { key: "group", operator: "eq", value: "data" },
+            // { key: "group", operator: "eq", value: "data" },
+            { key: "successfullQuote", operator: "eq", value: false },
             { key: "lfiChargable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
             { key: "api_category", operator: "ne", value: "setup" },
             { key: "discount_type", operator: "ne", value: "cop" },
             { key: "discount_type", operator: "ne", value: "balance" },
             { key: "type", operator: "ne", value: "corporate" }
         ]
-    }
+    },
+
+//Commissions
+    {
+        key: "fx_brokerage_collection",
+        Label: "FX Brokerage Collection",
+        filterParams: [
+            // { key: "group", operator: "eq", value: "data" },
+            { key: "successfullQuote", operator: "eq", value: true },
+            { key: "chargeable", operator: "eq", value: true },
+            { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
+            { key: "api_category", operator: "eq", value: "FX Quotes" },
+            { key: "discount_type", operator: "ne", value: "cop" },
+            { key: "discount_type", operator: "ne", value: "balance" },
+            { key: "type", operator: "ne", value: "corporate" }
+        ]
+    },
+    {
+        key: "insurance_brokerage_collection",
+        Label: "Insurance Brokerage Collection",
+        filterParams: [
+            { key: "group", operator: "eq", value: "data" },
+            { key: "successfullQuote", operator: "eq", value: true },
+            { key: "chargeable", operator: "eq", value: true },
+            { key: "success", operator: "eq", value: true },
+            { key: "duplicate", operator: "eq", value: false },
+            { key: "api_category", operator: "eq", value: "Insurance Quote Sharing" },
+            { key: "discount_type", operator: "ne", value: "cop" },
+            { key: "discount_type", operator: "ne", value: "balance" },
+            { key: "type", operator: "ne", value: "corporate" }
+        ]
+    },
+
 ]
 
 
