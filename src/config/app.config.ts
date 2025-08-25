@@ -370,7 +370,7 @@ export const paymentLabelFilters = [
         key: "insurance_brokerage_collection",
         Label: "Insurance Brokerage Collection",
         filterParams: [
-            { key: "group", operator: "eq", value: "data" },
+            // { key: "group", operator: "eq", value: "data" },
             { key: "successfullQuote", operator: "eq", value: true },
             { key: "chargeable", operator: "eq", value: true },
             { key: "success", operator: "eq", value: true },
@@ -460,6 +460,15 @@ export const filter_master = [
             { value: null, label: "All" },
             { value: true, label: "True" }
         ]
-    }
+    },
+    {
+        key: "successfullQuote",
+        operators: ["eq", '$ne'],
+        label: "Success Full Quote",
+        options: [
+            { value: null, label: "All" },
+            { value: true, label: "True" }
+        ]
+    },
 ]
 
