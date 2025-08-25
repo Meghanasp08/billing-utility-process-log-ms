@@ -197,7 +197,7 @@ export class InvoiceService {
                                                     }
                                                 ]
                                             },
-                                            then: "Other Payment" //-- paymentApiHubFee
+                                            then: "Payment Data" //-- paymentApiHubFee
                                         },
                                         {
                                             case: {
@@ -416,7 +416,7 @@ export class InvoiceService {
                                                     [
                                                         "Corporate Payment",
                                                         "Payment Initiation",
-                                                        "Other Payment"
+                                                        "Payment Data"
                                                     ]
                                                 ]
                                             },
@@ -580,7 +580,7 @@ export class InvoiceService {
                                             then: [
                                                 "Corporate Payment",
                                                 "Payment Initiation",
-                                                "Other Payment"
+                                                "Payment Data"
                                             ]
                                         },
                                         {
@@ -657,10 +657,10 @@ export class InvoiceService {
                                                                 case: {
                                                                     $eq: [
                                                                         "$$desc",
-                                                                        "Other Payment"
+                                                                        "Payment Data"
                                                                     ]
                                                                 },
-                                                                then: "other_payment"
+                                                                then: "payment_data"
                                                             },
                                                             {
                                                                 case: {
@@ -781,7 +781,7 @@ export class InvoiceService {
                                                                         case: {
                                                                             $eq: [
                                                                                 "$$desc",
-                                                                                "Other Payment"
+                                                                                "Payment Data"
                                                                             ]
                                                                         },
                                                                         then: paymentApiHubFee
@@ -2818,7 +2818,7 @@ export class InvoiceService {
                                                 }
                                             ]
                                         },
-                                        then: "Other Payment" //--paymentApiHubFee
+                                        then: "Payment Data" //--paymentApiHubFee
                                     },
                                     {
                                         case: {
@@ -3039,7 +3039,7 @@ export class InvoiceService {
                                                 [
                                                     "Corporate Payment",
                                                     "Payment Initiation",
-                                                    "Other Payment"
+                                                    "Payment Data"
                                                 ]
                                             ]
                                         },
@@ -3193,10 +3193,10 @@ export class InvoiceService {
                                                             case: {
                                                                 $eq: [
                                                                     "$$item.description",
-                                                                    "Other Payment"
+                                                                    "Payment Data"
                                                                 ]
                                                             },
-                                                            then: "other_payment"
+                                                            then: "payment_data"
                                                         },
                                                         {
                                                             case: {
@@ -3305,7 +3305,7 @@ export class InvoiceService {
                                         then: [
                                             "Corporate Payment",
                                             "Payment Initiation",
-                                            "Other Payment"
+                                            "Payment Data"
                                         ]
                                     },
                                     {
@@ -7282,7 +7282,7 @@ export class InvoiceService {
                             <span class="invoice-total-amount">AED ${(Math.abs(memo?.full_total)).toFixed(2) ?? 0}</span> 
                         </div>
                         <div class="note">
-                            ** - The volume shown for this entry represents the aggregated value for amount in payment log for non-capped transactions
+                            ** - The volume indicated for this entry reflects the aggregated amount for non-capped transactions.
                         </div>
                     </div>
                 </div>
@@ -8400,7 +8400,7 @@ export class InvoiceService {
         </table>
 
         <div class="note">
-            ** - The volume shown for this entry represents the aggregated value for amount in payment log for non-capped transactions
+            ** - The volume indicated for this entry reflects the aggregated amount for non-capped transactions.
         </div>
         <div class="note">
             Note: The Grand Total is Net adjusted amount against commission amount.
