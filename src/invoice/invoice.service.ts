@@ -7026,7 +7026,6 @@ export class InvoiceService {
         const timestamp = currentDate.getTime();
         const invoice_data = await this.invoiceTppAggregation(data)
         let attachment_html = await this.invoiceTemplate(invoice_data)
-        console.log("HTML", attachment_html)
         const attachmentPath = `./temp/invoice${timestamp}.pdf`
         console.log("LOG!")
         const browser = await puppeteer.launch({
@@ -7121,11 +7120,11 @@ export class InvoiceService {
 
             if (lfi_list && lfi_list.trim() !== '') {
                 tableHtml = `
-                <table>
+                <table class="table-bottom">
                 <thead>
                     <tr>
-                    <th>No.</th>
-                    <th>Licensed Financial Institutions</th>
+                    <th style="width: 7%">No.</th>
+                    <th style="width: 75%">Licensed Financial Institutions</th>
                     <th class="table-total">Total</th>
                     </tr>
                 </thead>
@@ -7185,6 +7184,7 @@ export class InvoiceService {
             let collection_memo = ''
             let displayIndex = 0;
             for (const memo of data?.tpp_usage_per_lfi || []) {
+                console.log("MEMO",memo)
                 displayIndex++;
                 collection_memo += ` 
             <div class="new-page-section">
@@ -7193,13 +7193,13 @@ export class InvoiceService {
                 <div class="header">
                     <div>
                         <div class="title">Collection Memo</div>
-                        <h3>Nebras Collection Services</h3>
+                        <h3 style="margin-top:7px; margin-bottom:8px;">Nebras Collection Services</h3>
                         <div class="memo-number">Collection Memo 00${displayIndex}</div>
                         <div class="date">${moment(data.generated_at).format('D MMMM YYYY')}</div>
                         <div class="lfi-info">
                             <div>${memo.lfi_name}</div>
-                            <div class="lfi-info-space" style="margin-bottom: 1em;">${memo._id}</div>
-                            <div class="lfi-info-space">4567 Business Park<br>Innovation City, IC 12345<br>United Arab
+                            <div class="lfi-info-space" style="margin-bottom: 0.8rem;">${memo._id}</div>
+                            <div class="lfi-info-space">4567 Business Park, Innovation City, IC 12345<br>United Arab
                                 Emirates</div>
                         </div>
                     </div>
@@ -7214,6 +7214,12 @@ export class InvoiceService {
                 if (memo?.labels && memo?.labels.length != 0) {
                     collection_memo += ` 
                         <table>
+                        <colgroup>
+                            <col style="width: 57%">
+                            <col style="width: 10%">
+                            <col style="width: 18%">
+                            <col style="width: 15%">
+                        </colgroup>
                         <thead>
                             <tr>
                             <th>Charge Type</th>
@@ -7247,6 +7253,12 @@ export class InvoiceService {
                     collection_memo += `
                         <div class="summary-title">Commissions</div>
                         <table>
+                        <colgroup>
+                            <col style="width: 57%">
+                            <col style="width: 10%">
+                            <col style="width: 18%">
+                            <col style="width: 15%">
+                        </colgroup>
                         <thead>
                             <tr>
                             <th>Charge Type</th>
@@ -7287,7 +7299,7 @@ export class InvoiceService {
                     </div>
                 </div>
 
-                <div class="note">
+                <div class="note" style="margin-top:0px;">
                     Note- This is a collection memo on behalf of the LFIs and Nebras is authorized to collect fees on behalf of the Licensed Financial Institutes.
                 </div>
 
@@ -7518,7 +7530,7 @@ export class InvoiceService {
         .section-title {
             font-weight: bold;
             color: #1b194f;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -7552,7 +7564,7 @@ export class InvoiceService {
 
        .invoice-summary-wrapper {            
             margin-top: 30px;
-            margin-bottom: 20px;
+            margin-bottom: 9px;
         }
             
         .invoice-total {
@@ -7602,7 +7614,7 @@ export class InvoiceService {
         }
 
         .lfi-info {
-            margin-top: 20px;
+            margin-top: 12px;
             color: #1b194f;
             font-weight: bold;
         }
@@ -7614,7 +7626,8 @@ export class InvoiceService {
 
 
         .collection-summary {
-            margin: 30px 0;
+            margin-top: 20px;
+            margin-bottom: 0;   
         }
 
         .summary-title {
@@ -7784,9 +7797,9 @@ export class InvoiceService {
             <table  class="table-bottom">
                 <thead>
                     <tr>
-                        <th>No.</th>
+                        <th style="width: 7%">No.</th>
                         <th>Description </th>
-                        <th class="table-total">Taxable Amount11 </th>
+                        <th class="table-total">Taxable Amount </th>
                         <th class="table-total">VAT % </th>
                         <th class="table-total">VAT Amount  </th>
                         <th class="table-total">Gross Amount  </th>
