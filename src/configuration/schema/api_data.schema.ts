@@ -28,6 +28,9 @@ export class ApiDataConfiguration {
 
     @Prop({ type: Boolean, default: false })
     chargeable_quote_fee: boolean;
+
+    @Prop({ required: false })
+    commission_category: string;
 }
 
 export const ApiDataConfigurationSchema = SchemaFactory.createForClass(ApiDataConfiguration);

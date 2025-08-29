@@ -238,6 +238,23 @@ export class ProfileController {
     try {
       const logData = await this.profileService.getTppDetails(search, limit, offset);
       return {
+        message: 'Tpp list',
+        result: logData,
+        statusCode: HttpStatus.OK
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Retrieve details of TPP.' })
+  @Get('tppdetails/:id')
+  @Claims(Claim.TPP_CONFIGURATION_VIEW)
+  async getTppindividualDetails(@Param('id') id: string,) {
+    try {
+      const logData = await this.profileService.getTppindividualDetails(id);
+      return {
         message: 'Tpp Details',
         result: logData,
         statusCode: HttpStatus.OK

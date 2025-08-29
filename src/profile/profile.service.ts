@@ -750,6 +750,18 @@ export class ProfileService {
       throw new Error("Failed to fetch billing details");
     }
   }
+
+  async getTppindividualDetails(tpp_id: string,) {
+    try {
+
+      const result = await this.tppModel.findOne({ tpp_id }).exec();
+      return result;
+
+    } catch (error) {
+      console.error("Error fetching billing details:", error);
+      throw new Error("Failed to fetch billing details");
+    }
+  }
   async getLogDataToCSV(queryParameters: QueryParametersDTO) {
     const filter: any = {};
 
