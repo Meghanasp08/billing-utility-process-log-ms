@@ -1383,7 +1383,7 @@ export class UploadService {
       const success = /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.tpp_response_code_group"]) &&
         /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.lfi_response_code_group"]);
 
-      if (islfiChargable || isChargeable) {
+      if (islfiChargable || isChargeable || success) {
         let errorTppLfi = !record["raw_api_log_data.tpp_id"] || !record["raw_api_log_data.tpp_name"] || !record["raw_api_log_data.lfi_id"] || !record["raw_api_log_data.lfi_name"];
         if (errorTppLfi) {
           await this.uploadLog.findByIdAndUpdate(
