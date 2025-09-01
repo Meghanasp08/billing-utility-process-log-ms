@@ -246,6 +246,7 @@ export class ProfileController {
       throw error;
     }
   }
+  
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Retrieve details of TPP.' })
