@@ -7036,7 +7036,7 @@ export class InvoiceService {
             headless: 'new',
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
-
+        
         const page = await browser.newPage()
         await page.setContent(attachment_html, {
             waitUntil: 'networkidle0',
