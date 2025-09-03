@@ -2143,7 +2143,7 @@ export class InvoiceService {
                                                     ]
                                                 }
                                             ]
-                                        },
+                                        }, 
                                         then: "Setup and Consent" //-- paymentApiHubFee
                                     },
                                     {
