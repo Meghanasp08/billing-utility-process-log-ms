@@ -18,6 +18,12 @@ export class ConfigurationFee {
 
     @Prop({ type: Number, required: true })
     health: number;
+
+    @Prop({ type: Number, required: true })
+    life: number;
+
+    @Prop({ type: Number, required: true })
+    employment_ILO: number;
 }
 
 export type BrokerageConfigurationDocument = BrokerageConfiguration & Document;
