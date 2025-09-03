@@ -523,7 +523,7 @@ export class InvoiceService {
                     {
                         $addFields: {
                             vat_amount: {
-                                $round: [
+                                $trunc: [
                                     {
                                         $multiply: ["$total", vatDecimal]
                                     },
@@ -1993,8 +1993,9 @@ export class InvoiceService {
                 {
                     $match: {
                         "raw_api_log_data.tpp_id": data?.tpp_id,
-                        "chargeable": true,
-                        "success": true,
+                        chargeable: true,
+                        success: true,
+                        duplicate: false,
                         $expr: {
                             $and: [
                                 {
@@ -2024,22 +2025,63 @@ export class InvoiceService {
                                 branches: [
                                     {
                                         case: {
-                                            $eq: ["$group", "payment-bulk"]
+                                            $and: [
+                                                {
+                                                    $eq: [
+                                                        "$group",
+                                                        "payment-bulk"
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        false
+                                                    ]
+                                                }
+                                            ]
                                         },
-                                        then: "Corporate Payment"   //-- paymentApiHubFee
+                                        then: "Corporate Payment" //-- paymentApiHubFee
                                     },
                                     {
                                         case: {
-                                            $eq: [
-                                                "$group",
-                                                "payment-non-bulk"
+                                            $and: [
+                                                {
+                                                    $eq: [
+                                                        "$group",
+                                                        "payment-data"
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        false
+                                                    ]
+                                                }
                                             ]
                                         },
-                                        then: "Payment Initiation"    //--paymentApiHubFee
+                                        then: "Payment Data" //-- paymentApiHubFee
                                     },
                                     {
-                                        case:
-                                        {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: [
+                                                        "$group",
+                                                        "payment-non-bulk"
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        false
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "Payment Initiation" //--paymentApiHubFee
+                                    },
+                                    {
+                                        case: {
                                             $and: [
                                                 {
                                                     $eq: ["$group", "insurance"]
@@ -2049,14 +2091,19 @@ export class InvoiceService {
                                                         "$api_category",
                                                         "Insurance Data Sharing"
                                                     ]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        false
+                                                    ]
                                                 }
                                             ]
                                         },
-                                        then: "Insurance Data Sharing"    //-- insuranceApiHubFee
+                                        then: "Insurance Data Sharing" //-- insuranceApiHubFee
                                     },
                                     {
-                                        case:
-                                        {
+                                        case: {
                                             $and: [
                                                 {
                                                     $eq: ["$group", "insurance"]
@@ -2066,10 +2113,16 @@ export class InvoiceService {
                                                         "$api_category",
                                                         "Insurance Quote Sharing"
                                                     ]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        false
+                                                    ]
                                                 }
                                             ]
                                         },
-                                        then: "Insurance Quote Sharing"    //-- insuranceApiHubFee
+                                        then: "Insurance Quote Sharing" //-- insuranceApiHubFee
                                     },
                                     {
                                         case: {
@@ -2080,12 +2133,18 @@ export class InvoiceService {
                                                 {
                                                     $eq: [
                                                         "$api_category",
-                                                        "Setup and Consent"             //////
+                                                        "Setup and Consent" 
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        false
                                                     ]
                                                 }
                                             ]
                                         },
-                                        then: "Setup and Consent"    //-- paymentApiHubFee
+                                        then: "Setup and Consent" //-- paymentApiHubFee
                                     },
                                     {
                                         case: {
@@ -2095,10 +2154,16 @@ export class InvoiceService {
                                                 },
                                                 {
                                                     $eq: ["$type", "corporate"]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        false
+                                                    ]
                                                 }
                                             ]
                                         },
-                                        then: "Corporate Data"   //-- paymentApiHubFee
+                                        then: "Corporate Data" //-- paymentApiHubFee
                                     },
                                     {
                                         case: {
@@ -2108,10 +2173,16 @@ export class InvoiceService {
                                                 },
                                                 {
                                                     $eq: ["$discount_type", "cop"]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        false
+                                                    ]
                                                 }
                                             ]
                                         },
-                                        then: "Confirmation of Payee(Discounted)"  //-- discountApiHubFee
+                                        then: "Confirmation of Payee(Discounted)" //-- discountApiHubFee
                                     },
                                     {
                                         case: {
@@ -2124,16 +2195,70 @@ export class InvoiceService {
                                                         "$discount_type",
                                                         "balance"
                                                     ]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        false
+                                                    ]
                                                 }
                                             ]
                                         },
-                                        then: "Balance(Discounted)"  //-- discountApiHubFee
+                                        then: "Balance(Discounted)" //-- discountApiHubFee
                                     },
                                     {
                                         case: {
-                                            $eq: ["$group", "data"]
+                                            $and: [
+                                                {
+                                                    $eq: ["$group", "data"]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        false
+                                                    ]
+                                                }
+                                            ]
                                         },
-                                        then: "Bank Data Sharing"   //--paymentApiHubFee
+                                        then: "Bank Data Sharing" //--paymentApiHubFee
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        true
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$api_category",
+                                                        "Insurance Quote Sharing"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "Insurance Brokerage Collection"
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        true
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$api_category",
+                                                        "FX Quotes"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        then: "FX Brokerage Collection"
                                     }
                                 ],
                                 default: null
@@ -2171,13 +2296,14 @@ export class InvoiceService {
 
             ]
         );
+        
         const result_of_lfi = await this.logsModel.aggregate(
             [
                 {
                     $match: {
                         "raw_api_log_data.tpp_id": data?.tpp_id,
-                        lfiChargable: true,
                         success: true,
+                        duplicate: false,
                         $expr: {
                             $and: [
                                 {
@@ -2204,7 +2330,7 @@ export class InvoiceService {
                 },
                 {
                     $addFields: {
-                        category: {
+                        label: {
                             $switch: {
                                 branches: [
                                     {
@@ -2222,6 +2348,18 @@ export class InvoiceService {
                                                 {
                                                     $eq: ["$type", "merchant"]
                                                 },
+                                                // {
+                                                //     $eq: ["$isCapped", true]
+                                                // },
+                                                {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        false
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$lfiChargable", true]
+                                                },
                                                 {
                                                     $ne: [
                                                         "$raw_api_log_data.payment_type",
@@ -2230,8 +2368,45 @@ export class InvoiceService {
                                                 }
                                             ]
                                         },
-                                        then: "Merchant Collection"   //-- nonLargeValueMerchantBps/10000
+                                        then: "Merchant Collection"
                                     },
+                                    // {
+                                    //     case: {
+                                    //         $and: [
+                                    //             {
+                                    //                 $in: [
+                                    //                     "$group",
+                                    //                     [
+                                    //                         "payment-bulk",
+                                    //                         "payment-non-bulk"
+                                    //                     ]
+                                    //                 ]
+                                    //             },
+                                    //             {
+                                    //                 $eq: ["$type", "merchant"]
+                                    //             },
+                                    //             {
+                                    //                 $eq: ["$isCapped", false]
+                                    //             },
+                                    //             {
+                                    //                 $eq: [
+                                    //                     "$successfullQuote",
+                                    //                     false
+                                    //                 ]
+                                    //             },
+                                    //             {
+                                    //                 $eq: ["$lfiChargable", true]
+                                    //             },
+                                    //             {
+                                    //                 $ne: [
+                                    //                     "$raw_api_log_data.payment_type",
+                                    //                     "LargeValueCollection"
+                                    //                 ]
+                                    //             }
+                                    //         ]
+                                    //     },
+                                    //     then: "Merchant Collection Non-Capped"
+                                    // },
                                     {
                                         case: {
                                             $and: [
@@ -2248,6 +2423,15 @@ export class InvoiceService {
                                                     $eq: ["$type", "peer-2-peer"]
                                                 },
                                                 {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        false
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$lfiChargable", true]
+                                                },
+                                                {
                                                     $ne: [
                                                         "$raw_api_log_data.payment_type",
                                                         "LargeValueCollection"
@@ -2255,7 +2439,7 @@ export class InvoiceService {
                                                 }
                                             ]
                                         },
-                                        then: "Peer-to-Peer"   //paymentNonLargevalueFeePeer
+                                        then: "Peer-to-Peer"
                                     },
                                     {
                                         case: {
@@ -2273,6 +2457,15 @@ export class InvoiceService {
                                                     $eq: ["$type", "me-2-me"]
                                                 },
                                                 {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        false
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$lfiChargable", true]
+                                                },
+                                                {
                                                     $ne: [
                                                         "$raw_api_log_data.payment_type",
                                                         "LargeValueCollection"
@@ -2280,7 +2473,7 @@ export class InvoiceService {
                                                 }
                                             ]
                                         },
-                                        then: "Me-to-Me Transfer"  //paymentFeeMe2me
+                                        then: "Me-to-Me Transfer"
                                     },
                                     {
                                         case: {
@@ -2299,10 +2492,19 @@ export class InvoiceService {
                                                         "$raw_api_log_data.payment_type",
                                                         "LargeValueCollection"
                                                     ]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        false
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$lfiChargable", true]
                                                 }
                                             ]
                                         },
-                                        then: "Large Value Collection"  // paymentLargeValueFee
+                                        then: "Large Value Collection"
                                     },
                                     {
                                         case: {
@@ -2315,10 +2517,19 @@ export class InvoiceService {
                                                 },
                                                 {
                                                     $eq: ["$type", "corporate"]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        false
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$lfiChargable", true]
                                                 }
                                             ]
                                         },
-                                        then: "Corporate Payments" // bulkLargeCorporatefee
+                                        then: "Corporate Payments"
                                     },
                                     {
                                         case: {
@@ -2328,16 +2539,82 @@ export class InvoiceService {
                                                 },
                                                 {
                                                     $eq: ["$type", "corporate"]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        false
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$lfiChargable", true]
                                                 }
                                             ]
                                         },
-                                        then: "Corporate Treasury Data" // dataLargeCorporateMdp
+                                        then: "Corporate Treasury Data"
                                     },
                                     {
                                         case: {
-                                            $eq: ["$group", "data"]
+                                            $and: [
+                                                {
+                                                    $eq: ["$group", "data"]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        false
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$lfiChargable", true]
+                                                }
+                                            ]
                                         },
-                                        then: "Customer Data"       //Take mppRate from lfi
+                                        then: "Customer Data"
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: [
+                                                        "$api_category",
+                                                        "FX Quotes"
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        true
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$chargeable", true]
+                                                }
+                                            ]
+                                        },
+                                        then: "FX Brokerage Collection"
+                                    },
+                                    {
+                                        case: {
+                                            $and: [
+                                                {
+                                                    $eq: [
+                                                        "$api_category",
+                                                        "Insurance Quote Sharing"
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$successfullQuote",
+                                                        true
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: ["$chargeable", true]
+                                                }
+                                            ]
+                                        },
+                                        then: "Insurance Brokerage Collection"
                                     }
                                 ],
                                 default: "Others"
@@ -2352,12 +2629,16 @@ export class InvoiceService {
                 },
             ]
         )
-        console.log(result_tpp)
+        
         const log = [...result_tpp, ...result_of_lfi];
+        const uniqueByInteraction = [
+            ...new Map(log.map(item => [item.raw_api_log_data.interaction_id, item])).values()
+        ];
+
         let result;
         try {
             // Define the CSV headers
-            const flattenedLog = log.map(({ _id, ...entry }) => ({
+            const flattenedLog = uniqueByInteraction.map(({ _id, ...entry }) => ({
                 timestamp: moment
                     .utc(entry.raw_api_log_data.timestamp)   // Parse as UTC
                     .tz(timezone)                            // Convert to local timezone
@@ -3775,7 +4056,7 @@ export class InvoiceService {
                                         //         else: "$quantity"
                                         //     }
                                         // },
-                                        unit_price:"$unit_price",
+                                        unit_price: "$unit_price",
                                         //  {
                                         //     $cond: {
                                         //         if: {
@@ -7036,7 +7317,7 @@ export class InvoiceService {
             headless: 'new',
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
-        
+
         const page = await browser.newPage()
         await page.setContent(attachment_html, {
             waitUntil: 'networkidle0',
@@ -8219,7 +8500,7 @@ export class InvoiceService {
             for (const item of tpp_data.collection_memo_subitem || []) {
                 revenue_data += `
                 <tr>
-                    <td>${item.label} ${item?.brokerage === true ? ' (Debit)' : ''} ${item?.key === 'merchant_collection_non_capped' ? '**' : ''}</td>
+                    <td>${item.label} ${item?.brokerage === true ? ' (Debit)' : ''} ${item?.key === 'merchant_collection' ? '**' : ''}</td>
                     <td class="table-total">${item?.quantity}</td>
                     <td class="table-total">${item?.unit_price?.toFixed(4)}</td>
                     <td class="table-total">${item?.total?.toFixed(2)}</td>
