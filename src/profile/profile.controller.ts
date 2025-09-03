@@ -58,11 +58,13 @@ export class ProfileController {
   @UseGuards(JwtAuthGuard)
   @Post('logs')
   @Claims(Claim.LOG_VIEW)
-  async getLogDataWithAllFilter(@Req() req: any, @Body(ValidationPipe) queryBody: any,) {
+  async getLogDataWithAllFilter(@Req() req: any, @Body(ValidationPipe) queryBody: any,@Query('limit') limit: number = 10,
+    @Query('offset') offset: number = 0) {
     try {
-      const logData = await this.profileService.getLogDataNew(
-        queryBody
-      );
+
+      queryBody.offset = offset
+      queryBody.limit = limit
+      const logData = await this.profileService.getLogDataNew(queryBody);
       return {
         message: 'List of Logs',
         result: logData,
