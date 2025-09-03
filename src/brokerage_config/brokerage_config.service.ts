@@ -16,11 +16,11 @@ export class BrokerageConfigService {
     ) { }
 
     async getBrokerageData(id: string) {
-
+        
         const result = await this.BrokerageConfiguration.aggregate([
             {
                 '$match': {
-                    'tpp_id': '0016920f-c806-47fd-91d6-ce81b3fa7a1e'
+                    'tpp_id': id
                 }
             }, {
                 '$lookup': {
