@@ -42,7 +42,7 @@ export class ConfigurationFeeDto {
         required: true,
     })
     @IsNumber()
-    insurance: number;
+    home: number;
 
     @ApiProperty({
         description: 'Fee for Health ',

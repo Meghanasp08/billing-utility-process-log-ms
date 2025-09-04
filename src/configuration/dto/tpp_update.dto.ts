@@ -8,7 +8,7 @@ export class UpdateTppDataDto {
         required: true,
     })
     @IsNumber()
-    @IsNotEmpty()
+    // @IsNotEmpty()
     brokerage_fee: number;
 
     @ApiProperty({

@@ -16,7 +16,12 @@ export class BrokerageConfigService {
     ) { }
 
     async getBrokerageData(id: string) {
-        
+
+        const tpp_data = await this.tppModel.findOne({ tpp_id: id });
+        if (!tpp_data) {
+            throw new NotFoundException(`TPP with this ID ${id} not found.`);
+        }
+
         const result = await this.BrokerageConfiguration.aggregate([
             {
                 '$match': {

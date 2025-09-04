@@ -14,7 +14,7 @@ export class ConfigurationFee {
     travel: number;
 
     @Prop({ type: Number, required: true })
-    insurance: number;
+    home: number;
 
     @Prop({ type: Number, required: true })
     health: number;
