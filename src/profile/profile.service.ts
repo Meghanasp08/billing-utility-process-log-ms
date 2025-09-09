@@ -47,13 +47,15 @@ export class ProfileService {
 
     if (queryParameters.startDate && queryParameters.endDate) {
       filter["raw_api_log_data.timestamp"] = {
-        $gte: moment.tz(queryParameters.startDate, timezone).utc().toDate(),
-        $lte: moment.tz(queryParameters.endDate, timezone).utc().toDate(),
+        $gte: new Date(queryParameters.startDate),
+        $lte: new Date(queryParameters.endDate),
+        // $gte: moment.tz(queryParameters.startDate, timezone).utc().toDate(),
+        // $lte: moment.tz(queryParameters.endDate, timezone).utc().toDate(),
       };
     } else if (queryParameters.startDate) {
-      filter["raw_api_log_data.timestamp"] = { $gte: moment.tz(queryParameters.startDate, timezone).utc().toDate(), };
+      filter["raw_api_log_data.timestamp"] = { $gte: new Date(queryParameters.startDate) };
     } else if (queryParameters.endDate) {
-      filter["raw_api_log_data.timestamp"] = { $lte: moment.tz(queryParameters.endDate, timezone).utc().toDate(), };
+      filter["raw_api_log_data.timestamp"] = { $lte: new Date(queryParameters.endDate) };
     }
     if (queryParameters.group) {
       filter["group"] = queryParameters.group
@@ -118,16 +120,16 @@ export class ProfileService {
     // Handle Date Range
     if (startDate && endDate) {
       filter["raw_api_log_data.timestamp"] = {
-        $gte: moment.tz(startDate, timezone).utc().toDate(),
-        $lte: moment.tz(endDate, timezone).utc().toDate(),
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
       };
     } else if (startDate) {
       filter["raw_api_log_data.timestamp"] = {
-        $gte: moment.tz(startDate, timezone).utc().toDate(),
+        $gte: new Date(startDate),
       };
     } else if (endDate) {
       filter["raw_api_log_data.timestamp"] = {
-        $lte: moment.tz(endDate, timezone).utc().toDate(),
+        $lte: new Date(endDate),
       };
     }
 
@@ -244,10 +246,11 @@ export class ProfileService {
       try {
         // Define the CSV headers
         const flattenedLog = log.map(({ _id, ...entry }) => ({
-          timestamp: moment
-            .utc(entry.raw_api_log_data.timestamp)   // Parse as UTC
-            .tz(timezone)                            // Convert to local timezone
-            .format('YYYY-MM-DD HH:mm:ss'),
+          // timestamp: moment
+          //   .utc(entry.raw_api_log_data.timestamp)   // Parse as UTC
+          //   .tz(timezone)                            // Convert to local timezone
+          //   .format('YYYY-MM-DD HH:mm:ss'),
+          timestamp: entry.raw_api_log_data.timestamp,
           lfi_id: entry.raw_api_log_data.lfi_id,
           lfi_name: entry.raw_api_log_data.lfi_name,
           tpp_id: entry.raw_api_log_data.tpp_id,
@@ -277,27 +280,27 @@ export class ProfileService {
           transaction_id: entry.payment_logs.transaction_id,
           number_of_successful_transactions: entry.payment_logs.number_of_successful_transactions,
           international_payment: entry.payment_logs.international_payment,
-          chargeable: entry.chargeable,
-          lfiChargable: entry.lfiChargable,
-          success: entry.success,
-          group: entry.group,
-          type: entry.type,
-          discountType: entry.discountType,
-          api_category: entry.api_category,
-          discounted: entry.discounted,
-          api_hub_fee: entry.api_hub_fee,
-          applicableApiHubFee: entry.applicableApiHubFee,
-          apiHubVolume: entry.apiHubVolume,
-          calculatedFee: entry.calculatedFee,
-          applicableFee: entry.applicableFee,
-          unit_price: entry.unit_price,
-          volume: entry.volume,
-          appliedLimit: entry.appliedLimit,
-          limitApplied: entry.limitApplied,
-          isCapped: entry.isCapped,
-          cappedAt: entry.cappedAt,
-          numberOfPages: entry.numberOfPages,
-          duplicate: entry.duplicate,
+          // chargeable: entry.chargeable,
+          // lfiChargable: entry.lfiChargable,
+          // success: entry.success,
+          // group: entry.group,
+          // type: entry.type,
+          // discountType: entry.discountType,
+          // api_category: entry.api_category,
+          // discounted: entry.discounted,
+          // api_hub_fee: entry.api_hub_fee,
+          // applicableApiHubFee: entry.applicableApiHubFee,
+          // apiHubVolume: entry.apiHubVolume,
+          // calculatedFee: entry.calculatedFee,
+          // applicableFee: entry.applicableFee,
+          // unit_price: entry.unit_price,
+          // volume: entry.volume,
+          // appliedLimit: entry.appliedLimit,
+          // limitApplied: entry.limitApplied,
+          // isCapped: entry.isCapped,
+          // cappedAt: entry.cappedAt,
+          // numberOfPages: entry.numberOfPages,
+          // duplicate: entry.duplicate,
         }));
 
         const outputPath = './output/log_detail.csv';
@@ -340,13 +343,13 @@ export class ProfileService {
       let timezone: string = moment.tz.guess();
       if (startDate && endDate) {
         filter["raw_api_log_data.timestamp"] = {
-          $gte: moment.tz(startDate, timezone).utc().toDate(),
-          $lte: moment.tz(endDate, timezone).utc().toDate(),
+          $gte: new Date(startDate),
+          $lte: new Date(endDate),
         };
       } else if (startDate) {
-        filter["raw_api_log_data.timestamp"] = { $gte: moment.tz(startDate, timezone).utc().toDate(), };
+        filter["raw_api_log_data.timestamp"] = { $gte: new Date(startDate), };
       } else if (endDate) {
-        filter["raw_api_log_data.timestamp"] = { $lte: moment.tz(endDate, timezone).utc().toDate(), };
+        filter["raw_api_log_data.timestamp"] = { $lte: new Date(endDate), };
       }
 
       if (search) {
@@ -769,13 +772,15 @@ export class ProfileService {
 
     if (queryParameters.startDate && queryParameters.endDate) {
       filter["raw_api_log_data.timestamp"] = {
-        $gte: moment.tz(queryParameters.startDate, timezone).utc().toDate(),
-        $lte: moment.tz(queryParameters.endDate, timezone).utc().toDate(),
+        $gte: new Date(queryParameters.startDate),
+        $lte: new Date(queryParameters.endDate),
+        // $gte: moment.tz(queryParameters.startDate, timezone).utc().toDate(),
+        // $lte: moment.tz(queryParameters.endDate, timezone).utc().toDate(),
       };
     } else if (queryParameters.startDate) {
-      filter["raw_api_log_data.timestamp"] = { $gte: moment.tz(queryParameters.startDate, timezone).utc().toDate(), };
+      filter["raw_api_log_data.timestamp"] = { $gte: new Date(queryParameters.startDate) };
     } else if (queryParameters.endDate) {
-      filter["raw_api_log_data.timestamp"] = { $lte: moment.tz(queryParameters.endDate, timezone).utc().toDate(), };
+      filter["raw_api_log_data.timestamp"] = { $lte: new Date(queryParameters.endDate) };
     }
     if (queryParameters.group) {
       filter["group"] = queryParameters.group
@@ -791,6 +796,9 @@ export class ProfileService {
     }
     if (queryParameters.success) {
       filter["success"] = queryParameters.success
+    }
+    if (queryParameters.duplicate) {
+      filter["duplicate"] = queryParameters.duplicate
     }
 
     if (queryParameters.search) {
@@ -815,10 +823,11 @@ export class ProfileService {
 
     // Flatten the log data
     const flattenedLog = log.map(({ _id, ...entry }) => ({
-      timestamp: moment
-        .utc(entry.raw_api_log_data.timestamp)   // Parse as UTC
-        .tz(timezone)                            // Convert to local timezone
-        .format('YYYY-MM-DD HH:mm:ss'),
+      // timestamp: moment
+      //   .utc(entry.raw_api_log_data.timestamp)   // Parse as UTC
+      //   .tz(timezone)                            // Convert to local timezone
+      //   .format('YYYY-MM-DD HH:mm:ss'),
+      timestamp: entry.raw_api_log_data.timestamp,
       lfi_id: entry.raw_api_log_data.lfi_id,
       lfi_name: entry.raw_api_log_data.lfi_name,
       tpp_id: entry.raw_api_log_data.tpp_id,
@@ -848,30 +857,30 @@ export class ProfileService {
       transaction_id: entry.payment_logs.transaction_id,
       number_of_successful_transactions: entry.payment_logs.number_of_successful_transactions,
       international_payment: entry.payment_logs.international_payment,
-      chargeable: entry.chargeable,
-      lfiChargable: entry.lfiChargable,
-      success: entry.success,
-      group: entry.group,
-      type: entry.type,
-      discountType: entry.discountType,
-      api_category: entry.api_category,
-      discounted: entry.discounted,
-      api_hub_fee: entry.api_hub_fee,
-      applicableApiHubFee: entry.applicableApiHubFee,
-      apiHubVolume: entry.apiHubVolume,
-      calculatedFee: entry.calculatedFee,
-      applicableFee: entry.applicableFee,
-      unit_price: entry.unit_price,
-      volume: entry.volume,
-      appliedLimit: entry.appliedLimit,
-      limitApplied: entry.limitApplied,
-      isCapped: entry.isCapped,
-      cappedAt: entry.cappedAt,
-      numberOfPages: entry.numberOfPages,
-      duplicate: entry.duplicate,
-      brokerage_fee: entry.brokerage_fee,
-      serviceStatus: entry.serviceStatus,
-      successQuote: entry.successfullQuote,
+      // chargeable: entry.chargeable,
+      // lfiChargable: entry.lfiChargable,
+      // success: entry.success,
+      // group: entry.group,
+      // type: entry.type,
+      // discountType: entry.discountType,
+      // api_category: entry.api_category,
+      // discounted: entry.discounted,
+      // api_hub_fee: entry.api_hub_fee,
+      // applicableApiHubFee: entry.applicableApiHubFee,
+      // apiHubVolume: entry.apiHubVolume,
+      // calculatedFee: entry.calculatedFee,
+      // applicableFee: entry.applicableFee,
+      // unit_price: entry.unit_price,
+      // volume: entry.volume,
+      // appliedLimit: entry.appliedLimit,
+      // limitApplied: entry.limitApplied,
+      // isCapped: entry.isCapped,
+      // cappedAt: entry.cappedAt,
+      // numberOfPages: entry.numberOfPages,
+      // duplicate: entry.duplicate,
+      // brokerage_fee: entry.brokerage_fee,
+      // serviceStatus: entry.serviceStatus,
+      // successQuote: entry.successfullQuote,
     }));
 
     const outputPath = './output/log_data.csv';

@@ -2,6 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as csv from 'csv-parser';
 import * as fs from 'fs';
+import moment from "moment";
 import { Model } from 'mongoose';
 import { PaginationEnum, StatusEnum } from 'src/common/constants/constants.enum';
 import { PaginationDTO } from 'src/common/dto/common.dto';
@@ -355,7 +356,6 @@ export class UploadService {
         status: 400
       }, HttpStatus.BAD_REQUEST);
 
-      return null;
     };
 
     const paymentDataMap = new Map<string, any>();
@@ -564,7 +564,7 @@ export class UploadService {
     console.log('stage 4 completed');
 
 
-    const pagesFeeApplied = await this.feeCalculationForLfi(feeApplied);
+    const pagesFeeApplied = await this.feeCalculationForLfi(feeApplied, logUpdate._id);
     console.log('stage 5 completed');
 
     const pageDataCalculation = await this.attendedUpdateOnNumberOfPage(pagesFeeApplied);
@@ -698,52 +698,7 @@ export class UploadService {
 
   }
 
-  // async calculateTotalApiHubFee(data: any) {
-  //   return data.map(async (record: any) => {
-  //     let totalApiHubFee = record.api_hub_fee ?? 0;
-  //     let apiHubVolume = 1;
-  //     if (record.group === "payment-bulk" && record.success && record.chargeable) {
-  //       apiHubVolume = parseInt(record['payment_logs.number_of_successful_transactions'] ?? 1);
-  //       totalApiHubFee *= apiHubVolume;
-  //     } else if (record.group === "data" && record.success && record.chargeable) {
-  //       if (!record.lfiChargable) {
-  //         const records = parseInt(record["raw_api_log_data.records"] ?? "0", 10);
-  //         record.numberOfPages = Math.ceil(records / 100) || 1;
-  //         apiHubVolume = record.numberOfPages;
-  //         totalApiHubFee *= apiHubVolume;
-  //       } else {
-  //         // Use volume when lfiChargable is true
-  //         apiHubVolume = record.volume ?? 1;
-  //         totalApiHubFee *= apiHubVolume;
 
-  //       }
-  //     }
-
-  //     // Tpp status update and brokerage fee calculation for log
-  //     const tppId = record.raw_api_log_data?.tpp_id;
-  //     let brokerage_fee = 0;
-  //     let serviceStatus: boolean = false;
-
-  //     if (tppId) {
-  //       const tppDoc = await this.TppModel.findById(tppId, {
-  //         brokerage_fee: 1,
-  //         serviceStatus: 1,
-  //       }).lean();
-
-  //       if (tppDoc) {
-  //         brokerage_fee = tppDoc.brokerage_fee
-  //         serviceStatus = tppDoc.serviceStatus;
-  //       }
-  //     }
-  //     return {
-  //       ...record,
-  //       applicableApiHubFee: totalApiHubFee.toFixed(3),
-  //       apiHubVolume: apiHubVolume,
-  //       brokerage_fee,
-  //       serviceStatus
-  //     };
-  //   });
-  // }
   async calculateTotalApiHubFee(data: any[]) {
     const results = await Promise.all(
       data.map(async (record: any) => {
@@ -921,7 +876,7 @@ export class UploadService {
   }
 
 
-  async feeCalculationForLfi(data: any) {
+  async feeCalculationForLfi(data: any, logId: string) {
     try {
       const psuGroupedMap: Record<
         string,
@@ -961,7 +916,7 @@ export class UploadService {
 
       // Step 2: Process each record
       const lfiCalculated = await Promise.all(
-        data.map(async (record: { [x: string]: any }) => {
+        data.map(async (record, index) => {
           if (record.group === "data" && record.type === "NA" && record.lfiChargable && record.success) {
             if (Boolean(record["raw_api_log_data.is_large_corporate"])) {
               record.type = "corporate";
@@ -974,6 +929,28 @@ export class UploadService {
             if (!lfiData) return record;
 
             const psuId = record["raw_api_log_data.psu_id"];
+            if (!psuId) {
+              await this.uploadLog.findByIdAndUpdate(
+                logId,
+                {
+                  $set: {
+                    status: 'Failed',
+                    remarks: `Failed to Find PSUID in Raw Log File`,
+                  },
+                  $push: {
+                    log: {
+                      description: `Validation error at row ${index + 2} in the 'Raw Log File' PSU ID is missing or empty for success and chargeable url.`,
+                      status: 'Failed',
+                      errorDetail: null,
+                    },
+                  },
+                }
+              );
+              throw new HttpException({
+                message: `Validation error at row ${index + 2} in the 'Raw Log File' PSU ID is missing or empty for success and chargeable url.`,
+                status: 400
+              }, HttpStatus.BAD_REQUEST);
+            }
             const date = new Date(record["raw_api_log_data.timestamp"]).toISOString().split("T")[0];
             const isAttended = record["raw_api_log_data.is_attended"];
             const tpp_id = record["raw_api_log_data.tpp_id"];
@@ -1414,6 +1391,29 @@ export class UploadService {
             status: 400
           }, HttpStatus.BAD_REQUEST);
         }
+        if (!this.isUTCString(record['raw_api_log_data.timestamp'])) {
+          await this.uploadLog.findByIdAndUpdate(
+            logId,
+            {
+              $set: {
+                status: 'Failed',
+                remarks: `Failed to validate 'Raw Log File`,
+              },
+              $push: {
+                log: {
+                  description: `Validation error at row ${index + 2} in the 'Raw Log File': 'timestamp' is not in valid UTC format (e.g. 2025-08-28T12:34:56Z)`,
+                  status: 'Failed',
+                  errorDetail: null,
+                },
+              },
+            }
+          );
+          throw new HttpException({
+            message: `Validation error at row ${index + 2} in the 'Raw Log File': 'timestamp' is not in valid UTC format (e.g. 2025-08-28T12:34:56Z)`,
+            status: 400
+          }, HttpStatus.BAD_REQUEST);
+        }
+
       }
 
       return {
@@ -1425,7 +1425,9 @@ export class UploadService {
       };
     }));
   }
-
+  async isUTCString(str: string): Promise<boolean> {
+    return moment.utc(str, moment.ISO_8601, true).isValid() && str.endsWith("Z");
+  }
   async calculateApiHubFee(processedData: any[], apiData: any[],) {
     return await Promise.all(processedData.map(async record => {
 
