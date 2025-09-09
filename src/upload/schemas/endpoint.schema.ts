@@ -21,10 +21,10 @@ export class ApiData {
     @Prop({ required: true })
     chargeable_LFI_TPP_fee: boolean;
 
-    @Prop({ required: false })
+    @Prop({ required: true })
     key_name: string;
 
-    @Prop({ required: false })
+    @Prop({ required: true })
     api_category: string;
 
     @Prop({ type: Boolean, default: false })

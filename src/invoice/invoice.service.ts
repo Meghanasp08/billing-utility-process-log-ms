@@ -2133,7 +2133,7 @@ export class InvoiceService {
                                                 {
                                                     $eq: [
                                                         "$api_category",
-                                                        "Setup and Consent" 
+                                                        "Setup and Consent"
                                                     ]
                                                 },
                                                 {
@@ -2143,7 +2143,7 @@ export class InvoiceService {
                                                     ]
                                                 }
                                             ]
-                                        }, 
+                                        },
                                         then: "Setup and Consent" //-- paymentApiHubFee
                                     },
                                     {
@@ -2296,7 +2296,7 @@ export class InvoiceService {
 
             ]
         );
-        
+
         const result_of_lfi = await this.logsModel.aggregate(
             [
                 {
@@ -2629,7 +2629,7 @@ export class InvoiceService {
                 },
             ]
         )
-        
+
         const log = [...result_tpp, ...result_of_lfi];
         const uniqueByInteraction = [
             ...new Map(log.map(item => [item.raw_api_log_data.interaction_id, item])).values()
@@ -2639,10 +2639,11 @@ export class InvoiceService {
         try {
             // Define the CSV headers
             const flattenedLog = uniqueByInteraction.map(({ _id, ...entry }) => ({
-                timestamp: moment
-                    .utc(entry.raw_api_log_data.timestamp)   // Parse as UTC
-                    .tz(timezone)                            // Convert to local timezone
-                    .format('YYYY-MM-DD HH:mm:ss'),
+                // timestamp: moment
+                //     .utc(entry.raw_api_log_data.timestamp)   // Parse as UTC
+                //     .tz(timezone)                            // Convert to local timezone
+                //     .format('YYYY-MM-DD HH:mm:ss'),
+                timestamp: entry.raw_api_log_data.timestamp,
                 lfi_id: entry.raw_api_log_data.lfi_id,
                 lfi_name: entry.raw_api_log_data.lfi_name,
                 tpp_id: entry.raw_api_log_data.tpp_id,
@@ -2906,10 +2907,11 @@ export class InvoiceService {
         try {
             // Define the CSV headers
             const flattenedLog = log.map(({ _id, ...entry }) => ({
-                timestamp: moment
-                    .utc(entry.raw_api_log_data.timestamp)   // Parse as UTC
-                    .tz(timezone)                            // Convert to local timezone
-                    .format('YYYY-MM-DD HH:mm:ss'),
+                // timestamp: moment
+                //     .utc(entry.raw_api_log_data.timestamp)   // Parse as UTC
+                //     .tz(timezone)                            // Convert to local timezone
+                //     .format('YYYY-MM-DD HH:mm:ss'),
+                timestamp: entry.raw_api_log_data.timestamp,
                 lfi_id: entry.raw_api_log_data.lfi_id,
                 lfi_name: entry.raw_api_log_data.lfi_name,
                 tpp_id: entry.raw_api_log_data.tpp_id,
@@ -4630,10 +4632,11 @@ export class InvoiceService {
         try {
             // Define the CSV headers
             const flattenedLog = log.map(({ _id, ...entry }) => ({
-                timestamp: moment
-                    .utc(entry.raw_api_log_data.timestamp)   // Parse as UTC
-                    .tz(timezone)                            // Convert to local timezone
-                    .format('YYYY-MM-DD HH:mm:ss'),
+                // timestamp: moment
+                //     .utc(entry.raw_api_log_data.timestamp)   // Parse as UTC
+                //     .tz(timezone)                            // Convert to local timezone
+                //     .format('YYYY-MM-DD HH:mm:ss'),
+                timestamp: entry.raw_api_log_data.timestamp,
                 lfi_id: entry.raw_api_log_data.lfi_id,
                 lfi_name: entry.raw_api_log_data.lfi_name,
                 tpp_id: entry.raw_api_log_data.tpp_id,
@@ -5806,10 +5809,11 @@ export class InvoiceService {
         try {
             // Define the CSV headers
             const flattenedLog = log.map(({ _id, ...entry }) => ({
-                timestamp: moment
-                    .utc(entry.raw_api_log_data.timestamp)   // Parse as UTC
-                    .tz(timezone)                            // Convert to local timezone
-                    .format('YYYY-MM-DD HH:mm:ss'),
+                // timestamp: moment
+                //     .utc(entry.raw_api_log_data.timestamp)   // Parse as UTC
+                //     .tz(timezone)                            // Convert to local timezone
+                //     .format('YYYY-MM-DD HH:mm:ss'),
+                timestamp: entry.raw_api_log_data.timestamp,
                 lfi_id: entry.raw_api_log_data.lfi_id,
                 lfi_name: entry.raw_api_log_data.lfi_name,
                 tpp_id: entry.raw_api_log_data.tpp_id,

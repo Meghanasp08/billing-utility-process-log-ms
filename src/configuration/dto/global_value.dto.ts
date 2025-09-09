@@ -108,7 +108,7 @@ export class UpdateApiDto {
 
     })
     @IsEnum(KeyName, { message: 'key must be one of the predefined key names.' })
-    key: KeyName;
+    key_name: KeyName;
 
     // @ApiProperty({
     //     description: 'The category under which the API is classified.',
@@ -125,7 +125,7 @@ export class UpdateApiDto {
         example: ApiCategory.SETUP_AND_CONSENT,
     })
     @IsEnum(ApiCategory, { message: 'apiCategory must be a valid enum value.' })
-    apiCategory: ApiCategory;
+    api_category: ApiCategory;
 }
 
 export class CreateApiDto {
@@ -188,7 +188,7 @@ export class CreateApiDto {
 
     })
     @IsEnum(KeyName, { message: 'key must be one of the predefined key names.' })
-    key: KeyName;
+    key_name: KeyName;
 
     // @ApiProperty({
     //     description: 'The category under which the API is classified.',
@@ -205,5 +205,5 @@ export class CreateApiDto {
         example: ApiCategory.SETUP_AND_CONSENT,
     })
     @IsEnum(ApiCategory, { message: 'apiCategory must be a valid enum value.' })
-    apiCategory: ApiCategory;
+    api_category: ApiCategory;
 }
