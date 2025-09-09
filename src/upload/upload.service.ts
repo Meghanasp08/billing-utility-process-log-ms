@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as csv from 'csv-parser';
 import * as fs from 'fs';
-import moment from "moment";
+import * as moment from 'moment';
 import { Model } from 'mongoose';
 import { PaginationEnum, StatusEnum } from 'src/common/constants/constants.enum';
 import { PaginationDTO } from 'src/common/dto/common.dto';
@@ -815,7 +815,6 @@ export class UploadService {
           .filter(id => id != null) // removes null & undefined
       )
     );
-    console.log("uniqueLfiIds", uniqueLfiIds);
     const lfiDataToInsert = uniqueLfiIds.map(lfi_id => ({
       lfi_id,
       lfi_name: rawData.find(data => data["raw_api_log_data.lfi_id"] === lfi_id)["raw_api_log_data.lfi_name"],
@@ -925,40 +924,17 @@ export class UploadService {
             const lfiData = await this.lfiModel.findOne({
               lfi_id: record["raw_api_log_data.lfi_id"],
             });
-            console.log('iam lfi data', lfiData)
             if (!lfiData) return record;
 
             const psuId = record["raw_api_log_data.psu_id"];
-            if (!psuId) {
-              await this.uploadLog.findByIdAndUpdate(
-                logId,
-                {
-                  $set: {
-                    status: 'Failed',
-                    remarks: `Failed to Find PSUID in Raw Log File`,
-                  },
-                  $push: {
-                    log: {
-                      description: `Validation error at row ${index + 2} in the 'Raw Log File' PSU ID is missing or empty for success and chargeable url.`,
-                      status: 'Failed',
-                      errorDetail: null,
-                    },
-                  },
-                }
-              );
-              throw new HttpException({
-                message: `Validation error at row ${index + 2} in the 'Raw Log File' PSU ID is missing or empty for success and chargeable url.`,
-                status: 400
-              }, HttpStatus.BAD_REQUEST);
-            }
             const date = new Date(record["raw_api_log_data.timestamp"]).toISOString().split("T")[0];
             const isAttended = record["raw_api_log_data.is_attended"];
             const tpp_id = record["raw_api_log_data.tpp_id"];
             const key = `${psuId}_${date}_${isAttended}_${tpp_id}`;
 
-            console.log('iam key', key)
-            console.log('iam bool data', isAttended)
-            console.log('iam tpp data', tpp_id)
+            // console.log('iam key', key)
+            // console.log('iam bool data', isAttended)
+            // console.log('iam tpp data', tpp_id)
 
             const margin =
               isAttended == true
@@ -968,7 +944,6 @@ export class UploadService {
                   : 0;
             const lfiMdpMultiplier = record['raw_api_log_data.is_large_corporate'] ? this.variables.dataLargeCorporateMdp.value : lfiData.mdp_rate;
 
-            console.log('iam lfi multiplier', lfiMdpMultiplier)
 
             const chargesData = psuGroupedMap[key];
 
@@ -1366,7 +1341,6 @@ export class UploadService {
       const success = /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.tpp_response_code_group"]) &&
         /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.lfi_response_code_group"]);
 
-      console.log("success-CHECK", success, index + 2)
       if ((islfiChargable || isChargeable) && success) {
         let errorTppLfi = !record["raw_api_log_data.tpp_id"] || !record["raw_api_log_data.tpp_name"] || !record["raw_api_log_data.lfi_id"] || !record["raw_api_log_data.lfi_name"];
         if (errorTppLfi) {
@@ -1391,7 +1365,8 @@ export class UploadService {
             status: 400
           }, HttpStatus.BAD_REQUEST);
         }
-        if (!this.isUTCString(record['raw_api_log_data.timestamp'])) {
+        const isValidUTC = await this.isUTCString(record['raw_api_log_data.timestamp']);
+        if (!isValidUTC) {
           await this.uploadLog.findByIdAndUpdate(
             logId,
             {
@@ -1410,6 +1385,29 @@ export class UploadService {
           );
           throw new HttpException({
             message: `Validation error at row ${index + 2} in the 'Raw Log File': 'timestamp' is not in valid UTC format (e.g. 2025-08-28T12:34:56Z)`,
+            status: 400
+          }, HttpStatus.BAD_REQUEST);
+        }
+        const psuIdCheck = record["raw_api_log_data.psu_id"];
+        if (!psuIdCheck) {
+          await this.uploadLog.findByIdAndUpdate(
+            logId,
+            {
+              $set: {
+                status: 'Failed',
+                remarks: `Failed to Find PSUID in Raw Log File`,
+              },
+              $push: {
+                log: {
+                  description: `Validation error at row ${index + 2} in the 'Raw Log File' PSU ID is missing or empty for success and chargeable url.`,
+                  status: 'Failed',
+                  errorDetail: null,
+                },
+              },
+            }
+          );
+          throw new HttpException({
+            message: `Validation error at row ${index + 2} in the 'Raw Log File' PSU ID is missing or empty for success and chargeable url.`,
             status: 400
           }, HttpStatus.BAD_REQUEST);
         }
