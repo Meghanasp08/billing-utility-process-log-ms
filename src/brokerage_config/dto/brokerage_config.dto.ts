@@ -112,9 +112,9 @@ export class CreateGlobalConfigurationDto {
         description: 'Status of configuration',
         example: true,
         required: false,
-        default: false,
+        default: true,
     })
     @IsBoolean()
     @IsOptional()
-    serviceStatus?: boolean = false;
+    serviceStatus?: boolean = true;
 }
