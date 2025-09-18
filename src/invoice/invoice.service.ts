@@ -76,6 +76,505 @@ export class InvoiceService {
         };
     }
 
+    async paymentTypeLabel() {
+        return {
+            $switch: {
+                branches: [
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $eq: [
+                                        "$group",
+                                        "payment-bulk"
+                                    ]
+                                },
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        false
+                                    ]
+                                }
+                            ]
+                        },
+                        then: "Corporate Payment" //-- paymentApiHubFee
+                    },
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $eq: [
+                                        "$group",
+                                        "payment-data"
+                                    ]
+                                },
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        false
+                                    ]
+                                }
+                            ]
+                        },
+                        then: "Payment Data" //-- paymentApiHubFee
+                    },
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $eq: [
+                                        "$group",
+                                        "payment-non-bulk"
+                                    ]
+                                },
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        false
+                                    ]
+                                }
+                            ]
+                        },
+                        then: "Payment Initiation" //--paymentApiHubFee
+                    },
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $eq: ["$group", "insurance"]
+                                },
+                                {
+                                    $eq: [
+                                        "$api_category",
+                                        "Insurance Data Sharing"
+                                    ]
+                                },
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        false
+                                    ]
+                                }
+                            ]
+                        },
+                        then: "Insurance Data Sharing" //-- insuranceApiHubFee
+                    },
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $eq: ["$group", "insurance"]
+                                },
+                                {
+                                    $eq: [
+                                        "$api_category",
+                                        "Insurance Quote Sharing"
+                                    ]
+                                },
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        false
+                                    ]
+                                }
+                            ]
+                        },
+                        then: "Insurance Quote Sharing" //-- insuranceApiHubFee
+                    },
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $eq: ["$group", "data"]
+                                },
+                                {
+                                    $eq: [
+                                        "$api_category",
+                                        "Setup and Consent" //////
+                                    ]
+                                },
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        false
+                                    ]
+                                }
+                            ]
+                        },
+                        then: "Setup and Consent" //-- paymentApiHubFee
+                    },
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $eq: ["$group", "data"]
+                                },
+                                {
+                                    $eq: ["$type", "corporate"]
+                                },
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        false
+                                    ]
+                                }
+                            ]
+                        },
+                        then: "Corporate Data" //-- paymentApiHubFee
+                    },
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $eq: ["$group", "data"]
+                                },
+                                {
+                                    $eq: ["$discount_type", "cop"]
+                                },
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        false
+                                    ]
+                                }
+                            ]
+                        },
+                        then: "Confirmation of Payee(Discounted)" //-- discountApiHubFee
+                    },
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $eq: ["$group", "data"]
+                                },
+                                {
+                                    $eq: [
+                                        "$discount_type",
+                                        "balance"
+                                    ]
+                                },
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        false
+                                    ]
+                                }
+                            ]
+                        },
+                        then: "Balance(Discounted)" //-- discountApiHubFee
+                    },
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $eq: ["$group", "data"]
+                                },
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        false
+                                    ]
+                                }
+                            ]
+                        },
+                        then: "Bank Data Sharing" //--paymentApiHubFee
+                    },
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        true
+                                    ]
+                                },
+                                {
+                                    $eq: [
+                                        "$api_category",
+                                        "Insurance Quote Sharing"
+                                    ]
+                                }
+                            ]
+                        },
+                        then: "Insurance Brokerage Collection"
+                    },
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        true
+                                    ]
+                                },
+                                {
+                                    $eq: [
+                                        "$api_category",
+                                        "FX Quotes"
+                                    ]
+                                }
+                            ]
+                        },
+                        then: "FX Brokerage Collection"
+                    }
+                ],
+                default: null
+            }
+        }
+    }
+    async lfi_label() {
+        return {
+            $switch: {
+                branches: [
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $in: [
+                                        "$group",
+                                        [
+                                            "payment-bulk",
+                                            "payment-non-bulk"
+                                        ]
+                                    ]
+                                },
+                                {
+                                    $eq: ["$type", "merchant"]
+                                },
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        false
+                                    ]
+                                },
+                                {
+                                    $eq: ["$lfiChargable", true]
+                                },
+                                {
+                                    $ne: [
+                                        "$raw_api_log_data.payment_type",
+                                        "LargeValueCollection"
+                                    ]
+                                }
+                            ]
+                        },
+                        then: "Merchant Collection"
+                    },
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $in: [
+                                        "$group",
+                                        [
+                                            "payment-bulk",
+                                            "payment-non-bulk"
+                                        ]
+                                    ]
+                                },
+                                {
+                                    $eq: ["$type", "peer-2-peer"]
+                                },
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        false
+                                    ]
+                                },
+                                {
+                                    $eq: ["$lfiChargable", true]
+                                },
+                                {
+                                    $ne: [
+                                        "$raw_api_log_data.payment_type",
+                                        "LargeValueCollection"
+                                    ]
+                                }
+                            ]
+                        },
+                        then: "Peer-to-Peer"
+                    },
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $in: [
+                                        "$group",
+                                        [
+                                            "payment-bulk",
+                                            "payment-non-bulk"
+                                        ]
+                                    ]
+                                },
+                                {
+                                    $eq: ["$type", "me-2-me"]
+                                },
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        false
+                                    ]
+                                },
+                                {
+                                    $eq: ["$lfiChargable", true]
+                                },
+                                {
+                                    $ne: [
+                                        "$raw_api_log_data.payment_type",
+                                        "LargeValueCollection"
+                                    ]
+                                }
+                            ]
+                        },
+                        then: "Me-to-Me Transfer"
+                    },
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $in: [
+                                        "$group",
+                                        [
+                                            "payment-bulk",
+                                            "payment-non-bulk"
+                                        ]
+                                    ]
+                                },
+                                {
+                                    $eq: [
+                                        "$raw_api_log_data.payment_type",
+                                        "LargeValueCollection"
+                                    ]
+                                },
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        false
+                                    ]
+                                },
+                                {
+                                    $eq: ["$lfiChargable", true]
+                                }
+                            ]
+                        },
+                        then: "Large Value Collection"
+                    },
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $eq: [
+                                        "$group",
+                                        "payment-bulk"
+                                    ]
+                                },
+                                {
+                                    $eq: ["$type", "corporate"]
+                                },
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        false
+                                    ]
+                                },
+                                {
+                                    $eq: ["$lfiChargable", true]
+                                }
+                            ]
+                        },
+                        then: "Corporate Payments"
+                    },
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $eq: ["$group", "data"]
+                                },
+                                {
+                                    $eq: ["$type", "corporate"]
+                                },
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        false
+                                    ]
+                                },
+                                {
+                                    $eq: ["$lfiChargable", true]
+                                }
+                            ]
+                        },
+                        then: "Corporate Treasury Data"
+                    },
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $eq: ["$group", "data"]
+                                },
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        false
+                                    ]
+                                },
+                                {
+                                    $eq: ["$lfiChargable", true]
+                                }
+                            ]
+                        },
+                        then: "Customer Data"
+                    },
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $eq: [
+                                        "$api_category",
+                                        "FX Quotes"
+                                    ]
+                                },
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        true
+                                    ]
+                                },
+                                {
+                                    $eq: ["$chargeable", true]
+                                }
+                            ]
+                        },
+                        then: "FX Brokerage Collection"
+                    },
+                    {
+                        case: {
+                            $and: [
+                                {
+                                    $eq: [
+                                        "$api_category",
+                                        "Insurance Quote Sharing"
+                                    ]
+                                },
+                                {
+                                    $eq: [
+                                        "$successfullQuote",
+                                        true
+                                    ]
+                                },
+                                {
+                                    $eq: ["$chargeable", true]
+                                }
+                            ]
+                        },
+                        then: "Insurance Brokerage Collection"
+                    }
+                ],
+                default: "Others"
+            }
+        }
+    }
+
     async invoiceCreation(
         invoiceDto: any,
     ): Promise<any> {
@@ -122,7 +621,9 @@ export class InvoiceService {
         const currentDate = new Date();
         const futureDate = new Date();
         futureDate.setDate(currentDate.getDate() + 30);
-        console.log(startDate, endDate)
+
+        let paymentTypeLabel = await this.paymentTypeLabel();
+        let lfi_label = await this.lfi_label();
 
         for (const tpp of tppData) {
             const result = await this.logsModel.aggregate(
@@ -158,250 +659,7 @@ export class InvoiceService {
                     },
                     {
                         $addFields: {
-                            paymentTypeLabel: {
-                                $switch: {
-                                    branches: [
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $eq: [
-                                                            "$group",
-                                                            "payment-bulk"
-                                                        ]
-                                                    },
-                                                    {
-                                                        $eq: [
-                                                            "$successfullQuote",
-                                                            false
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Corporate Payment" //-- paymentApiHubFee
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $eq: [
-                                                            "$group",
-                                                            "payment-data"
-                                                        ]
-                                                    },
-                                                    {
-                                                        $eq: [
-                                                            "$successfullQuote",
-                                                            false
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Payment Data" //-- paymentApiHubFee
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $eq: [
-                                                            "$group",
-                                                            "payment-non-bulk"
-                                                        ]
-                                                    },
-                                                    {
-                                                        $eq: [
-                                                            "$successfullQuote",
-                                                            false
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Payment Initiation" //--paymentApiHubFee
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $eq: ["$group", "insurance"]
-                                                    },
-                                                    {
-                                                        $eq: [
-                                                            "$api_category",
-                                                            "Insurance Data Sharing"
-                                                        ]
-                                                    },
-                                                    {
-                                                        $eq: [
-                                                            "$successfullQuote",
-                                                            false
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Insurance Data Sharing" //-- insuranceApiHubFee
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $eq: ["$group", "insurance"]
-                                                    },
-                                                    {
-                                                        $eq: [
-                                                            "$api_category",
-                                                            "Insurance Quote Sharing"
-                                                        ]
-                                                    },
-                                                    {
-                                                        $eq: [
-                                                            "$successfullQuote",
-                                                            false
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Insurance Quote Sharing" //-- insuranceApiHubFee
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $eq: ["$group", "data"]
-                                                    },
-                                                    {
-                                                        $eq: [
-                                                            "$api_category",
-                                                            "Setup and Consent" //////
-                                                        ]
-                                                    },
-                                                    {
-                                                        $eq: [
-                                                            "$successfullQuote",
-                                                            false
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Setup and Consent" //-- paymentApiHubFee
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $eq: ["$group", "data"]
-                                                    },
-                                                    {
-                                                        $eq: ["$type", "corporate"]
-                                                    },
-                                                    {
-                                                        $eq: [
-                                                            "$successfullQuote",
-                                                            false
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Corporate Data" //-- paymentApiHubFee
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $eq: ["$group", "data"]
-                                                    },
-                                                    {
-                                                        $eq: ["$discount_type", "cop"]
-                                                    },
-                                                    {
-                                                        $eq: [
-                                                            "$successfullQuote",
-                                                            false
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Confirmation of Payee(Discounted)" //-- discountApiHubFee
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $eq: ["$group", "data"]
-                                                    },
-                                                    {
-                                                        $eq: [
-                                                            "$discount_type",
-                                                            "balance"
-                                                        ]
-                                                    },
-                                                    {
-                                                        $eq: [
-                                                            "$successfullQuote",
-                                                            false
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Balance(Discounted)" //-- discountApiHubFee
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $eq: ["$group", "data"]
-                                                    },
-                                                    {
-                                                        $eq: [
-                                                            "$successfullQuote",
-                                                            false
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Bank Data Sharing" //--paymentApiHubFee
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $eq: [
-                                                            "$successfullQuote",
-                                                            true
-                                                        ]
-                                                    },
-                                                    {
-                                                        $eq: [
-                                                            "$api_category",
-                                                            "Insurance Quote Sharing"
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            then: "Insurance Brokerage Collection"
-                                        },
-                                        {
-                                            case: {
-                                                $and: [
-                                                    {
-                                                        $eq: [
-                                                            "$successfullQuote",
-                                                            true
-                                                        ]
-                                                    },
-                                                    {
-                                                        $eq: [
-                                                            "$api_category",
-                                                            "FX Quotes"
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            then: "FX Brokerage Collection"
-                                        }
-                                    ],
-                                    default: null
-                                }
-                            }
+                            paymentTypeLabel: paymentTypeLabel
                         }
                     },
                     {
@@ -977,296 +1235,7 @@ export class InvoiceService {
                 },
                 {
                     $addFields: {
-                        label: {
-                            $switch: {
-                                branches: [
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $in: [
-                                                        "$group",
-                                                        [
-                                                            "payment-bulk",
-                                                            "payment-non-bulk"
-                                                        ]
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$type", "merchant"]
-                                                },
-                                                // {
-                                                //     $eq: ["$isCapped", true]
-                                                // },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                },
-                                                {
-                                                    $ne: [
-                                                        "$raw_api_log_data.payment_type",
-                                                        "LargeValueCollection"
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Merchant Collection"
-                                    },
-                                    // {
-                                    //     case: {
-                                    //         $and: [
-                                    //             {
-                                    //                 $in: [
-                                    //                     "$group",
-                                    //                     [
-                                    //                         "payment-bulk",
-                                    //                         "payment-non-bulk"
-                                    //                     ]
-                                    //                 ]
-                                    //             },
-                                    //             {
-                                    //                 $eq: ["$type", "merchant"]
-                                    //             },
-                                    //             {
-                                    //                 $eq: ["$isCapped", false]
-                                    //             },
-                                    //             {
-                                    //                 $eq: [
-                                    //                     "$successfullQuote",
-                                    //                     false
-                                    //                 ]
-                                    //             },
-                                    //             {
-                                    //                 $eq: ["$lfiChargable", true]
-                                    //             },
-                                    //             {
-                                    //                 $ne: [
-                                    //                     "$raw_api_log_data.payment_type",
-                                    //                     "LargeValueCollection"
-                                    //                 ]
-                                    //             }
-                                    //         ]
-                                    //     },
-                                    //     then: "Merchant Collection Non-Capped"
-                                    // },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $in: [
-                                                        "$group",
-                                                        [
-                                                            "payment-bulk",
-                                                            "payment-non-bulk"
-                                                        ]
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$type", "peer-2-peer"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                },
-                                                {
-                                                    $ne: [
-                                                        "$raw_api_log_data.payment_type",
-                                                        "LargeValueCollection"
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Peer-to-Peer"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $in: [
-                                                        "$group",
-                                                        [
-                                                            "payment-bulk",
-                                                            "payment-non-bulk"
-                                                        ]
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$type", "me-2-me"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                },
-                                                {
-                                                    $ne: [
-                                                        "$raw_api_log_data.payment_type",
-                                                        "LargeValueCollection"
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Me-to-Me Transfer"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $in: [
-                                                        "$group",
-                                                        [
-                                                            "payment-bulk",
-                                                            "payment-non-bulk"
-                                                        ]
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$raw_api_log_data.payment_type",
-                                                        "LargeValueCollection"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                }
-                                            ]
-                                        },
-                                        then: "Large Value Collection"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$group",
-                                                        "payment-bulk"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$type", "corporate"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                }
-                                            ]
-                                        },
-                                        then: "Corporate Payments"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "data"]
-                                                },
-                                                {
-                                                    $eq: ["$type", "corporate"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                }
-                                            ]
-                                        },
-                                        then: "Corporate Treasury Data"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "data"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                }
-                                            ]
-                                        },
-                                        then: "Customer Data"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$api_category",
-                                                        "FX Quotes"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        true
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$chargeable", true]
-                                                }
-                                            ]
-                                        },
-                                        then: "FX Brokerage Collection"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$api_category",
-                                                        "Insurance Quote Sharing"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        true
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$chargeable", true]
-                                                }
-                                            ]
-                                        },
-                                        then: "Insurance Brokerage Collection"
-                                    }
-                                ],
-                                default: "Others"
-                            }
-                        }
+                        label: lfi_label
                     }
                 },
                 {
@@ -1988,6 +1957,9 @@ export class InvoiceService {
     }
     async invoiceTppCsv(data: any) {
         const timezone: string = moment.tz.guess();
+        const paymentTypeLabel = await this.paymentTypeLabel()
+        const lfi_label = await this.lfi_label();
+
         const result_tpp = await this.logsModel.aggregate(
             [
                 {
@@ -2020,250 +1992,7 @@ export class InvoiceService {
                 },
                 {
                     $addFields: {
-                        paymentTypeLabel: {
-                            $switch: {
-                                branches: [
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$group",
-                                                        "payment-bulk"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Corporate Payment" //-- paymentApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$group",
-                                                        "payment-data"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Payment Data" //-- paymentApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$group",
-                                                        "payment-non-bulk"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Payment Initiation" //--paymentApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "insurance"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$api_category",
-                                                        "Insurance Data Sharing"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Insurance Data Sharing" //-- insuranceApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "insurance"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$api_category",
-                                                        "Insurance Quote Sharing"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Insurance Quote Sharing" //-- insuranceApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "data"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$api_category",
-                                                        "Setup and Consent"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Setup and Consent" //-- paymentApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "data"]
-                                                },
-                                                {
-                                                    $eq: ["$type", "corporate"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Corporate Data" //-- paymentApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "data"]
-                                                },
-                                                {
-                                                    $eq: ["$discount_type", "cop"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Confirmation of Payee(Discounted)" //-- discountApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "data"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$discount_type",
-                                                        "balance"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Balance(Discounted)" //-- discountApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "data"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Bank Data Sharing" //--paymentApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        true
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$api_category",
-                                                        "Insurance Quote Sharing"
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Insurance Brokerage Collection"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        true
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$api_category",
-                                                        "FX Quotes"
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "FX Brokerage Collection"
-                                    }
-                                ],
-                                default: null
-                            }
-                        }
+                        paymentTypeLabel: paymentTypeLabel
                     }
                 },
                 {
@@ -2330,296 +2059,7 @@ export class InvoiceService {
                 },
                 {
                     $addFields: {
-                        label: {
-                            $switch: {
-                                branches: [
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $in: [
-                                                        "$group",
-                                                        [
-                                                            "payment-bulk",
-                                                            "payment-non-bulk"
-                                                        ]
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$type", "merchant"]
-                                                },
-                                                // {
-                                                //     $eq: ["$isCapped", true]
-                                                // },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                },
-                                                {
-                                                    $ne: [
-                                                        "$raw_api_log_data.payment_type",
-                                                        "LargeValueCollection"
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Merchant Collection"
-                                    },
-                                    // {
-                                    //     case: {
-                                    //         $and: [
-                                    //             {
-                                    //                 $in: [
-                                    //                     "$group",
-                                    //                     [
-                                    //                         "payment-bulk",
-                                    //                         "payment-non-bulk"
-                                    //                     ]
-                                    //                 ]
-                                    //             },
-                                    //             {
-                                    //                 $eq: ["$type", "merchant"]
-                                    //             },
-                                    //             {
-                                    //                 $eq: ["$isCapped", false]
-                                    //             },
-                                    //             {
-                                    //                 $eq: [
-                                    //                     "$successfullQuote",
-                                    //                     false
-                                    //                 ]
-                                    //             },
-                                    //             {
-                                    //                 $eq: ["$lfiChargable", true]
-                                    //             },
-                                    //             {
-                                    //                 $ne: [
-                                    //                     "$raw_api_log_data.payment_type",
-                                    //                     "LargeValueCollection"
-                                    //                 ]
-                                    //             }
-                                    //         ]
-                                    //     },
-                                    //     then: "Merchant Collection Non-Capped"
-                                    // },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $in: [
-                                                        "$group",
-                                                        [
-                                                            "payment-bulk",
-                                                            "payment-non-bulk"
-                                                        ]
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$type", "peer-2-peer"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                },
-                                                {
-                                                    $ne: [
-                                                        "$raw_api_log_data.payment_type",
-                                                        "LargeValueCollection"
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Peer-to-Peer"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $in: [
-                                                        "$group",
-                                                        [
-                                                            "payment-bulk",
-                                                            "payment-non-bulk"
-                                                        ]
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$type", "me-2-me"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                },
-                                                {
-                                                    $ne: [
-                                                        "$raw_api_log_data.payment_type",
-                                                        "LargeValueCollection"
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Me-to-Me Transfer"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $in: [
-                                                        "$group",
-                                                        [
-                                                            "payment-bulk",
-                                                            "payment-non-bulk"
-                                                        ]
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$raw_api_log_data.payment_type",
-                                                        "LargeValueCollection"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                }
-                                            ]
-                                        },
-                                        then: "Large Value Collection"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$group",
-                                                        "payment-bulk"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$type", "corporate"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                }
-                                            ]
-                                        },
-                                        then: "Corporate Payments"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "data"]
-                                                },
-                                                {
-                                                    $eq: ["$type", "corporate"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                }
-                                            ]
-                                        },
-                                        then: "Corporate Treasury Data"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "data"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                }
-                                            ]
-                                        },
-                                        then: "Customer Data"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$api_category",
-                                                        "FX Quotes"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        true
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$chargeable", true]
-                                                }
-                                            ]
-                                        },
-                                        then: "FX Brokerage Collection"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$api_category",
-                                                        "Insurance Quote Sharing"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        true
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$chargeable", true]
-                                                }
-                                            ]
-                                        },
-                                        then: "Insurance Brokerage Collection"
-                                    }
-                                ],
-                                default: "Others"
-                            }
-                        }
+                        label: lfi_label
                     }
                 },
                 {
@@ -3013,6 +2453,9 @@ export class InvoiceService {
             key: 'serviceFeePercentage',
         })
         const dataServiceFeePercentage = globData?.value || 0;
+        const paymentTypeLabel = await this.paymentTypeLabel()
+        const lfi_label = await this.lfi_label();
+
         const result = await this.logsModel.aggregate(
             [
                 {
@@ -3036,280 +2479,7 @@ export class InvoiceService {
                 },
                 {
                     $addFields: {
-                        paymentTypeLabel: {
-                            $switch: {
-                                branches: [
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$group",
-                                                        "payment-bulk"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $gt: ["$apiHubVolume", 0]
-                                                }
-                                            ]
-                                        },
-                                        then: "Corporate Payment" //-- paymentApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$group",
-                                                        "payment-non-bulk"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $gt: ["$apiHubVolume", 0]
-                                                }
-                                            ]
-                                        },
-                                        then: "Payment Initiation" //--paymentApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$group",
-                                                        "payment-data"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $gt: ["$apiHubVolume", 0]
-                                                }
-                                            ]
-                                        },
-                                        then: "Payment Data" //--paymentApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "insurance"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$api_category",
-                                                        "Insurance Data Sharing"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $gt: ["$apiHubVolume", 0]
-                                                }
-                                            ]
-                                        },
-                                        then: "Insurance Data Sharing" //-- insuranceApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "insurance"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$api_category",
-                                                        "Insurance Quote Sharing"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $gt: ["$apiHubVolume", 0]
-                                                }
-                                            ]
-                                        },
-                                        then: "Insurance Quote Sharing" //-- insuranceApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "data"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$api_category",
-                                                        "Setup and Consent"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $gt: ["$apiHubVolume", 0]
-                                                }
-                                            ]
-                                        },
-                                        then: "Setup and Consent" //-- paymentApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "data"]
-                                                },
-                                                {
-                                                    $eq: ["$type", "corporate"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $gt: ["$apiHubVolume", 0]
-                                                }
-                                            ]
-                                        },
-                                        then: "Corporate Data" //-- paymentApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "data"]
-                                                },
-                                                {
-                                                    $eq: ["$discount_type", "cop"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $gt: ["$apiHubVolume", 0]
-                                                }
-                                            ]
-                                        },
-                                        then: "Confirmation of Payee(Discounted)" //-- discountApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "data"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$discount_type",
-                                                        "balance"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $gt: ["$apiHubVolume", 0]
-                                                }
-                                            ]
-                                        },
-                                        then: "Balance(Discounted)" //-- discountApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "data"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $gt: ["$apiHubVolume", 0]
-                                                }
-                                            ]
-                                        },
-                                        then: "Bank Data Sharing" //--paymentApiHubFee
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        true
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$api_category",
-                                                        "Insurance Quote Sharing"
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Insurance Brokerage Collection"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        true
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$api_category",
-                                                        "FX Quotes"
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "FX Brokerage Collection"
-                                    }
-                                ],
-                                default: null
-                            }
-                        }
+                        paymentTypeLabel: paymentTypeLabel
                     }
                 },
                 {
@@ -3657,320 +2827,7 @@ export class InvoiceService {
                 },
                 {
                     $addFields: {
-                        label: {
-                            $switch: {
-                                branches: [
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $in: [
-                                                        "$group",
-                                                        [
-                                                            "payment-bulk",
-                                                            "payment-non-bulk"
-                                                        ]
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$type", "merchant"]
-                                                },
-                                                // {
-                                                //     $eq: ["$isCapped", true]
-                                                // },
-                                                {
-                                                    $gt: ["$volume", 0]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                },
-                                                {
-                                                    $ne: [
-                                                        "$raw_api_log_data.payment_type",
-                                                        "LargeValueCollection"
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Merchant Collection"
-                                    },
-                                    // {
-                                    //     case: {
-                                    //         $and: [
-                                    //             {
-                                    //                 $in: [
-                                    //                     "$group",
-                                    //                     [
-                                    //                         "payment-bulk",
-                                    //                         "payment-non-bulk"
-                                    //                     ]
-                                    //                 ]
-                                    //             },
-                                    //             {
-                                    //                 $eq: ["$type", "merchant"]
-                                    //             },
-                                    //             {
-                                    //                 $eq: ["$isCapped", false]
-                                    //             },
-                                    //             {
-                                    //                 $eq: [
-                                    //                     "$successfullQuote",
-                                    //                     false
-                                    //                 ]
-                                    //             },
-                                    //             {
-                                    //                 $eq: ["$lfiChargable", true]
-                                    //             },
-                                    //             {
-                                    //                 $gt: ["$volume", 0]
-                                    //             },
-                                    //             {
-                                    //                 $ne: [
-                                    //                     "$raw_api_log_data.payment_type",
-                                    //                     "LargeValueCollection"
-                                    //                 ]
-                                    //             }
-                                    //         ]
-                                    //     },
-                                    //     then: "Merchant Collection Non-Capped"
-                                    // },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $in: [
-                                                        "$group",
-                                                        [
-                                                            "payment-bulk",
-                                                            "payment-non-bulk"
-                                                        ]
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$type", "peer-2-peer"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                },
-                                                {
-                                                    $gt: ["$volume", 0]
-                                                },
-                                                {
-                                                    $ne: [
-                                                        "$raw_api_log_data.payment_type",
-                                                        "LargeValueCollection"
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Peer-to-Peer"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $in: [
-                                                        "$group",
-                                                        [
-                                                            "payment-bulk",
-                                                            "payment-non-bulk"
-                                                        ]
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$type", "me-2-me"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                },
-                                                {
-                                                    $gt: ["$volume", 0]
-                                                },
-                                                {
-                                                    $ne: [
-                                                        "$raw_api_log_data.payment_type",
-                                                        "LargeValueCollection"
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        then: "Me-to-Me Transfer"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $in: [
-                                                        "$group",
-                                                        [
-                                                            "payment-bulk",
-                                                            "payment-non-bulk"
-                                                        ]
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$raw_api_log_data.payment_type",
-                                                        "LargeValueCollection"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                },
-                                                {
-                                                    $gt: ["$volume", 0]
-                                                }
-                                            ]
-                                        },
-                                        then: "Large Value Collection"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$group",
-                                                        "payment-bulk"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$type", "corporate"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                },
-                                                {
-                                                    $gt: ["$volume", 0]
-                                                }
-                                            ]
-                                        },
-                                        then: "Corporate Payments"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "data"]
-                                                },
-                                                {
-                                                    $eq: ["$type", "corporate"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                },
-                                                {
-                                                    $gt: ["$volume", 0]
-                                                }
-                                            ]
-                                        },
-                                        then: "Corporate Treasury Data"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: ["$group", "data"]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        false
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$lfiChargable", true]
-                                                },
-                                                {
-                                                    $gt: ["$volume", 0]
-                                                }
-                                            ]
-                                        },
-                                        then: "Customer Data"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$api_category",
-                                                        "FX Quotes"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        true
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$chargeable", true]
-                                                }
-                                            ]
-                                        },
-                                        then: "FX Brokerage Collection"
-                                    },
-                                    {
-                                        case: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$api_category",
-                                                        "Insurance Quote Sharing"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$successfullQuote",
-                                                        true
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: ["$chargeable", true]
-                                                }
-                                            ]
-                                        },
-                                        then: "Insurance Brokerage Collection"
-                                    }
-                                ],
-                                default: "Others"
-                            }
-                        }
+                        label:lfi_label
                     }
                 },
                 {
@@ -4319,6 +3176,10 @@ export class InvoiceService {
             ) : undefined
 
         console.log(startDate, endDate);
+
+        const paymentTypeLabel = await this.paymentTypeLabel()
+        const lfi_label = await this.lfi_label();
+
         const result_tpp = await this.logsModel.aggregate(
             [
                 {
@@ -4340,102 +3201,7 @@ export class InvoiceService {
                     }
                 }, {
                     '$addFields': {
-                        'paymentTypeLabel': {
-                            '$switch': {
-                                'branches': [
-                                    {
-                                        'case': {
-                                            '$eq': [
-                                                '$group', 'payment-bulk'
-                                            ]
-                                        },
-                                        'then': 'Corporate Payment'
-                                    }, {
-                                        'case': {
-                                            '$eq': [
-                                                '$group', 'payment-non-bulk'
-                                            ]
-                                        },
-                                        'then': 'Payment Initiation'
-                                    }, {
-                                        'case': {
-                                            '$eq': [
-                                                '$group', 'insurance'
-                                            ]
-                                        },
-                                        'then': 'Insurance'
-                                    }, {
-                                        'case': {
-                                            '$and': [
-                                                {
-                                                    '$eq': [
-                                                        '$group', 'data'
-                                                    ]
-                                                }, {
-                                                    '$eq': [
-                                                        '$api_category', 'setup'
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        'then': 'Setup and Consent'
-                                    }, {
-                                        'case': {
-                                            '$and': [
-                                                {
-                                                    '$eq': [
-                                                        '$group', 'data'
-                                                    ]
-                                                }, {
-                                                    '$eq': [
-                                                        '$type', 'corporate'
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        'then': 'Corporate Payment Data'
-                                    }, {
-                                        'case': {
-                                            '$and': [
-                                                {
-                                                    '$eq': [
-                                                        '$group', 'data'
-                                                    ]
-                                                }, {
-                                                    '$eq': [
-                                                        '$discount_type', 'cop'
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        'then': 'Confirmation of Payee(Discounted)'
-                                    }, {
-                                        'case': {
-                                            '$and': [
-                                                {
-                                                    '$eq': [
-                                                        '$group', 'data'
-                                                    ]
-                                                }, {
-                                                    '$eq': [
-                                                        '$discount_type', 'balance'
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        'then': 'Balance(Discounted)'
-                                    }, {
-                                        'case': {
-                                            '$eq': [
-                                                '$group', 'data'
-                                            ]
-                                        },
-                                        'then': 'Bank Data Sharing'
-                                    }
-                                ],
-                                'default': null
-                            }
-                        }
+                        'paymentTypeLabel': paymentTypeLabel
                     }
                 }, {
                     '$addFields': {
