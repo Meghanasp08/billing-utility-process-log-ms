@@ -42,7 +42,7 @@ export class BrokerageConfiguration {
     @Prop({ type: ConfigurationFee, required: true })
     configuration_fee: ConfigurationFee;
 
-    @Prop({ type: Boolean, default: false })
+    @Prop({ type: Boolean, default: true })
     serviceStatus: boolean;
 }
 

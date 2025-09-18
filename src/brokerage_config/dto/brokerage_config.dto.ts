@@ -111,7 +111,7 @@ export class CreateGlobalConfigurationDto {
     @ApiProperty({
         description: 'Status of configuration',
         example: true,
-        required: false,
+        required: true,
         default: true,
     })
     @IsBoolean()
