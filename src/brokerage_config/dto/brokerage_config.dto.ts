@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
     IsBoolean,
     IsNotEmpty,
@@ -7,7 +8,6 @@ import {
     IsString,
     ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 
 // Nested DTO for configuration_fee
 export class ConfigurationFeeDto {
@@ -26,7 +26,7 @@ export class ConfigurationFeeDto {
         required: true,
     })
     @IsNumber()
-    rent: number;
+    renter: number;
 
     @ApiProperty({
         description: 'Fee for Travel ',
@@ -116,5 +116,5 @@ export class CreateGlobalConfigurationDto {
     })
     @IsBoolean()
     @IsOptional()
-    status?: boolean = false;
+    serviceStatus?: boolean = false;
 }

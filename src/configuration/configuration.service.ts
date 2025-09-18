@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { BrokerageConfiguration, BrokerageConfigurationDocument } from 'src/brokerage_config/schema/brokerage_config.schema';
 import { filter_master, paymentLabelFilters } from 'src/config/app.config';
 import { LfiData, LfiDataDocument } from 'src/upload/schemas/lfi-data.schema';
 import { TppData, TppDataDocument } from 'src/upload/schemas/tpp-data.schema';
@@ -16,6 +17,7 @@ export class ConfigurationService {
         @InjectModel(TppData.name) private tppModel: Model<TppDataDocument>,
         @InjectModel(GlobalConfiguration.name) private globalModel: Model<GlobalConfigurationDocument>,
         @InjectModel(ApiDataConfiguration.name) private apiDataModel: Model<ApiDataConfigurationDocument>,
+        @InjectModel(BrokerageConfiguration.name) private brokerageConfigModel: Model<BrokerageConfigurationDocument>,
     ) { }
 
     async updateLfiData(id: string, updateLfiDataDto: UpdateLfiDataDto) {
@@ -43,6 +45,11 @@ export class ConfigurationService {
 
         const updatedTpp = await this.tppModel.findByIdAndUpdate(
             id,
+            { $set: updateTppDataDto },
+            { new: true }
+        );
+        await this.brokerageConfigModel.findOneAndUpdate(
+            { tpp_id: updatedTpp?.tpp_id },
             { $set: updateTppDataDto },
             { new: true }
         );

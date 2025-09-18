@@ -58,7 +58,7 @@ export class ProfileController {
   @UseGuards(JwtAuthGuard)
   @Post('logs')
   @Claims(Claim.LOG_VIEW)
-  async getLogDataWithAllFilter(@Req() req: any, @Body(ValidationPipe) queryBody: any,@Query('limit') limit: number = 10,
+  async getLogDataWithAllFilter(@Req() req: any, @Body(ValidationPipe) queryBody: any, @Query('limit') limit: number = 10,
     @Query('offset') offset: number = 0) {
     try {
 
@@ -248,7 +248,7 @@ export class ProfileController {
       throw error;
     }
   }
-  
+
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Retrieve details of TPP.' })
@@ -310,6 +310,24 @@ export class ProfileController {
     } catch (err) {
       console.log(err);
       throw err;
+    }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Retrieve LFI list.' })
+  @Get('tpp/list-lfi')
+  @Claims(Claim.LFI_DIRECTORY_VIEW)
+  async getLfilistforTpp() {
+    try {
+      const logData = await this.profileService.getLfilidtFortpp();
+      return {
+        message: 'Lfi Details',
+        result: logData,
+        statusCode: HttpStatus.OK
+      }
+    } catch (error) {
+      throw error;
     }
   }
 }

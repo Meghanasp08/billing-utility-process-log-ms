@@ -8,7 +8,7 @@ export class ConfigurationFee {
     motor: number;
 
     @Prop({ type: Number, required: true })
-    rent: number;
+    renter: number;
 
     @Prop({ type: Number, required: true })
     travel: number;
@@ -43,7 +43,7 @@ export class BrokerageConfiguration {
     configuration_fee: ConfigurationFee;
 
     @Prop({ type: Boolean, default: false })
-    status: boolean;
+    serviceStatus: boolean;
 }
 
 export const BrokerageConfigurationSchema = SchemaFactory.createForClass(BrokerageConfiguration);

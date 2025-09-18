@@ -4,6 +4,7 @@ import * as csv from 'csv-parser';
 import * as fs from 'fs';
 import * as moment from 'moment';
 import { Model } from 'mongoose';
+import { BrokerageConfiguration, BrokerageConfigurationDocument } from 'src/brokerage_config/schema/brokerage_config.schema';
 import { PaginationEnum, StatusEnum } from 'src/common/constants/constants.enum';
 import { PaginationDTO } from 'src/common/dto/common.dto';
 import { AppConfig } from 'src/config/app.config';
@@ -29,6 +30,7 @@ export class UploadService {
     @InjectModel(PageMultiplier.name) private pageMultiplier: Model<PageMultiplierDocument>,
     @InjectModel(uploadLog.name) private uploadLog: Model<uploadLogDocument>,
     @InjectModel(GlobalConfiguration.name) private globalModel: Model<GlobalConfigurationDocument>,
+    @InjectModel(BrokerageConfiguration.name) private brokerageConfigModel: Model<BrokerageConfigurationDocument>,
   ) { }
 
   private readonly peer_to_peer_types = AppConfig.peerToPeerTypes;
@@ -36,6 +38,7 @@ export class UploadService {
   private readonly nonLargeValueCapMerchantCheck = AppConfig.highValueMerchantcapCheck;
   private readonly paymentTypes = AppConfig.paymentTypes;
   private readonly paymentStatus = AppConfig.paymentStatus;
+  private readonly salaryBand = AppConfig.salaryBand;
 
   private variables: {
     nonLargeValueCapMerchant?: any; //50 aed
@@ -57,6 +60,14 @@ export class UploadService {
     discountHourValue?: any; // 2 hour
     fxQuoteApiHubFee?: any; // 0.2 aed
     fxQuotelfiFee?: any; // 0.5 aed
+    defaultMotorValue?: any; // 5%
+    defaultTravelValue?: any; // 15%
+    defaultHomeValue?: any; // 5%
+    defaultEmployment_ILOValue?: any; // 0%
+    defaultRenterValue?: any; // 15%
+    defaultHealthValue?: any; // 5%
+    defaultLifeValue?: any; // 10%
+    below4000BandValue?: any; // 5%
   } = {};
 
   async mergeCsvFiles(userEmail: string, file1Path: string, file2Path: string, downloadCsv: boolean = false,) {
@@ -119,6 +130,30 @@ export class UploadService {
             break;
           case 'discountHourValue':
             this.variables.discountHourValue = obj;
+            break;
+          case 'defaultMotorValue':
+            this.variables.defaultMotorValue = obj;
+            break;
+          case 'defaultTravelValue':
+            this.variables.defaultTravelValue = obj;
+            break;
+          case 'defaultHomeValue':
+            this.variables.defaultHomeValue = obj;
+            break;
+          case 'defaultEmployment_ILOValue':
+            this.variables.defaultEmployment_ILOValue = obj;
+            break;
+          case 'defaultRenterValue':
+            this.variables.defaultRenterValue = obj;
+            break;
+          case 'defaultHealthValue':
+            this.variables.defaultHealthValue = obj;
+            break;
+          case 'defaultLifeValue':
+            this.variables.defaultLifeValue = obj;
+            break;
+          case 'below4000BandValue':
+            this.variables.below4000BandValue = obj;
             break;
           default:
             console.warn(`Unknown key: ${obj.key}`);
@@ -438,29 +473,29 @@ export class UploadService {
 
     const mergedData = await Promise.all(
       file1Data.map(async (rawApiRecord, index) => {
-        // let errorTppLfi = !rawApiRecord.lfiId || !rawApiRecord.tppName || !rawApiRecord.tppId || !rawApiRecord.lfiName;
-        // if (errorTppLfi) {
-        //   await this.uploadLog.findByIdAndUpdate(
-        //     logUpdate._id,
-        //     {
-        //       $set: {
-        //         status: 'Failed',
-        //         remarks: `Failed to validate 'Raw Log File`,
-        //       },
-        //       $push: {
-        //         log: {
-        //           description: `Validation error occurred in row ${index + 2} for the field 'lfiId/lfiName/tppId/tppName' in the 'Raw Log File': the value is empty`,
-        //           status: 'Failed',
-        //           errorDetail: null,
-        //         },
-        //       },
-        //     }
-        //   );
-        //   throw new HttpException({
-        //     message: `Validation error occurred in row ${index + 2} for the field 'lfiId/lfiName/tppId/tppName' in the 'Raw Log File': the value is empty`,
-        //     status: 400
-        //   }, HttpStatus.BAD_REQUEST);
-        // }
+        let errorPremiumAmount = rawApiRecord.PremiumAmountExcludingVAT !== "" && isNaN(parseFloat(rawApiRecord.PremiumAmountExcludingVAT));
+        if (errorPremiumAmount) {
+          await this.uploadLog.findByIdAndUpdate(
+            logUpdate._id,
+            {
+              $set: {
+                status: 'Failed',
+                remarks: `Failed to validate 'Raw Log File`,
+              },
+              $push: {
+                log: {
+                  description: `Validation error occurred in row ${index + 2} for the field 'PremiumAmountExcludingVAT' in the 'Raw Log File': the value should be a number. Invalid value: '${rawApiRecord.PremiumAmountExcludingVAT}'`,
+                  status: 'Failed',
+                  errorDetail: null,
+                },
+              },
+            }
+          );
+          throw new HttpException({
+            message: `Validation error occurred in row ${index + 2} for the field 'PremiumAmountExcludingVAT' in the 'Raw Log File': the value should be a number. Invalid value: '${rawApiRecord.PremiumAmountExcludingVAT}'`,
+            status: 400
+          }, HttpStatus.BAD_REQUEST);
+        }
         const paymentId = rawApiRecord.paymentId?.trim();
         let paymentRecord: any = null;
         if (paymentId) {
@@ -513,6 +548,8 @@ export class UploadService {
           ["raw_api_log_data.is_large_corporate"]: await parseBoolean(rawApiRecord.isLargeCorporate, index, 'isLargeCorporate', true),
           [`raw_api_log_data.user_type`]: rawApiRecord.userType || null,
           [`raw_api_log_data.purpose`]: rawApiRecord.purpose || null,
+          [`raw_api_log_data.PremiumAmountExcludingVAT`]: rawApiRecord.PremiumAmountExcludingVAT || null,
+          [`raw_api_log_data.SalaryBand`]: rawApiRecord.SalaryBand || null,
 
           [`payment_logs.timestamp`]: paymentRecord?.timestamp || null,
           [`payment_logs.tpp_name`]: paymentRecord?.tppName || null,
@@ -570,6 +607,8 @@ export class UploadService {
     const pageDataCalculation = await this.attendedUpdateOnNumberOfPage(pagesFeeApplied);
 
     const totalHubFeecalculation = await this.calculateTotalApiHubFee(pageDataCalculation);
+
+    console.log("Stages Completed Successfully ");
 
     if (downloadCsv) {
       try {
@@ -722,19 +761,46 @@ export class UploadService {
 
         //Get TPP ID and fetch from DB
         const tppId = record.successfullQuote && record.success ? record["raw_api_log_data.tpp_id"] : null;
+        const lfiId = record.successfullQuote && record.success ? record["raw_api_log_data.lfi_id"] : null;
         let brokerage_fee = 0;
+        let percentage = 0;
+        let brokerageConfig_id: any = null;
         let serviceStatus: boolean = false;
-        if (tppId) {
+        if (tppId && lfiId) {
           const tppDoc = await this.TppModel.findOne({
             tpp_id: tppId
           }, {
-            brokerage_fee: 1,
+            // brokerage_fee: 1,
             serviceStatus: 1,
             _id: 0
           }).lean();
-          if (tppDoc) {
-            brokerage_fee = tppDoc.brokerage_fee || 0;
-            serviceStatus = tppDoc.serviceStatus;
+          serviceStatus = tppDoc?.serviceStatus ?? false;
+          if (tppDoc?.serviceStatus) {
+            const premium = parseFloat(record["raw_api_log_data.PremiumAmountExcludingVAT"] || 0);
+            // console.log(premium, 'premium')
+
+            const configData = await this.brokerageConfigModel.findOne({
+              tpp_id: tppId, lfi_id: lfiId, serviceStatus: true
+            })
+            console.log(configData, 'configData')
+            console.log(record.type, 'type:', this.variables.defaultEmployment_ILOValue.value)
+            if (configData) {
+              percentage = configData.configuration_fee[record.type] || 0;
+              brokerageConfig_id = configData._id;
+
+            } else {
+              percentage = record.type == "employment_ILO" ? this.variables.defaultEmployment_ILOValue.value : this.variables[`default${record.type.charAt(0).toUpperCase() + record.type.slice(1)}Value`]?.value || 0;
+            }
+            // console.log(percentage, 'percentage')
+            if (record["raw_api_log_data.SalaryBand"] === "BelowAED4000PerMonth") {
+              percentage = percentage >= 5 ? this.variables.below4000BandValue?.value : percentage;
+              record.isCapped = percentage >= 5 ? true : false;
+              record.cappedAt = percentage >= 5 ? 5 : 0;
+            } else if (record["raw_api_log_data.SalaryBand"] === "AED4000ToAED12000PerMonth" || record["raw_api_log_data.SalaryBand"] === "AED12001AndAbove") {
+              percentage = percentage;
+            }
+            brokerage_fee = parseFloat((premium * (percentage / 100)).toFixed(2));
+            // brokerage_fee = tppDoc.brokerage_fee || 0; 
           }
         }
 
@@ -742,7 +808,9 @@ export class UploadService {
           ...record,
           applicableApiHubFee: totalApiHubFee.toFixed(3),
           apiHubVolume,
+          percentage,
           brokerage_fee,
+          brokerageConfig_id,
           serviceStatus
         };
       })
@@ -1476,7 +1544,7 @@ export class UploadService {
       return {
         ...record,
         group,
-        type: groupData?.key_name === 'payment-bulk' || groupData?.key_name === 'payment-non-bulk' ? this.getType(record) : 'NA',
+        type: groupData?.key_name === 'payment-bulk' || groupData?.key_name === 'payment-non-bulk' ? this.getType(record) : record.successfullQuote ? groupData.commission_category : 'NA',
         discountType: groupData?.key_name === 'balance' || groupData?.key_name === 'confirmation' ? groupData?.key_name : null,
         api_category: groupData?.api_category || null,
         discounted,

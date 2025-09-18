@@ -25,7 +25,8 @@ export const AppConfig = {
     aedConstant: 100,
     highValueMerchantcapCheck: 20000,
     paymentTypes: ['Collection', 'LargeValueCollection', 'PushP2P', 'PullP2P', 'Me2Me', ''],
-    paymentStatus: ['AcceptedSettlementCompleted', 'AcceptedCreditSettlementCompleted', 'AcceptedWithoutPosting']
+    paymentStatus: ['AcceptedSettlementCompleted', 'AcceptedCreditSettlementCompleted', 'AcceptedWithoutPosting'],
+    salaryBand: ['NoSalary', 'BelowAED4000PerMonth', 'AED4000ToAED12000PerMonth', 'AED12001AndAbove']
 };
 
 export const invoice_config = {
@@ -192,7 +193,7 @@ export const paymentLabelFilters = [
             { key: "type", operator: "ne", value: "corporate" }
         ]
     },
-    
+
     //LFI
     {
         key: "merchant_collection_capped",
@@ -320,7 +321,7 @@ export const paymentLabelFilters = [
         ]
     },
 
-//Commissions
+    //Commissions
     {
         key: "fx_brokerage_collection",
         Label: "FX Brokerage Collection",

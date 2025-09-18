@@ -76,6 +76,12 @@ export class RawApiLogData {
 
   @Prop()
   purpose: string;
+
+  @Prop()
+  PremiumAmountExcludingVAT: number;
+
+  @Prop()
+  SalaryBand: string;
 }
 
 export const RawApiLogDataSchema = SchemaFactory.createForClass(RawApiLogData);
@@ -252,6 +258,12 @@ export class Log {
 
   @Prop()
   brokerage_fee: number;
+
+  @Prop()
+  percentage: number;
+
+  @Prop()
+  brokerageConfig_id: string;
 
   @Prop()
   serviceStatus: boolean;

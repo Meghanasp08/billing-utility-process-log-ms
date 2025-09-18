@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsNotEmpty, IsNumber } from 'class-validator';
+import { IsBoolean, IsNotEmpty } from 'class-validator';
 
 export class UpdateTppDataDto {
     // @ApiProperty({
@@ -7,7 +7,7 @@ export class UpdateTppDataDto {
     //     example: 2.99,
     // })
     // @IsNumber()
-    brokerage_fee: number;
+    // brokerage_fee: number;
 
     @ApiProperty({
         description: 'Allow Nebras to collect Service Fee status.',

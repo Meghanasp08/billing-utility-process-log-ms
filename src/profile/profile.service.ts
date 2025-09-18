@@ -850,6 +850,8 @@ export class ProfileService {
       is_large_corporate: entry.raw_api_log_data.is_large_corporate,
       user_type: entry.raw_api_log_data.user_type,
       purpose: entry.raw_api_log_data.purpose,
+      PremiumAmountExcludingVAT: entry.raw_api_log_data.PremiumAmountExcludingVAT,
+      SalaryBand: entry.raw_api_log_data.SalaryBand,
       status: entry.payment_logs.status,
       currency: entry.payment_logs.currency,
       amount: entry.payment_logs.amount,
@@ -857,30 +859,6 @@ export class ProfileService {
       transaction_id: entry.payment_logs.transaction_id,
       number_of_successful_transactions: entry.payment_logs.number_of_successful_transactions,
       international_payment: entry.payment_logs.international_payment,
-      // chargeable: entry.chargeable,
-      // lfiChargable: entry.lfiChargable,
-      // success: entry.success,
-      // group: entry.group,
-      // type: entry.type,
-      // discountType: entry.discountType,
-      // api_category: entry.api_category,
-      // discounted: entry.discounted,
-      // api_hub_fee: entry.api_hub_fee,
-      // applicableApiHubFee: entry.applicableApiHubFee,
-      // apiHubVolume: entry.apiHubVolume,
-      // calculatedFee: entry.calculatedFee,
-      // applicableFee: entry.applicableFee,
-      // unit_price: entry.unit_price,
-      // volume: entry.volume,
-      // appliedLimit: entry.appliedLimit,
-      // limitApplied: entry.limitApplied,
-      // isCapped: entry.isCapped,
-      // cappedAt: entry.cappedAt,
-      // numberOfPages: entry.numberOfPages,
-      // duplicate: entry.duplicate,
-      // brokerage_fee: entry.brokerage_fee,
-      // serviceStatus: entry.serviceStatus,
-      // successQuote: entry.successfullQuote,
     }));
 
     const outputPath = './output/log_data.csv';
@@ -902,9 +880,15 @@ export class ProfileService {
   } catch(error) {
     console.error("Error creating CSV file:", error);
   }
-  //     return {
-  //   log,
-  // }
-  // }
+
+
+  async getLfilidtFortpp() {
+    try {
+      const result = await this.lfiModel.find().select("lfi_id lfi_name").exec();
+      return result;
+    } catch (error) {
+      throw new Error("Failed to fetch billing details");
+    }
+  }
 
 }

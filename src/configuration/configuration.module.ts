@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from 'src/auth/auth.module';
+import { BrokerageConfiguration, BrokerageConfigurationSchema } from 'src/brokerage_config/schema/brokerage_config.schema';
 import { LfiData, LfiDataSchema } from 'src/upload/schemas/lfi-data.schema';
 import { TppData, TppDataSchema } from 'src/upload/schemas/tpp-data.schema';
 import { ConfigurationController } from './configuration.controller';
@@ -14,6 +15,7 @@ import { GlobalConfiguration, GlobalConfigurationSchema } from './schema/global_
     { name: TppData.name, schema: TppDataSchema },
     { name: GlobalConfiguration.name, schema: GlobalConfigurationSchema },
     { name: ApiDataConfiguration.name, schema: ApiDataConfigurationSchema },
+    { name: BrokerageConfiguration.name, schema: BrokerageConfigurationSchema },
   ]),
     AuthModule],
   providers: [ConfigurationService],
