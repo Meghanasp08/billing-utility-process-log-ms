@@ -112,11 +112,15 @@ export class ConfigurationController {
     @Put('bulk-update')
     @Claims(Claim.GLOBAL_CONFIGURATION_EDIT)
     async bulkUpdate(@Body() data: UpdateManyDto[]) {
-        const globalData = await this.configService.bulkUpdate(data);
-        return {
-            message: 'Global Data Updates successfully',
-            result: globalData,
-            statusCode: HttpStatus.OK
+        try {
+            const globalData = await this.configService.bulkUpdate(data);
+            return {
+                message: 'Global Data Updates successfully',
+                result: globalData,
+                statusCode: HttpStatus.OK
+            }
+        } catch (error) {
+            throw error;
         }
     }
 
@@ -126,11 +130,15 @@ export class ConfigurationController {
     @Get('api-data')
     @Claims(Claim.GLOBAL_CONFIGURATION_VIEW)
     async getApiData(@Query(ValidationPipe) PaginationDTO: PaginationDTO) {
-        const apiData = await this.configService.getApiData();
-        return {
-            message: 'Api Data List',
-            result: apiData,
-            statusCode: HttpStatus.OK
+        try {
+            const apiData = await this.configService.getApiData();
+            return {
+                message: 'Api Data List',
+                result: apiData,
+                statusCode: HttpStatus.OK
+            }
+        } catch (error) {
+            throw error;
         }
     }
 
@@ -140,11 +148,15 @@ export class ConfigurationController {
     @Put('api-data')
     @Claims(Claim.GLOBAL_CONFIGURATION_EDIT)
     async updateApidata(@Body(ValidationPipe) updateApiDto: UpdateApiDto) {
-        const apiData = await this.configService.updateApidatas(updateApiDto);
-        return {
-            message: 'Api Data Updated successfully',
-            result: apiData,
-            statusCode: HttpStatus.OK
+        try {
+            const apiData = await this.configService.updateApidatas(updateApiDto);
+            return {
+                message: 'Api Data Updated successfully',
+                result: apiData,
+                statusCode: HttpStatus.OK
+            }
+        } catch (error) {
+            throw error;
         }
     }
 
@@ -154,11 +166,15 @@ export class ConfigurationController {
     @Post('api-data')
     @Claims(Claim.GLOBAL_CONFIGURATION_CREATE)
     async createApidata(@Body(ValidationPipe) createApiDto: CreateApiDto) {
-        const apiData = await this.configService.createApidatas(createApiDto);
-        return {
-            message: 'Api Data Created successfully',
-            result: apiData,
-            statusCode: HttpStatus.OK
+        try {
+            const apiData = await this.configService.createApidatas(createApiDto);
+            return {
+                message: 'Api Data Created successfully',
+                result: apiData,
+                statusCode: HttpStatus.OK
+            }
+        } catch (error) {
+            throw error;
         }
     }
 
@@ -167,11 +183,15 @@ export class ConfigurationController {
     @ApiOperation({ summary: 'Get Filter List' })
     @Get('get-filters')
     async getFilterList() {
-        const result = await this.configService.getFilterList();
-        return {
-            message: 'Get Filter List successfully',
-            result: result,
-            statusCode: HttpStatus.OK
+        try {
+            const result = await this.configService.getFilterList();
+            return {
+                message: 'Get Filter List successfully',
+                result: result,
+                statusCode: HttpStatus.OK
+            }
+        } catch (error) {
+            throw error;
         }
     }
 
@@ -180,11 +200,15 @@ export class ConfigurationController {
     @ApiOperation({ summary: 'Get Payment Filter List' })
     @Get('get-payment-filters')
     async getPaymentFilter() {
-        const result = await this.configService.getPaymentFilter();
-        return {
-            message: 'Get Filter List successfully',
-            result: result,
-            statusCode: HttpStatus.OK
+        try {
+            const result = await this.configService.getPaymentFilter();
+            return {
+                message: 'Get Filter List successfully',
+                result: result,
+                statusCode: HttpStatus.OK
+            }
+        } catch (error) {
+            throw error;
         }
     }
 }
