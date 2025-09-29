@@ -15,6 +15,7 @@ import { ApiData, ApiDataDocument } from './schemas/endpoint.schema';
 import { LfiData, LfiDataDocument } from './schemas/lfi-data.schema';
 import { MerchantTransaction, MerchantTransactionDocument } from './schemas/merchant.limitapplied.schema';
 import { PageMultiplier, PageMultiplierDocument } from './schemas/pagemultiplier.schema';
+import { TempRawLog } from './schemas/temp-log.schema';
 import { TppData, TppDataDocument } from './schemas/tpp-data.schema';
 import { uploadLog, uploadLogDocument } from './schemas/upload-log.schema';
 const { Parser } = require('json2csv');
@@ -31,6 +32,7 @@ export class UploadService {
     @InjectModel(uploadLog.name) private uploadLog: Model<uploadLogDocument>,
     @InjectModel(GlobalConfiguration.name) private globalModel: Model<GlobalConfigurationDocument>,
     @InjectModel(BrokerageConfiguration.name) private brokerageConfigModel: Model<BrokerageConfigurationDocument>,
+    @InjectModel(TempRawLog.name) private readonly tempLogModel: Model<any>,
   ) { }
 
   private readonly peer_to_peer_types = AppConfig.peerToPeerTypes;
@@ -70,102 +72,21 @@ export class UploadService {
     below4000BandValue?: any; // 5%
   } = {};
 
+
+
   async mergeCsvFiles(userEmail: string, file1Path: string, file2Path: string, downloadCsv: boolean = false,) {
     const file1Data: any[] = [];
     const file2Data: any[] = [];
     let globalData = await this.globalModel.find();
-    if (globalData.length) {
-      globalData.forEach((obj) => {
-        switch (obj.key) {
-          case 'nonLargeValueCapMerchant':
-            this.variables.nonLargeValueCapMerchant = obj;
-            break;
-          case 'nonLargeValueFreeLimitMerchant':
-            this.variables.nonLargeValueFreeLimitMerchant = obj;
-            break;
-          case 'paymentLargeValueFee':
-            this.variables.paymentLargeValueFee = obj;
-            break;
-          case 'bulkLargeCorporatefee':
-            this.variables.bulkLargeCorporatefee = obj;
-            break;
-          case 'paymentFeeMe2me':
-            this.variables.paymentFeeMe2me = obj;
-            break;
-          case 'bulkMe2mePeer2PeerCap':
-            this.variables.bulkMe2mePeer2PeerCap = obj;
-            break;
-          case 'paymentNonLargevalueFeePeer':
-            this.variables.paymentNonLargevalueFeePeer = obj;
-            break;
-          case 'attendedCallFreeLimit':
-            this.variables.attendedCallFreeLimit = obj;
-            break;
-          case 'unAttendedCallFreeLimit':
-            this.variables.unAttendedCallFreeLimit = obj;
-            break;
-          case 'nonLargeValueMerchantBps':
-            this.variables.nonLargeValueMerchantBps = obj;
-            break;
-          case 'fxQuoteApiHubFee':
-            this.variables.fxQuoteApiHubFee = obj;
-            break;
-          case 'fxQuotelfiFee':
-            this.variables.fxQuotelfiFee = obj;
-            break;
-          case 'dataLargeCorporateMdp':
-            this.variables.dataLargeCorporateMdp = obj;
-            break;
-          case 'paymentApiHubFee':
-            this.variables.paymentApiHubFee = obj;
-            break;
-          case 'discountApiHubFee':
-            this.variables.discountApiHubFee = obj;
-            break;
-          case 'insuranceQuoteApiHubFee':
-            this.variables.insuranceQuoteApiHubFee = obj;
-            break;
-          case 'insuranceDataApiHubFee':
-            this.variables.insuranceDataApiHubFee = obj;
-            break;
-          case 'discountHourValue':
-            this.variables.discountHourValue = obj;
-            break;
-          case 'defaultMotorValue':
-            this.variables.defaultMotorValue = obj;
-            break;
-          case 'defaultTravelValue':
-            this.variables.defaultTravelValue = obj;
-            break;
-          case 'defaultHomeValue':
-            this.variables.defaultHomeValue = obj;
-            break;
-          case 'defaultEmployment_ILOValue':
-            this.variables.defaultEmployment_ILOValue = obj;
-            break;
-          case 'defaultRenterValue':
-            this.variables.defaultRenterValue = obj;
-            break;
-          case 'defaultHealthValue':
-            this.variables.defaultHealthValue = obj;
-            break;
-          case 'defaultLifeValue':
-            this.variables.defaultLifeValue = obj;
-            break;
-          case 'below4000BandValue':
-            this.variables.below4000BandValue = obj;
-            break;
-          default:
-            console.warn(`Unknown key: ${obj.key}`);
-        }
-      });
-
-    } else {
+    if (!globalData.length) {
       throw new HttpException({
         message: 'Your Global Configuration is not setup completely',
         status: 400
       }, HttpStatus.BAD_REQUEST);
     }
+
+    globalData.forEach(obj => { this.variables[obj.key] = obj; });
+
 
     let logUpdate: any;
     if (!file1Path) {
@@ -212,9 +133,6 @@ export class UploadService {
       }
       )
     }
-
-
-
     // Validate headers for file1
     await new Promise((resolve, reject) => {
       fs.createReadStream(file1Path)
@@ -474,28 +392,28 @@ export class UploadService {
     const mergedData = await Promise.all(
       file1Data.map(async (rawApiRecord, index) => {
         let errorPremiumAmount = rawApiRecord.PremiumAmountExcludingVAT !== "" && isNaN(parseFloat(rawApiRecord.PremiumAmountExcludingVAT));
-        if (errorPremiumAmount) {
-          await this.uploadLog.findByIdAndUpdate(
-            logUpdate._id,
-            {
-              $set: {
-                status: 'Failed',
-                remarks: `Failed to validate 'Raw Log File`,
-              },
-              $push: {
-                log: {
-                  description: `Validation error occurred in row ${index + 2} for the field 'PremiumAmountExcludingVAT' in the 'Raw Log File': the value should be a number. Invalid value: '${rawApiRecord.PremiumAmountExcludingVAT}'`,
-                  status: 'Failed',
-                  errorDetail: null,
-                },
-              },
-            }
-          );
-          throw new HttpException({
-            message: `Validation error occurred in row ${index + 2} for the field 'PremiumAmountExcludingVAT' in the 'Raw Log File': the value should be a number. Invalid value: '${rawApiRecord.PremiumAmountExcludingVAT}'`,
-            status: 400
-          }, HttpStatus.BAD_REQUEST);
-        }
+        // if (errorPremiumAmount) {
+        //   await this.uploadLog.findByIdAndUpdate(
+        //     logUpdate._id,
+        //     {
+        //       $set: {
+        //         status: 'Failed',
+        //         remarks: `Failed to validate 'Raw Log File`,
+        //       },
+        //       $push: {
+        //         log: {
+        //           description: `Validation error occurred in row ${index + 2} for the field 'PremiumAmountExcludingVAT' in the 'Raw Log File': the value should be a number. Invalid value: '${rawApiRecord.PremiumAmountExcludingVAT}'`,
+        //           status: 'Failed',
+        //           errorDetail: null,
+        //         },
+        //       },
+        //     }
+        //   );
+        //   throw new HttpException({
+        //     message: `Validation error occurred in row ${index + 2} for the field 'PremiumAmountExcludingVAT' in the 'Raw Log File': the value should be a number. Invalid value: '${rawApiRecord.PremiumAmountExcludingVAT}'`,
+        //     status: 400
+        //   }, HttpStatus.BAD_REQUEST);
+        // }
         const paymentId = rawApiRecord.paymentId?.trim();
         let paymentRecord: any = null;
         if (paymentId) {
@@ -610,132 +528,933 @@ export class UploadService {
 
     console.log("Stages Completed Successfully ");
 
-    if (downloadCsv) {
-      try {
-        // Define the CSV headers
-        const outputPath = './output/data.csv';
 
-        const directory = outputPath.substring(0, outputPath.lastIndexOf('/'));
-        if (!fs.existsSync(directory)) {
-          fs.mkdirSync(directory, { recursive: true });
-        }
 
-        // Define the CSV headers
-        const fields = [
-          "raw_api_log_data.timestamp",
-          "raw_api_log_data.tpp_name",
-          "raw_api_log_data.lfi_name",
-          "raw_api_log_data.lfi_id",
-          "raw_api_log_data.tpp_id",
-          "raw_api_log_data.tpp_client_id",
-          "raw_api_log_data.api_set_sub",
-          "raw_api_log_data.http_method",
-          "raw_api_log_data.url",
-          "raw_api_log_data.tpp_response_code_group",
-          "raw_api_log_data.execution_time",
-          "raw_api_log_data.interaction_id",
-          "raw_api_log_data.resource_name",
-          "raw_api_log_data.lfi_response_code_group",
-          "raw_api_log_data.is_attended",
-          "raw_api_log_data.records",
-          "raw_api_log_data.payment_type",
-          "raw_api_log_data.payment_id",
-          "raw_api_log_data.merchant_id",
-          "raw_api_log_data.psu_id",
-          "raw_api_log_data.is_large_corporate",
-          "raw_api_log_data.user_type",
-          "raw_api_log_data.purpose",
-          "payment_logs.timestamp",
-          "payment_logs.tpp_name",
-          "payment_logs.lfi_id",
-          "payment_logs.tpp_id",
-          "payment_logs.tpp_client_id",
-          "payment_logs.status",
-          "payment_logs.currency",
-          "payment_logs.amount",
-          "payment_logs.payment_consent_type",
-          "payment_logs.payment_type",
-          "payment_logs.transaction_id",
-          "payment_logs.payment_id",
-          "payment_logs.merchant_id",
-          "payment_logs.psu_id",
-          "payment_logs.is_large_corporate",
-          "payment_logs.number_of_successful_transactions",
-          "payment_logs.international_payment",
-          "chargeable",
-          "lfiChargable",
-          "success",
-          "group",
-          "type",
-          "discountType",
-          "api_category",
-          "discounted",
-          "api_hub_fee",
-          "applicableApiHubFee",
-          "apiHubVolume",
-          "calculatedFee",
-          "applicableFee",
-          "unit_price",
-          "volume",
-          "appliedLimit",
-          "limitApplied",
-          "isCapped",
-          "cappedAt",
-          "numberOfPages",
-          "duplicate",
-          "brokerage_fee",
-          "serviceStatus"
-        ];
+    const existingInteractionIds = await this.logModel.distinct("raw_api_log_data.interaction_id");
 
-        // Convert JSON to CSV
-        const parser = new Parser({ fields });
-        const csv = parser.parse(totalHubFeecalculation);
-
-        // Write the CSV file
-        fs.writeFileSync(outputPath, csv, 'utf8');
-        console.log(`CSV file has been created at ${outputPath}`);
-        return outputPath;
-      } catch (error) {
-        console.error("Error creating CSV file:", error);
-      }
-    } else {
-      // return totalHubFeecalculation
-
-      const existingInteractionIds = await this.logModel.distinct("raw_api_log_data.interaction_id");
-
-      const processedRecords = totalHubFeecalculation.map((record) => {
-        const isDuplicate = existingInteractionIds.includes(record["raw_api_log_data.interaction_id"]);
-        return {
-          ...record,
-          duplicate: isDuplicate,
-        };
-      });
-      if (processedRecords.length) {
-        const billData = await this.logModel.insertMany(processedRecords);
-        if (billData.length) {
-          await this.uploadLog.findByIdAndUpdate(
-            logUpdate._id,
-            {
-              $set: {
+    const processedRecords = totalHubFeecalculation.map((record) => {
+      const isDuplicate = existingInteractionIds.includes(record["raw_api_log_data.interaction_id"]);
+      return {
+        ...record,
+        duplicate: isDuplicate,
+      };
+    });
+    if (processedRecords.length) {
+      const billData = await this.logModel.insertMany(processedRecords);
+      if (billData.length) {
+        await this.uploadLog.findByIdAndUpdate(
+          logUpdate._id,
+          {
+            $set: {
+              status: 'Completed',
+              remarks: 'Database Process Completed',
+            },
+            $push: {
+              log: {
+                description: `Filtering Completed and the Latest Merged Data Updated In the Database`,
                 status: 'Completed',
-                remarks: 'Database Process Completed',
+                errorDetail: null
               },
-              $push: {
-                log: {
-                  description: `Filtering Completed and the Latest Merged Data Updated In the Database`,
-                  status: 'Completed',
-                  errorDetail: null
-                },
-              },
-            }
-          );
-        }
+            },
+          }
+        );
       }
-      return processedRecords.length
-
     }
+    return processedRecords.length
+
 
   }
+
+
+  async mergeCsvFilesRefactor(userEmail: string, file1Path: string, file2Path: string, jobId: string, downloadCsv: boolean = false) {
+    let logUpdate: any;
+    try {
+      const file1Data: any[] = [];
+      const file2Data: any[] = [];
+      let globalData = await this.globalModel.find();
+      if (!globalData.length) {
+        throw new HttpException({
+          message: 'Your Global Configuration is not setup completely',
+          status: 400
+        }, HttpStatus.BAD_REQUEST);
+      }
+
+      globalData.forEach(obj => { this.variables[obj.key] = obj; });
+
+      if (!file1Path) {
+        logUpdate = await this.uploadLog.create({
+          batchNo: `${Date.now()}`,
+          uploadedAt: new Date(),
+          raw_log_path: file1Path,
+          payment_log_path: file2Path,
+          key: 'inputFiles',
+          status: 'Failed',
+          uploadedBy: userEmail,
+          remarks: 'File UploadUpload Failed, processing Stopped',
+          log: [{
+            description: "Uploading Failed for the raw data log",
+            status: "Failed",
+            errorDetail: "Missing file1Path for raw data log"
+          }
+          ],
+        }
+        )
+
+        throw new HttpException({
+          message: 'Missing raw data file',
+          status: 400
+        }, HttpStatus.BAD_REQUEST);
+      }
+      else {
+        logUpdate = await this.uploadLog.create({
+          batchNo: `${Date.now()}`,
+          uploadedAt: new Date(),
+          raw_log_path: file1Path,
+          payment_log_path: file2Path,
+          status: 'Processing',
+          key: 'inputFiles',
+          uploadedBy: userEmail,
+          remarks: 'File Uploaded, processing started',
+          log: [
+            {
+              description: "Processing and filter logic started",
+              status: "In Progress",
+              errorDetail: null
+            }
+          ]
+        }
+        )
+      }
+
+      const paymentDataMap = new Map<string, any>();
+      if (file2Path !== "") {
+        console.log(`📂 Reading Payment Log file: ${file2Path}`);
+        await new Promise((resolve, reject) => {
+          fs.createReadStream(file2Path)
+            .pipe(csv())
+            .on('headers', async (headers) => {
+              const normalizedHeaders = headers.map((header) =>
+                header.replace(/^\ufeff/, '').trim()
+              );
+              try {
+                validateHeaders(normalizedHeaders, file2HeadersIncludeSchema);
+              } catch (error) {
+                await this.uploadLog.findByIdAndUpdate(
+                  logUpdate._id,
+                  {
+                    $set: {
+                      status: 'Failed',
+                      remarks: 'Failed to validate payment log headers',
+                    },
+                    $push: {
+                      log: {
+                        description: error.message,
+                        status: 'Failed',
+                        errorDetail: error.message,
+                      },
+                    },
+                  }
+                );
+                reject(new HttpException(
+                  { message: 'Validation failed for payment log headers', status: 400 },
+                  HttpStatus.BAD_REQUEST,
+                ));
+              }
+            })
+            .on('data', (row) => {
+              const normalizedRow: any = {};
+              let isEmptyRow = true;
+
+              for (const key in row) {
+                const normalizedKey = key.replace(/^\ufeff/, '').trim();
+                const value = row[key]?.trim();
+                normalizedRow[normalizedKey] = value;
+                if (value) isEmptyRow = false;
+              }
+
+              if (!isEmptyRow) {
+                const paymentId = normalizedRow.paymentId?.trim();
+                if (paymentId) paymentDataMap.set(paymentId, normalizedRow);
+              }
+            })
+            // .on('end', resolve)
+            .on('end', () => {
+              console.log(`✅ Finished reading Payment Log. Records: ${paymentDataMap.size}`);
+              resolve(true);
+            })
+            .on('error', reject);
+        });
+      }
+
+      const batchSize = 50000;
+      let batch: any[] = [];
+      let rowIndex = 0;
+      let batchNumber = 1;
+
+      console.log(`📂 Reading Raw Log file in batches of ${batchSize}: ${file1Path}`);
+      await new Promise((resolve, reject) => {
+        const stream = fs.createReadStream(file1Path).pipe(csv());
+
+        stream
+          .on('headers', (headers) => {
+            const normalizedHeaders = headers.map((header) =>
+              header.replace(/^\ufeff/, '').trim()
+            );
+            try {
+              validateHeaders(normalizedHeaders, file1HeadersIncludeSchema);
+            } catch (error) {
+              reject(new HttpException(
+                { message: 'Validation failed for raw log headers', status: 400 },
+                HttpStatus.BAD_REQUEST,
+              ));
+            }
+          })
+          .on('data', async (row) => {
+            stream.pause(); // pause while we process
+
+            const normalizedRow: any = {};
+            let isEmptyRow = true;
+
+            for (const key in row) {
+              const normalizedKey = key.replace(/^\ufeff/, '').trim();
+              const value = row[key]?.trim();
+              normalizedRow[normalizedKey] = value;
+              if (value) isEmptyRow = false;
+            }
+
+            if (!isEmptyRow) {
+              batch.push(normalizedRow);
+              rowIndex++;
+            }
+
+            if (batch.length >= batchSize) {
+              console.log(`🚀 Processing batch #${batchNumber} (rows ${rowIndex - batch.length + 1} → ${rowIndex})`,);
+              await this.processAndInsertBatch(batch, paymentDataMap, logUpdate, batchNumber, rowIndex - batch.length, jobId);
+              console.log(`✅ Finished batch #${batchNumber}`);
+              batch = [];
+              batchNumber++;
+            }
+
+            stream.resume();
+          })
+          .on('end', async () => {
+            if (batch.length > 0) {
+              console.log(`🚀 Processing final batch #${batchNumber} (rows ${rowIndex - batch.length + 1} → ${rowIndex})`,);
+              await this.processAndInsertBatch(batch, paymentDataMap, logUpdate, batchNumber, rowIndex - batch.length, jobId);
+              console.log(`✅ Finished final batch #${batchNumber}`);
+            }
+            // 🔽 Migrate temp → final
+            console.log(`🎉 All ${rowIndex} rows processed successfully`);
+
+            await this.tempLogModel.aggregate([
+              // Filter early by jobId
+              { $match: { jobId: jobId } },
+
+              {
+                $facet: {
+                  // ---------------- Pipeline 1: Merchant-based ----------------
+                  merchantBased: [
+                    {
+                      $match: {
+                        success: true,
+                        lfiChargable: true,
+                        "payment_logs.merchant_id": { $ne: null },
+                        "raw_api_log_data.payment_type": { $ne: "LargeValueCollection" }
+                      }
+                    },
+                    {
+                      $addFields: {
+                        date: {
+                          $dateTrunc: {
+                            date: "$raw_api_log_data.timestamp",
+                            unit: "day"
+                          }
+                        },
+                        amount: {
+                          $toDouble: "$payment_logs.amount"
+                        }
+                      }
+                    },
+                    // 3. Sort (important for "who comes first")
+                    {
+                      $sort: {
+                        "payment_logs.merchant_id": 1,
+                        date: 1,
+                        "raw_api_log_data.timestamp": 1
+                      }
+                    },
+                    // 4. Running total per merchant/day
+                    {
+                      $setWindowFields: {
+                        partitionBy: {
+                          merchantId: "$payment_logs.merchant_id",
+                          date: "$date"
+                        },
+                        sortBy: {
+                          "raw_api_log_data.timestamp": 1
+                        },
+                        output: {
+                          runningTotal: {
+                            $sum: "$amount",
+                            window: {
+                              documents: ["unbounded", "current"]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    // 5. Apply free limit of 200
+                    {
+                      $addFields: {
+                        appliedLimit: {
+                          $cond: [
+                            {
+                              $lte: ["$runningTotal", this.variables.nonLargeValueFreeLimitMerchant.value]
+                            },
+                            "$amount",
+                            {
+                              $cond: [
+                                {
+                                  $lte: [
+                                    {
+                                      $subtract: [
+                                        "$runningTotal",
+                                        "$amount"
+                                      ]
+                                    },
+                                    this.variables.nonLargeValueFreeLimitMerchant.value
+                                  ]
+                                },
+                                {
+                                  $subtract: [
+                                    this.variables.nonLargeValueFreeLimitMerchant.value,
+                                    {
+                                      $subtract: [
+                                        "$runningTotal",
+                                        "$amount"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                0
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    // 6. Chargeable amount and flags
+                    {
+                      $addFields: {
+                        chargeableAmount: {
+                          $subtract: ["$amount", "$appliedLimit"]
+                        },
+                        limitApplied: {
+                          $gt: ["$appliedLimit", 0]
+                        }
+                      }
+                    },
+                    // 7. (Optional) Calculate fee
+                    {
+                      $addFields: {
+                        calculatedFee: {
+                          $multiply: ["$chargeableAmount", { $divide: [this.variables.nonLargeValueMerchantBps.value, 10000] }]  // 38 bps = 0.0038
+                        },
+                        applicableFee: {
+                          $cond: [
+                            { $gt: [{ $multiply: ["$chargeableAmount", { $divide: [this.variables.nonLargeValueMerchantBps.value, 10000] }] }, this.variables.nonLargeValueCapMerchant.value] },
+                            this.variables.nonLargeValueCapMerchant.value,
+                            { $multiply: ["$chargeableAmount", { $divide: [this.variables.nonLargeValueMerchantBps.value, 10000] }] }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      $addFields: {
+                        unit_price: { $divide: [this.variables.nonLargeValueMerchantBps.value, 10000] },
+                        volume: "$chargeableAmount",
+                        appliedLimit: "$appliedLimit",
+                        limitApplied: "$limitApplied",
+                        isCapped: { $gt: ["$calculatedFee", this.variables.nonLargeValueCapMerchant.value] },
+                        cappedAt: {
+                          $cond: [
+                            { $gt: ["$calculatedFee", this.variables.nonLargeValueCapMerchant.value] },
+                            this.variables.nonLargeValueCapMerchant.value,
+                            0
+                          ]
+                        }
+                      }
+                    }
+                  ],
+
+                  // ---------------- Pipeline 2: LFI-based ----------------
+                  lfiBased: [
+                    {
+                      $match: {
+                        success: true,
+                        lfiChargable: true,
+                        group: "data",
+                        type: { $in: ["NA", "corporate"] }
+                      }
+                    },
+                    {
+                      $addFields: {
+                        psuId: "$raw_api_log_data.psu_id",
+                        tpp_id: "$raw_api_log_data.tpp_id",
+                        isAttended: "$raw_api_log_data.is_attended",
+                        date: {
+                          $dateTrunc: {
+                            date: "$raw_api_log_data.timestamp",
+                            unit: "day"
+                          }
+                        },
+                        numberOfPages: {
+                          $toInt: "$numberOfPages"
+                        }
+                      }
+                    },
+                    // 3. Lookup LFI data for free limits and mdp_rate
+                    {
+                      $lookup: {
+                        from: "lfi_data",
+                        localField: "raw_api_log_data.lfi_id",
+                        foreignField: "lfi_id",
+                        as: "lfiData"
+                      }
+                    },
+                    {
+                      $unwind: "$lfiData"
+                    },
+                    // 4. Add margin and multiplier
+                    {
+                      $addFields: {
+                        margin: {
+                          $cond: [
+                            {
+                              $eq: ["$isAttended", true]
+                            },
+                            "$lfiData.free_limit_attended",
+                            "$lfiData.free_limit_unattended"
+                          ]
+                        },
+                        lfiMultiplier: {
+                          $cond: [
+                            "$raw_api_log_data.is_large_corporate",
+                            this.variables.dataLargeCorporateMdp.value,
+                            // your corporate multiplier
+                            "$lfiData.mdp_rate"
+                          ]
+                        }
+                      }
+                    },
+                    // 5. Sort for running totals
+                    {
+                      $sort: {
+                        psuId: 1,
+                        tpp_id: 1,
+                        isAttended: 1,
+                        date: 1,
+                        "raw_api_log_data.timestamp": 1
+                      }
+                    },
+                    // 6. Running total per PSU/date/isAttended/tpp
+                    {
+                      $setWindowFields: {
+                        partitionBy: {
+                          psuId: "$psuId",
+                          date: "$date",
+                          isAttended: "$isAttended",
+                          tpp_id: "$tpp_id"
+                        },
+                        sortBy: {
+                          "raw_api_log_data.timestamp": 1
+                        },
+                        output: {
+                          runningTotal: {
+                            $sum: "$numberOfPages",
+                            window: {
+                              documents: ["unbounded", "current"]
+                            }
+                          },
+                          prevRunning: {
+                            $sum: "$numberOfPages",
+                            window: {
+                              documents: ["unbounded", -1]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    // 7. Calculate appliedLimit based on margin
+                    {
+                      $addFields: {
+                        appliedLimit: {
+                          $cond: [
+                            {
+                              $lte: ["$runningTotal", "$margin"]
+                            },
+                            "$numberOfPages",
+                            {
+                              $cond: [
+                                {
+                                  $lte: ["$prevRunning", "$margin"]
+                                },
+                                {
+                                  $subtract: [
+                                    "$margin",
+                                    "$prevRunning"
+                                  ]
+                                },
+                                0
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    // 8. Chargeable amount and limit flag
+                    {
+                      $addFields: {
+                        chargeableAmount: {
+                          $subtract: [
+                            "$numberOfPages",
+                            "$appliedLimit"
+                          ]
+                        },
+                        limitApplied: {
+                          $gt: ["$appliedLimit", 0]
+                        }
+                      }
+                    },
+                    // 9. Calculate fee
+                    {
+                      $addFields: {
+                        calculatedFee: {
+                          $multiply: [
+                            "$chargeableAmount",
+                            "$lfiMultiplier"
+                          ]
+                        },
+                        applicableFee: {
+                          $multiply: [
+                            "$chargeableAmount",
+                            "$lfiMultiplier"
+                          ]
+                        }
+                      }
+                    },
+                    // 10. Keep only final fields
+                    {
+                      $addFields: {
+                        unit_price: "$lfiMultiplier",
+                        volume: "$chargeableAmount",
+                        appliedLimit: "$appliedLimit",
+                        limitApplied: "$limitApplied",
+                        applicableFee: { $round: ["$applicableFee", 2] },
+                        calculatedFee: { $round: ["$calculatedFee", 2] }
+                        // paymentId: "$payment_logs.payment_id",
+                        // lfi_id: "$raw_api_log_data.lfi_id",
+                        // charge: "$calculatedFee"
+                      }
+                    }
+                  ],
+
+                  // ---------------- Pipeline 3: Discount-based ----------------
+                  discountBased: [
+                    {
+                      $match: {
+                        success: true,
+                        chargeable: true,
+                        discountType: { $in: ["balance", "confirmation"] }
+                      }
+                    },
+                    {
+                      $lookup: {
+                        from: "temp_logs",
+                        let: {
+                          psuId: "$raw_api_log_data.psu_id",
+                          ts: "$raw_api_log_data.timestamp"
+                        },
+                        pipeline: [
+                          {
+                            $match: {
+                              $expr: {
+                                $and: [
+                                  {
+                                    $eq: [
+                                      "$raw_api_log_data.psu_id",
+                                      "$$psuId"
+                                    ]
+                                  },
+                                  {
+                                    $eq: ["$chargeable", true]
+                                  },
+                                  {
+                                    $eq: ["$success", true]
+                                  },
+                                  {
+                                    $not: [
+                                      {
+                                        $in: [
+                                          "$discountType",
+                                          [
+                                            "balance",
+                                            "confirmation"
+                                          ]
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          {
+                            $sort: {
+                              "raw_api_log_data.timestamp": -1
+                            }
+                          } // latest first
+                        ],
+                        as: "otherRecords"
+                      }
+                    },
+                    // 3. Compute discounted flag and api_hub_fee based on 2-hour window
+                    {
+                      $addFields: {
+                        discountCheck: {
+                          $size: {
+                            $filter: {
+                              input: "$otherRecords",
+                              as: "other",
+                              cond: {
+                                $lte: [
+                                  {
+                                    $divide: [
+                                      { $abs: { $subtract: ["$$other.raw_api_log_data.timestamp", "$raw_api_log_data.timestamp"] } },
+                                      1000 * 60 * 60
+                                    ]
+                                  },
+                                  this.variables.discountHourValue.value // 2-hour window
+                                ]
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      $addFields: {
+                        discounted: { $gt: ["$discountCheck", 0] },
+                        api_hub_fee: {
+                          $cond: [{ $gt: ["$discountCheck", 0] }, this.variables.discountApiHubFee.value, "$api_hub_fee"]
+                        },
+                        applicableApiHubFee: {
+                          $multiply: [
+                            "$apiHubVolume",
+                            { $cond: [{ $gt: ["$discountCheck", 0] }, this.variables.discountApiHubFee.value, "$api_hub_fee"] }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      $unset: ["discountCheck", "otherRecords"]
+                    }
+                  ]
+                }
+              },
+
+              // Merge all facets into one array
+              {
+                $project: {
+                  allDocs: { $concatArrays: ["$merchantBased", "$lfiBased", "$discountBased"] }
+                }
+              },
+              { $unwind: "$allDocs" },
+              { $replaceRoot: { newRoot: "$allDocs" } },
+
+              // Finally update logs
+              {
+                $merge: {
+                  into: "temp_logs",
+                  on: "_id",            // match by _id
+                  whenMatched: "merge", // update matched docs
+                  whenNotMatched: "discard"
+                }
+              }
+            ]);
+            await this.tempLogModel.aggregate([
+              { $match: { jobId: jobId } },
+              // { $out: "logs" }
+              {
+                $merge: {
+                  into: "logs",            // final collection
+                  on: "_id",               // use _id to match
+                  whenMatched: "merge",    // update existing docs
+                  whenNotMatched: "insert" // keep old, insert new
+                }
+              }
+            ]);
+            await this.tempLogModel.deleteMany({ jobId: jobId });
+            console.log("✅ Migration from temp_logs to final_logs completed.");
+
+            resolve(true);
+          })
+          .on('error', reject);
+      });
+
+      return "CSV processed in streaming batches";
+    } catch (err) {
+      console.error("❌ Error in mergeCsvFilesRefactor:", err);
+
+      // Log into DB if we already have a log record
+      if (logUpdate?._id) {
+        await this.uploadLog.findByIdAndUpdate(
+          logUpdate._id,
+          {
+            $set: {
+              status: 'Failed',
+              remarks: 'Processing stopped due to error',
+            },
+            $push: {
+              log: {
+                description: err.message || 'Unexpected error',
+                status: 'Failed',
+                errorDetail: err.stack || JSON.stringify(err),
+              },
+            },
+          },
+        );
+      }
+
+      throw err;
+    }
+  }
+
+  private async processAndInsertBatch(
+    batch: any[],
+    paymentDataMap: Map<string, any>,
+    logUpdate: any,
+    batchNumber: number,
+    offset: number,
+    jobId: string
+  ) {
+    console.log(`🔄 Merging ${batch.length} rows in batch #${batchNumber}...`);
+
+    const mergedBatch = await Promise.all(
+      batch.map(async (rawApiRecord, index) => {
+        const globalIndex = offset + index;
+
+        if ((index + 1) % 5000 === 0) {
+          console.log(`⏳ Progress: row ${globalIndex + 1} inside batch #${batchNumber}`);
+        }
+
+        const paymentId = rawApiRecord.paymentId?.trim();
+        let paymentRecord: any = null;
+
+        // --- Raw Log Validations ---
+        const errorPremiumAmount =
+          rawApiRecord.PremiumAmountExcludingVAT !== "" &&
+          isNaN(parseFloat(rawApiRecord.PremiumAmountExcludingVAT));
+
+        // if (errorPremiumAmount) {
+        //   await this.uploadLog.findByIdAndUpdate(logUpdate._id, {
+        //     $set: { status: 'Failed', remarks: `Failed to validate 'Raw Log File'` },
+        //     $push: {
+        //       log: {
+        //         description: `Validation error at row ${globalIndex + 2} for PremiumAmountExcludingVAT`,
+        //         status: 'Failed',
+        //         errorDetail: null,
+        //       },
+        //     },
+        //   });
+        //   throw new HttpException(
+        //     { message: `Invalid PremiumAmountExcludingVAT at row ${globalIndex + 2}`, status: 400 },
+        //     HttpStatus.BAD_REQUEST,
+        //   );
+        // }
+
+        // --- Payment Log Validations ---
+        if (paymentId) {
+          paymentRecord = paymentDataMap.get(paymentId);
+
+          if (!paymentRecord) {
+            await this.uploadLog.findByIdAndUpdate(logUpdate._id, {
+              $set: { status: 'Failed', remarks: `Failed to validate 'Raw Log File'` },
+              $push: {
+                log: {
+                  description: `No matching record in Payment Log for paymentId '${paymentId}' at row ${globalIndex + 2}`,
+                  status: 'Failed',
+                  errorDetail: null,
+                },
+              },
+            });
+            throw new HttpException(
+              { message: `No matching payment record found for paymentId '${paymentId}' at row ${globalIndex + 2}`, status: 400 },
+              HttpStatus.BAD_REQUEST,
+            );
+          }
+
+          if (!this.paymentTypes.includes(paymentRecord.paymentType)) {
+            await this.uploadLog.findByIdAndUpdate(logUpdate._id, {
+              $set: { status: 'Failed', remarks: `Failed to validate 'Payment Log File'` },
+              $push: {
+                log: {
+                  description: `Invalid paymentType at row ${globalIndex + 2}, value: '${paymentRecord.paymentType}'`,
+                  status: 'Failed',
+                  errorDetail: null,
+                },
+              },
+            });
+            throw new HttpException(
+              { message: `Invalid paymentType at row ${globalIndex + 2}`, status: 400 },
+              HttpStatus.BAD_REQUEST,
+            );
+          }
+
+          if (paymentRecord.amount !== "" && isNaN(parseFloat(paymentRecord.amount))) {
+            await this.uploadLog.findByIdAndUpdate(logUpdate._id, {
+              $set: { status: 'Failed', remarks: `Failed to validate 'Payment Log File'` },
+              $push: {
+                log: {
+                  description: `Invalid amount at row ${globalIndex + 2}, value: '${paymentRecord.amount}'`,
+                  status: 'Failed',
+                  errorDetail: null,
+                },
+              },
+            });
+            throw new HttpException(
+              { message: `Invalid amount at row ${globalIndex + 2}`, status: 400 },
+              HttpStatus.BAD_REQUEST,
+            );
+          }
+        }
+        // --- Utility for boolean parsing ---
+        const parseBoolean = async (
+          value: string,
+          idx: number,
+          field: string,
+          rawData: boolean,
+        ) => {
+          if (typeof value === 'string') {
+            const normalized = value.trim().toLowerCase();
+            if (normalized === 'true' || normalized === '1') return true;
+            if (normalized === 'false' || normalized === '0') return false;
+            if (normalized === '') return null;
+          }
+          await this.uploadLog.findByIdAndUpdate(logUpdate._id, {
+            $set: {
+              status: 'Failed',
+              remarks: `Failed to validate ${rawData ? 'Raw Log File' : 'Payment Log File'}`,
+            },
+            $push: {
+              log: {
+                description: rawData
+                  ? `Validation error in row ${idx + 2} for field ${field} in Raw Log File, value: ${value}`
+                  : `Validation error in Payment Log for Payment ID: ${idx}, field ${field}, value: ${value}`,
+                status: 'Failed',
+                errorDetail: null,
+              },
+            },
+          });
+          throw new HttpException(
+            {
+              message: rawData
+                ? `Invalid boolean value in Raw Log row ${idx + 2} for field ${field}, value: ${value}`
+                : `Invalid boolean in Payment Log for Payment ID ${idx}, field ${field}, value: ${value}`,
+              status: 400,
+            },
+            HttpStatus.BAD_REQUEST,
+          );
+        };
+
+        // --- Merge raw + payment log ---
+        return {
+          jobId: jobId,
+          "raw_api_log_data.timestamp": rawApiRecord.timestamp || null,
+          "raw_api_log_data.tpp_name": rawApiRecord.tppName || null,
+          "raw_api_log_data.lfi_name": rawApiRecord.lfiName || null,
+          "raw_api_log_data.lfi_id": rawApiRecord.lfiId || null,
+          "raw_api_log_data.tpp_id": rawApiRecord.tppId || null,
+          "raw_api_log_data.tpp_client_id": rawApiRecord.tppClientId || null,
+          "raw_api_log_data.api_set_sub": rawApiRecord.apiSet || null,
+          "raw_api_log_data.http_method": rawApiRecord.httpMethod || null,
+          "raw_api_log_data.url": rawApiRecord.url || "/No-url-provided",
+          "raw_api_log_data.tpp_response_code_group": rawApiRecord.tppResponseCodeGroup || null,
+          "raw_api_log_data.execution_time": rawApiRecord.executionTime || null,
+          "raw_api_log_data.interaction_id": rawApiRecord.interactionId || null,
+          "raw_api_log_data.resource_name": rawApiRecord.resourceName || null,
+          "raw_api_log_data.lfi_response_code_group": rawApiRecord.lfIResponseCodeGroup || null,
+          "raw_api_log_data.is_attended": await parseBoolean(rawApiRecord.isAttended, globalIndex, 'isAttended', true),
+          "raw_api_log_data.records": rawApiRecord.records || null,
+          "raw_api_log_data.payment_type": rawApiRecord.paymentType || null,
+          "raw_api_log_data.payment_id": rawApiRecord.paymentId || null,
+          "raw_api_log_data.merchant_id": rawApiRecord.merchantId || null,
+          "raw_api_log_data.psu_id": rawApiRecord.psuId || null,
+          "raw_api_log_data.is_large_corporate": await parseBoolean(rawApiRecord.isLargeCorporate, globalIndex, 'isLargeCorporate', true),
+          "raw_api_log_data.user_type": rawApiRecord.userType || null,
+          "raw_api_log_data.purpose": rawApiRecord.purpose || null,
+          "raw_api_log_data.PremiumAmountExcludingVAT": rawApiRecord.PremiumAmountExcludingVAT || null,
+          "raw_api_log_data.SalaryBand": rawApiRecord.SalaryBand || null,
+
+          "payment_logs.timestamp": paymentRecord?.timestamp || null,
+          "payment_logs.tpp_name": paymentRecord?.tppName || null,
+          "payment_logs.lfi_name": paymentRecord?.lfiName || null,
+          "payment_logs.lfi_id": paymentRecord?.lfiId || null,
+          "payment_logs.tpp_id": paymentRecord?.tppId || null,
+          "payment_logs.tpp_client_id": paymentRecord?.tppClientId || null,
+          "payment_logs.status": paymentRecord?.status || null,
+          "payment_logs.currency": paymentRecord?.currency || null,
+          "payment_logs.amount": paymentRecord?.amount || null,
+          "payment_logs.payment_consent_type": paymentRecord?.paymentConsentType || null,
+          "payment_logs.payment_type": paymentRecord?.paymentType || null,
+          "payment_logs.transaction_id": paymentRecord?.transactionId || null,
+          "payment_logs.payment_id": paymentId || null,
+          "payment_logs.merchant_id": paymentRecord?.merchantId || null,
+          "payment_logs.psu_id": paymentRecord?.psuId || null,
+          "payment_logs.is_large_corporate": await parseBoolean(paymentRecord?.isLargeCorporate || '', globalIndex, 'isLargeCorporate', false),
+          "payment_logs.number_of_successful_transactions": paymentRecord?.numberOfSuccessfulTransactions || null,
+          "payment_logs.international_payment": paymentRecord?.internationalPayment == 'TRUE' ? true : false,
+        };
+      }),
+    );
+    console.log("merge completed for the batch, starting calculations...");
+
+    const chargeFile = await this.chargableConvertion(mergedBatch, logUpdate._id);
+    console.log('stage 1 completed');
+
+    const lfitoTppCharge = await this.calculateFeeForLFItoTpp(chargeFile, logUpdate._id);
+    console.log('stage 2 completed');
+
+    let response = await this.populateLfiData(lfitoTppCharge);
+    console.log('stage 3 completed');
+
+    let result = await this.populateTppData(lfitoTppCharge);
+    console.log('stage 4 completed');
+
+    const totalHubFeecalculation = await this.calculateTotalApiHubFee(lfitoTppCharge);
+
+    console.log(`📦 Inserting batch #${batchNumber} into DB (${mergedBatch.length} records)...`);
+    console.time(`⏳ Batch #${batchNumber} insertion time`);
+    await this.tempLogModel.insertMany(totalHubFeecalculation, {
+      ordered: false,
+      rawResult: false,
+      lean: false,
+    });
+    // const Model = this.tempLogModel;
+    // const docs = totalHubFeecalculation.map(d => new Model(d).toObject());
+    // await Model.insertMany(docs, { ordered: false });
+
+    // const ops = totalHubFeecalculation.map(doc => ({
+    //   insertOne: { document: doc }
+    // }));
+
+    // await this.tempLogModel.bulkWrite(ops, {
+    //   ordered: false,
+    // });
+    console.timeEnd(`⏳ Batch #${batchNumber} insertion time`);
+    console.log(`✅ Batch #${batchNumber} inserted successfully`);
+  }
+
 
 
   async calculateTotalApiHubFee(data: any[]) {
@@ -777,22 +1496,17 @@ export class UploadService {
           serviceStatus = tppDoc?.serviceStatus ?? false;
           if (tppDoc?.serviceStatus) {
             const premium = parseFloat(record["raw_api_log_data.PremiumAmountExcludingVAT"] || 0);
-            // console.log(premium, 'premium')
-
             const configData = await this.brokerageConfigModel.findOne({
               tpp_id: tppId, lfi_id: lfiId, serviceStatus: true
             })
-            console.log(configData, 'configData')
-            console.log(record.type, 'type:', this.variables.defaultEmployment_ILOValue.value)
             if (configData) {
               percentage = configData.configuration_fee[record.type] || 0;
               brokerageConfig_id = configData._id;
-
             } else {
+              console.log(record.type, record["raw_api_log_data.interaction_id"], "No brokerage config found, applying default");
               percentage = record.type == "employment_ILO" ? this.variables.defaultEmployment_ILOValue.value : this.variables[`default${record.type.charAt(0).toUpperCase() + record.type.slice(1)}Value`]?.value || 0;
             }
-            // console.log(percentage, 'percentage')
-            if (record["raw_api_log_data.SalaryBand"] === "BelowAED4000PerMonth") {
+            if (record["raw_api_log_data.SalaryBand"] === "BelowAED4000PerMonth" || record["raw_api_log_data.SalaryBand"] === "NoSalary") {
               percentage = percentage >= 5 ? this.variables.below4000BandValue?.value : percentage;
               record.isCapped = percentage >= 5 ? true : false;
               record.cappedAt = percentage >= 5 ? 5 : 0;
@@ -800,10 +1514,8 @@ export class UploadService {
               percentage = percentage;
             }
             brokerage_fee = parseFloat((premium * (percentage / 100)).toFixed(2));
-            // brokerage_fee = tppDoc.brokerage_fee || 0; 
           }
         }
-
         return {
           ...record,
           applicableApiHubFee: totalApiHubFee.toFixed(3),
@@ -815,7 +1527,6 @@ export class UploadService {
         };
       })
     );
-
     return results;
   }
 
@@ -876,34 +1587,47 @@ export class UploadService {
   }
 
   async populateLfiData(rawData: any[]) {
-    const uniqueLfiIds = Array.from(
-      new Set(
-        rawData
-          .map(data => data["raw_api_log_data.lfi_id"])
-          .filter(id => id != null) // removes null & undefined
-      )
-    );
-    const lfiDataToInsert = uniqueLfiIds.map(lfi_id => ({
-      lfi_id,
-      lfi_name: rawData.find(data => data["raw_api_log_data.lfi_id"] === lfi_id)["raw_api_log_data.lfi_name"],
-      mdp_rate: parseFloat((Math.random() * (3 - 2) + 2).toFixed(2)),
-      free_limit_attended: this.variables.attendedCallFreeLimit.value,
-      free_limit_unattended: this.variables.unAttendedCallFreeLimit.value,
-    }));
-    const results = [];
-    for (const lfiData of lfiDataToInsert) {
-      const existing = await this.lfiModel.findOne({ lfi_id: lfiData.lfi_id });
-      if (!existing) {
-        // If the LFI ID does not exist, insert the data
-        const inserted = await this.lfiModel.create(lfiData);
-        inserted
-      } else {
-        console.log(`Duplicate LFI ID skipped: ${lfiData.lfi_id}`);
-      }
-    }
+    try {
+      const uniqueLfiIds = Array.from(
+        new Set(
+          rawData
+            .map(data => data["raw_api_log_data.lfi_id"])
+            .filter(id => id != null)
+        )
+      );
 
-    return results;
+      const lfiDataToInsert = uniqueLfiIds.map(lfi_id => ({
+        lfi_id,
+        lfi_name: rawData.find(data => data["raw_api_log_data.lfi_id"] === lfi_id)["raw_api_log_data.lfi_name"],
+        mdp_rate: parseFloat((Math.random() * (3 - 2) + 2).toFixed(2)),
+        free_limit_attended: this.variables.attendedCallFreeLimit.value,
+        free_limit_unattended: this.variables.unAttendedCallFreeLimit.value,
+      }));
+
+      const results: any[] = [];
+
+      for (const lfiData of lfiDataToInsert) {
+        try {
+          const existing = await this.lfiModel.findOne({ lfi_id: lfiData.lfi_id });
+
+          if (!existing) {
+            const inserted = await this.lfiModel.create(lfiData);
+            results.push(inserted);
+          } else {
+            console.log(`⚠️ Duplicate LFI ID skipped: ${lfiData.lfi_id}`);
+          }
+        } catch (err) {
+          console.error(`❌ Error inserting LFI ID ${lfiData.lfi_id}:`, err.message);
+        }
+      }
+
+      return results;
+    } catch (err) {
+      console.error("❌ Fatal error in populateLfiData:", err.message);
+      throw err; // rethrow so caller knows something went wrong
+    }
   }
+
 
   async populateTppData(rawData: any[]) {
     try {
@@ -1357,7 +2081,171 @@ export class UploadService {
       throw new Error("Fee calculation failed");
     }
   }
+  async calculateFeeForLFItoTpp(data: any, logId: string) {
+    try {
+      const calculatedData = await Promise.all(data.map(async (record: { [x: string]: string; }, recordIndex: number) => {
+        let volume = 0;
+        let calculatedFee = 0;
+        let applicableFee = 0;
+        let numberOfPages = 0;
+        let unit_price = 0;
+        let appliedLimit = 0;
+        let limitApplied = false;
+        let isCapped: boolean = false;
+        let cappedAt = 0;
+        if (record.lfiChargable && record.success) {
 
+          if (record.group === "payment-bulk" && Boolean(record['raw_api_log_data.is_large_corporate'])) {
+
+            return {
+              ...record,
+              calculatedFee: parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.bulkLargeCorporatefee.value).toFixed(3)),
+              applicableFee: parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.bulkLargeCorporatefee.value).toFixed(3)), // Ensure 
+              type: "corporate",
+              unit_price: this.variables.bulkLargeCorporatefee.value,
+              volume: parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1),
+              isCapped: false,
+              cappedAt: 0,
+            }
+          }
+
+          // MERCHANT CALCULATION
+          if (record.type === "merchant") {
+            if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
+              if (record.group == 'payment-non-bulk') {
+                calculatedFee = this.variables.paymentLargeValueFee.value
+                applicableFee = calculatedFee
+                unit_price = this.variables.paymentLargeValueFee.value;
+                volume = 1;
+              } else if (record.group == 'payment-bulk') {
+                calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.paymentLargeValueFee.value).toFixed(3));
+                applicableFee = calculatedFee
+                unit_price = this.variables.paymentLargeValueFee.value;
+                volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
+              }
+
+
+            } else {
+              calculatedFee = parseFloat((parseInt(record["payment_logs.amount"]) * (this.variables.nonLargeValueMerchantBps.value / 10000)).toFixed(3));
+              applicableFee = parseFloat((calculatedFee > this.variables.nonLargeValueCapMerchant.value ? this.variables.nonLargeValueCapMerchant.value : calculatedFee).toFixed(3));
+              unit_price = (this.variables.nonLargeValueMerchantBps.value / 10000);
+              volume = parseInt(record["payment_logs.amount"]) ?? 0;
+              appliedLimit = 0;
+              limitApplied = false;
+              isCapped = calculatedFee > this.variables.nonLargeValueCapMerchant.value; // Assign boolean value
+              cappedAt = isCapped ? this.variables.nonLargeValueCapMerchant.value : 0;
+              // }
+            }
+
+          }
+
+          // PEER-2-PEER
+          else if (record.type === 'peer-2-peer') {
+            if (record.group === 'payment-bulk') {
+              calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.paymentNonLargevalueFeePeer.value).toFixed(3));
+
+              applicableFee = parseFloat((calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? this.variables.bulkMe2mePeer2PeerCap.value : calculatedFee).toFixed(3));
+              unit_price = this.variables.paymentNonLargevalueFeePeer.value;
+              volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
+              isCapped = calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? true : false // Assign boolean value
+              cappedAt = isCapped ? this.variables.bulkMe2mePeer2PeerCap.value : 0;
+            }
+            else if (record.group === 'payment-non-bulk') {
+              calculatedFee = parseFloat(this.variables.paymentNonLargevalueFeePeer.value.toFixed(3));
+
+              applicableFee = calculatedFee;
+              unit_price = this.variables.paymentNonLargevalueFeePeer.value;
+              volume = 1;
+            }
+
+          }
+
+          // ME-2-ME
+          else if (record.type === 'me-2-me') {
+            if (record.group === 'payment-bulk') {
+              calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.paymentFeeMe2me.value).toFixed(3));
+              applicableFee = parseFloat((calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? this.variables.bulkMe2mePeer2PeerCap.value : calculatedFee).toFixed(3));
+              unit_price = this.variables.paymentFeeMe2me.value;
+              volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
+              isCapped = calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? true : false
+              cappedAt = isCapped ? this.variables.bulkMe2mePeer2PeerCap.value : 0;
+            }
+            else if (record.group === 'payment-non-bulk') {
+              calculatedFee = parseFloat((this.variables.paymentFeeMe2me.value).toFixed(3));
+              applicableFee = calculatedFee;
+              unit_price = this.variables.paymentFeeMe2me.value;
+              volume = 1;
+            }
+          }
+          else if (record.group == 'fx') {
+            calculatedFee = this.variables.fxQuotelfiFee.value;
+            applicableFee = this.variables.fxQuotelfiFee.value;
+            unit_price = this.variables.fxQuotelfiFee.value;
+            volume = 1
+          }
+
+          // OTHER
+          else if (record.type === 'NA') {
+            if (record.group === 'insurance') {
+              calculatedFee = 0;
+              applicableFee = calculatedFee;
+            } else if (record.group === 'data') {
+              const psuIdCheck = record["raw_api_log_data.psu_id"];
+              if (!psuIdCheck) {
+                await this.uploadLog.findByIdAndUpdate(
+                  logId,
+                  {
+                    $set: {
+                      status: 'Failed',
+                      remarks: `Failed to Find PSUID in Raw Log File`,
+                    },
+                    $push: {
+                      log: {
+                        description: `Validation error at row ${recordIndex + 2} in the 'Raw Log File' PSU ID is missing or empty for success and chargeable url. Interaction Id : ${record["raw_api_log_data.interaction_id"]}`,
+                        status: 'Failed',
+                        errorDetail: null,
+                      },
+                    },
+                  }
+                );
+                throw new HttpException({
+                  message: `Validation error at row ${recordIndex + 2} in the 'Raw Log File' PSU ID is missing or empty for success and chargeable url. Interaction Id : ${record["raw_api_log_data.interaction_id"]}`,
+                  status: 400
+                }, HttpStatus.BAD_REQUEST);
+              }
+              numberOfPages = Math.ceil(parseInt(record["raw_api_log_data.records"] ?? "0") / 100);
+              if (Boolean(record["raw_api_log_data.is_large_corporate"])) {
+                record.type = "corporate";
+              }
+            } else {
+              calculatedFee = 0;
+              applicableFee = calculatedFee;
+            }
+          }
+        }
+
+        return {
+          ...record,
+          calculatedFee,
+          applicableFee,
+          unit_price,
+          volume,
+          appliedLimit,
+          limitApplied,
+          isCapped,
+          cappedAt,
+          // result,
+          numberOfPages,
+        };
+      }));
+
+
+      return calculatedData;
+    } catch (error) {
+      console.error("Error in calculateFee:", error);
+      throw new Error("Fee calculation failed");
+    }
+  }
 
   async determineChargeableAndSuccess(data: any[], apiData: any[], logId: string) {
     // Convert API data into lists of chargeable URLs with their methods
@@ -1406,8 +2294,9 @@ export class UploadService {
       ).then((results) => results.some((result) => result));
 
       // Determine if the record is successful based on response codes
-      const success = /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.tpp_response_code_group"]) &&
-        /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.lfi_response_code_group"]);
+      const success = /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.tpp_response_code_group"])
+      // &&
+      //   /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.lfi_response_code_group"]);
 
       if ((islfiChargable || isChargeable) && success) {
         let errorTppLfi = !record["raw_api_log_data.tpp_id"] || !record["raw_api_log_data.tpp_name"] || !record["raw_api_log_data.lfi_id"] || !record["raw_api_log_data.lfi_name"];
@@ -1456,29 +2345,7 @@ export class UploadService {
             status: 400
           }, HttpStatus.BAD_REQUEST);
         }
-        const psuIdCheck = record["raw_api_log_data.psu_id"];
-        if (!psuIdCheck) {
-          await this.uploadLog.findByIdAndUpdate(
-            logId,
-            {
-              $set: {
-                status: 'Failed',
-                remarks: `Failed to Find PSUID in Raw Log File`,
-              },
-              $push: {
-                log: {
-                  description: `Validation error at row ${index + 2} in the 'Raw Log File' PSU ID is missing or empty for success and chargeable url.`,
-                  status: 'Failed',
-                  errorDetail: null,
-                },
-              },
-            }
-          );
-          throw new HttpException({
-            message: `Validation error at row ${index + 2} in the 'Raw Log File' PSU ID is missing or empty for success and chargeable url.`,
-            status: 400
-          }, HttpStatus.BAD_REQUEST);
-        }
+
 
       }
 
@@ -1510,28 +2377,29 @@ export class UploadService {
       if (record.success && (groupData?.key_name === 'payment-bulk' || groupData?.key_name === 'payment-non-bulk' || groupData?.key_name === 'payment-data')) {
         record.success = this.paymentStatus.includes(record['payment_logs.status'])
       }
-      if (record.chargeable && record.success &&
-        (record["raw_api_log_data.url"].includes('confirmation-of-payee') || record["raw_api_log_data.url"].includes('balances'))) {
-        const filterData = processedData.filter(logData =>
-          logData["raw_api_log_data.psu_id"] === record["raw_api_log_data.psu_id"] && logData.chargeable &&
-          logData.success &&
-          !logData["raw_api_log_data.url"].includes('confirmation-of-payee') &&
-          !logData["raw_api_log_data.url"].includes('balances')
-        );
+      // if (record.chargeable && record.success &&
+      //   (record["raw_api_log_data.url"].includes('confirmation-of-payee') || record["raw_api_log_data.url"].includes('balances'))) {
+      //   const filterData = processedData.filter(logData =>
+      //     logData["raw_api_log_data.psu_id"] === record["raw_api_log_data.psu_id"] && logData.chargeable &&
+      //     logData.success &&
+      //     !logData["raw_api_log_data.url"].includes('confirmation-of-payee') &&
+      //     !logData["raw_api_log_data.url"].includes('balances')
+      //   );
 
-        if (filterData.length > 0) {
-          const lastRecord = filterData[0];
-          const lastRecordTime = new Date(lastRecord["raw_api_log_data.timestamp"]);
-          const currentRecordTime = new Date(record["raw_api_log_data.timestamp"]);
-          const timeDiff = Math.abs(currentRecordTime.getTime() - lastRecordTime.getTime());
-          const hours = Math.ceil(timeDiff / (1000 * 60 * 60));
+      //   if (filterData.length > 0) {
+      //     const lastRecord = filterData[0];
+      //     const lastRecordTime = new Date(lastRecord["raw_api_log_data.timestamp"]);
+      //     const currentRecordTime = new Date(record["raw_api_log_data.timestamp"]);
+      //     const timeDiff = Math.abs(currentRecordTime.getTime() - lastRecordTime.getTime());
+      //     const hours = Math.ceil(timeDiff / (1000 * 60 * 60));
 
-          if (hours <= this.variables.discountHourValue.value) {
-            api_hub_fee = this.variables.discountApiHubFee.value;
-            discounted = true;
-          }
-        }
-      } else if (record.chargeable && record.success && group === 'insurance' && groupData?.api_category === 'Insurance Data Sharing') {
+      //     if (hours <= this.variables.discountHourValue.value) {
+      //       api_hub_fee = this.variables.discountApiHubFee.value;
+      //       discounted = true;
+      //     }
+      //   }
+      // } else 
+      if (record.chargeable && record.success && group === 'insurance' && groupData?.api_category === 'Insurance Data Sharing') {
         api_hub_fee = this.variables.insuranceDataApiHubFee.value;
       } else if (record.chargeable && record.success && group === 'insurance' && groupData?.api_category === 'Insurance Quote Sharing') {
         api_hub_fee = this.variables.insuranceQuoteApiHubFee.value;
@@ -1544,7 +2412,7 @@ export class UploadService {
       return {
         ...record,
         group,
-        type: groupData?.key_name === 'payment-bulk' || groupData?.key_name === 'payment-non-bulk' ? this.getType(record) : record.successfullQuote ? groupData.commission_category : 'NA',
+        type: groupData?.key_name === 'payment-bulk' || groupData?.key_name === 'payment-non-bulk' ? this.getType(record) : record.successfullQuote ? groupData.commission_category || "NA" : 'NA',
         discountType: groupData?.key_name === 'balance' || groupData?.key_name === 'confirmation' ? groupData?.key_name : null,
         api_category: groupData?.api_category || null,
         discounted,
@@ -1578,17 +2446,15 @@ export class UploadService {
         ]
       });
       const processedData = await this.determineChargeableAndSuccess(data, apiData, logId);
+      console.log("Charge Convertion Done");
       const updatedData = await this.calculateApiHubFee(processedData, apiData,);
-
+      console.log("API Hub Fee Calculation Done");
       return updatedData;
     } catch (error) {
       console.error("Error in chargableConvertion:", error);
       throw new Error(error);
     }
   }
-
-
-
   getType(logEntry: any) {
     let type = "NA";
     if (logEntry["payment_logs.merchant_id"] != null || this.paymentTypesForMerchant.includes(logEntry["raw_api_log_data.payment_type"])) {
