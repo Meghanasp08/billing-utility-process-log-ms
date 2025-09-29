@@ -2362,28 +2362,28 @@ export class UploadService {
           }, HttpStatus.BAD_REQUEST);
         }
         const isValidUTC = await this.isUTCString(record['raw_api_log_data.timestamp']);
-        // if (!isValidUTC) {
-        //   await this.uploadLog.findByIdAndUpdate(
-        //     logId,
-        //     {
-        //       $set: {
-        //         status: 'Failed',
-        //         remarks: `Failed to validate 'Raw Log File`,
-        //       },
-        //       $push: {
-        //         log: {
-        //           description: `Validation error at row ${index + 2} in the 'Raw Log File': 'timestamp' is not in valid UTC format (e.g. 2025-08-28T12:34:56Z)`,
-        //           status: 'Failed',
-        //           errorDetail: null,
-        //         },
-        //       },
-        //     }
-        //   );
-        //   throw new HttpException({
-        //     message: `Validation error at row ${index + 2} in the 'Raw Log File': 'timestamp' is not in valid UTC format (e.g. 2025-08-28T12:34:56Z)`,
-        //     status: 400
-        //   }, HttpStatus.BAD_REQUEST);
-        // }
+        if (!isValidUTC) {
+          await this.uploadLog.findByIdAndUpdate(
+            logId,
+            {
+              $set: {
+                status: 'Failed',
+                remarks: `Failed to validate 'Raw Log File`,
+              },
+              $push: {
+                log: {
+                  description: `Validation error at row ${index + 2} in the 'Raw Log File': 'timestamp' is not in valid UTC format (e.g. 2025-08-28T12:34:56Z)`,
+                  status: 'Failed',
+                  errorDetail: null,
+                },
+              },
+            }
+          );
+          throw new HttpException({
+            message: `Validation error at row ${index + 2} in the 'Raw Log File': 'timestamp' is not in valid UTC format (e.g. 2025-08-28T12:34:56Z)`,
+            status: 400
+          }, HttpStatus.BAD_REQUEST);
+        }
 
 
       }
