@@ -567,6 +567,7 @@ export class UploadService {
 
 
   async mergeCsvFilesRefactor(userEmail: string, file1Path: string, file2Path: string, jobId: string, downloadCsv: boolean = false) {
+    const startTime = new Date();
     let logUpdate: any;
     try {
       const file1Data: any[] = [];
@@ -584,7 +585,7 @@ export class UploadService {
       if (!file1Path) {
         logUpdate = await this.uploadLog.create({
           batchNo: `${Date.now()}`,
-          uploadedAt: new Date(),
+          uploadedAt: startTime,
           raw_log_path: file1Path,
           payment_log_path: file2Path,
           key: 'inputFiles',
@@ -608,7 +609,7 @@ export class UploadService {
       else {
         logUpdate = await this.uploadLog.create({
           batchNo: `${Date.now()}`,
-          uploadedAt: new Date(),
+          uploadedAt: startTime,
           raw_log_path: file1Path,
           payment_log_path: file2Path,
           status: 'Processing',
@@ -696,13 +697,29 @@ export class UploadService {
         const stream = fs.createReadStream(file1Path).pipe(csv());
 
         stream
-          .on('headers', (headers) => {
+          .on('headers', async (headers) => {
             const normalizedHeaders = headers.map((header) =>
               header.replace(/^\ufeff/, '').trim()
             );
             try {
               validateHeaders(normalizedHeaders, file1HeadersIncludeSchema);
             } catch (error) {
+              await this.uploadLog.findByIdAndUpdate(
+                logUpdate._id,
+                {
+                  $set: {
+                    status: 'Failed',
+                    remarks: 'Failed to validate raw log headers',
+                  },
+                  $push: {
+                    log: {
+                      description: error.message,
+                      status: 'Failed',
+                      errorDetail: error.message,
+                    },
+                  },
+                }
+              );
               reject(new HttpException(
                 { message: 'Validation failed for raw log headers', status: 400 },
                 HttpStatus.BAD_REQUEST,
@@ -1201,31 +1218,46 @@ export class UploadService {
           })
           .on('error', reject);
       });
-
+      const endTime = new Date();
+      const durationMs = endTime.getTime() - startTime.getTime();
+      const durationTime = await this.formatDuration(durationMs);
+      await this.uploadLog.findByIdAndUpdate(logUpdate._id, {
+        $set: {
+          status: 'Completed',
+          completedAt: endTime,
+          duration: durationTime,
+          remarks: `File processed successfully. Duration: ${durationTime}`
+        },
+        $push: {
+          log: {
+            description: `Processing completed at ${endTime} (Duration: ${durationTime})`,
+            status: "Completed",
+            errorDetail: null
+          }
+        }
+      });
       return "CSV processed in streaming batches";
     } catch (err) {
-      console.error("❌ Error in mergeCsvFilesRefactor:", err);
-
-      // Log into DB if we already have a log record
+      const endTime = new Date();
+      const durationMs = endTime.getTime() - startTime.getTime();
+      const durationTime = await this.formatDuration(durationMs);
       if (logUpdate?._id) {
-        await this.uploadLog.findByIdAndUpdate(
-          logUpdate._id,
-          {
-            $set: {
-              status: 'Failed',
-              remarks: 'Processing stopped due to error',
-            },
-            $push: {
-              log: {
-                description: err.message || 'Unexpected error',
-                status: 'Failed',
-                errorDetail: err.stack || JSON.stringify(err),
-              },
-            },
+        await this.uploadLog.findByIdAndUpdate(logUpdate._id, {
+          $set: {
+            status: 'Failed',
+            completedAt: endTime,
+            duration: durationTime,
+            remarks: `Processing failed after ${durationTime}}`
           },
-        );
+          $push: {
+            log: {
+              description: `Failed at ${endTime} (Duration: ${durationTime})`,
+              status: "Failed",
+              errorDetail: err.message || 'Unknown error'
+            }
+          }
+        });
       }
-
       throw err;
     }
   }
@@ -1456,7 +1488,14 @@ export class UploadService {
   }
 
 
-
+  private async formatDuration(ms: number) {
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const milliseconds = ms % 1000;
+    return `${hours}h ${minutes}m ${seconds}s ${milliseconds}ms`;
+  }
   async calculateTotalApiHubFee(data: any[]) {
     const results = await Promise.all(
       data.map(async (record: any) => {
@@ -2323,28 +2362,28 @@ export class UploadService {
           }, HttpStatus.BAD_REQUEST);
         }
         const isValidUTC = await this.isUTCString(record['raw_api_log_data.timestamp']);
-        if (!isValidUTC) {
-          await this.uploadLog.findByIdAndUpdate(
-            logId,
-            {
-              $set: {
-                status: 'Failed',
-                remarks: `Failed to validate 'Raw Log File`,
-              },
-              $push: {
-                log: {
-                  description: `Validation error at row ${index + 2} in the 'Raw Log File': 'timestamp' is not in valid UTC format (e.g. 2025-08-28T12:34:56Z)`,
-                  status: 'Failed',
-                  errorDetail: null,
-                },
-              },
-            }
-          );
-          throw new HttpException({
-            message: `Validation error at row ${index + 2} in the 'Raw Log File': 'timestamp' is not in valid UTC format (e.g. 2025-08-28T12:34:56Z)`,
-            status: 400
-          }, HttpStatus.BAD_REQUEST);
-        }
+        // if (!isValidUTC) {
+        //   await this.uploadLog.findByIdAndUpdate(
+        //     logId,
+        //     {
+        //       $set: {
+        //         status: 'Failed',
+        //         remarks: `Failed to validate 'Raw Log File`,
+        //       },
+        //       $push: {
+        //         log: {
+        //           description: `Validation error at row ${index + 2} in the 'Raw Log File': 'timestamp' is not in valid UTC format (e.g. 2025-08-28T12:34:56Z)`,
+        //           status: 'Failed',
+        //           errorDetail: null,
+        //         },
+        //       },
+        //     }
+        //   );
+        //   throw new HttpException({
+        //     message: `Validation error at row ${index + 2} in the 'Raw Log File': 'timestamp' is not in valid UTC format (e.g. 2025-08-28T12:34:56Z)`,
+        //     status: 400
+        //   }, HttpStatus.BAD_REQUEST);
+        // }
 
 
       }

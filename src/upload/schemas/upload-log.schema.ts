@@ -25,6 +25,12 @@ export class uploadLog {
     uploadedAt: Date;
 
     @Prop({ required: false })
+    completedAt?: Date; // End time
+
+    @Prop({ required: false })
+    duration?: string;
+
+    @Prop({ required: false })
     raw_log_path: string;
 
     @Prop({ required: false })
