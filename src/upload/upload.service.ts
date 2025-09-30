@@ -1465,9 +1465,18 @@ export class UploadService {
 
     const totalHubFeecalculation = await this.calculateTotalApiHubFee(lfitoTppCharge);
 
+    const existingInteractionIds = await this.logModel.distinct("raw_api_log_data.interaction_id");
+    const processedRecords = totalHubFeecalculation.map((record) => {
+      const isDuplicate = existingInteractionIds.includes(record["raw_api_log_data.interaction_id"]);
+      return {
+        ...record,
+        duplicate: isDuplicate,
+      };
+    });
+
     console.log(`📦 Inserting batch #${batchNumber} into DB (${mergedBatch.length} records)...`);
     console.time(`⏳ Batch #${batchNumber} insertion time`);
-    await this.tempLogModel.insertMany(totalHubFeecalculation, {
+    await this.tempLogModel.insertMany(processedRecords, {
       ordered: false,
       rawResult: false,
       lean: false,
