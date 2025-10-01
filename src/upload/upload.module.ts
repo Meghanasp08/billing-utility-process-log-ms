@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ClientsModule, Transport } from '@nestjs/microservices';
 import { MongooseModule } from '@nestjs/mongoose';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -28,6 +29,13 @@ import { UploadService } from './upload.service';
     }),
   }),
     AuthModule,
+  ClientsModule.register([
+    {
+      name: 'UPLOAD_SERVICE',
+      transport: Transport.TCP,
+      options: { host: process.env.UPLOAD_HOST || 'localhost', port: parseInt(process.env.UPLOAD_PORT || '3001') },
+    },
+  ]),
   ],
   controllers: [UploadController],
   providers: [UploadService],

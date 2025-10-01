@@ -62,38 +62,17 @@ export class UploadController {
     @Claims(Claim.LOG_UPLOAD)
     async uploadFiles(@UploadedFiles() files: { raw_data?: Express.Multer.File[]; payment_data?: Express.Multer.File[]; }, @Req() req: any) {
         try {
-
-            if (isProcessing) {
-                throw new HttpException('Another upload is already in progress. Please try again later.', HttpStatus.TOO_MANY_REQUESTS);
-            }
             if (!files?.raw_data) {
                 throw new HttpException('The "raw_data" file is required', HttpStatus.BAD_REQUEST);
             }
-            const raw_dataPath = files.raw_data[0].path;
-            const payment_dataPath = files?.payment_data?.[0]?.path || "";
+            // const raw_dataPath = files.raw_data[0].path;
+            const raw_dataPath = files.raw_data[0].filename;
+            const payment_dataPath = files?.payment_data?.[0]?.filename || "";
             const jobId = files.raw_data[0].filename;
 
-            isProcessing = true;
-            // Fire-and-forget async execution
-            setImmediate(async () => {
-                try {
-                    console.time(`⏱ Total time for job ${jobId}`);
-                    console.log(`🚀 Job started: ${jobId}`);
-                    await this.uploadService.mergeCsvFilesRefactor(req.user.email, raw_dataPath, payment_dataPath, jobId);
-                    console.log(`✅ Job ${jobId} finished`);
-                    console.timeEnd(`⏱ Total time for job ${jobId}`);
-                } catch (err) {
-                    console.error(`❌ Job ${jobId} failed`, err);
-                } finally {
-                    isProcessing = false; // unlock after completion
-                }
-            });
+            const result = await this.uploadService.mergeCsvFilesMicorservice(req.user.email, raw_dataPath, payment_dataPath, jobId);
 
-            return {
-                message: 'Files merged and uploaded successfully',
-                jobId: jobId,
-                statusCode: HttpStatus.OK
-            }
+            return result;
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error; // Re-throw expected errors with proper status codes
