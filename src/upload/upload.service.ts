@@ -580,8 +580,8 @@ export class UploadService {
       }
       let body = {
         userEmail: userEmail,
-        file1Path: `${process.env.API_HOST}:${process.env.APP_PORT}/files/` + file1Path,
-        file2Path: `${process.env.API_HOST}:${process.env.APP_PORT}/files/` + file2Path,
+        file1Path: `${process.env.API_HOST}:${process.env.API_PORT}/files/` + file1Path,
+        file2Path: `${process.env.API_HOST}:${process.env.API_PORT}/files/` + file2Path,
         jobId: jobId,
       }
       console.log("micro service runing in:", process.env.UPLOAD_HOST, ":", process.env.UPLOAD_PORT)

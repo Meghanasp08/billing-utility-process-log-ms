@@ -33,7 +33,7 @@ import { UploadService } from './upload.service';
     {
       name: 'UPLOAD_SERVICE',
       transport: Transport.TCP,
-      options: { host: process.env.UPLOAD_HOST || 'localhost', port: parseInt(process.env.UPLOAD_PORT || '3001') },
+      options: { host: process.env.UPLOAD_HOST || 'localhost', port: parseInt(process.env.UPLOAD_PORT || '3000') },
     },
   ]),
   ],

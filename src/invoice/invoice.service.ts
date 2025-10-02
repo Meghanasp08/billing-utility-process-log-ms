@@ -1208,7 +1208,7 @@ export class InvoiceService {
                         // lfiChargable: true,
                         success: true,
                         duplicate: false,
-                        // successfullQuote: false
+                        "payment_logs.international_payment": false,
                         $expr: {
                             $and: [
                                 {
@@ -2827,7 +2827,7 @@ export class InvoiceService {
                 },
                 {
                     $addFields: {
-                        label:lfi_label
+                        label: lfi_label
                     }
                 },
                 {
@@ -3695,6 +3695,7 @@ export class InvoiceService {
                     "raw_api_log_data.lfi_id": lfi_id,
                     success: true,
                     duplicate: false,
+                    "payment_logs.international_payment": false,
                     $and: [
                         startDate && endDate
                             ? {
