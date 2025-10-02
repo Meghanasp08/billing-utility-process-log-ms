@@ -57,6 +57,9 @@ export class uploadLog {
     @Prop({ type: [LogEntry], default: [] }) // Log field as an array of objects
     log: LogEntry[];
 
+    @Prop({ default: false })
+    isProcessed: boolean;
+
 }
 
 

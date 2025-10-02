@@ -1,4 +1,5 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
 import { InjectModel } from '@nestjs/mongoose';
 import * as csv from 'csv-parser';
 import * as fs from 'fs';
@@ -33,6 +34,7 @@ export class UploadService {
     @InjectModel(GlobalConfiguration.name) private globalModel: Model<GlobalConfigurationDocument>,
     @InjectModel(BrokerageConfiguration.name) private brokerageConfigModel: Model<BrokerageConfigurationDocument>,
     @InjectModel(TempRawLog.name) private readonly tempLogModel: Model<any>,
+    @Inject('UPLOAD_SERVICE') private uploadService: ClientProxy,
   ) { }
 
   private readonly peer_to_peer_types = AppConfig.peerToPeerTypes;
@@ -565,7 +567,34 @@ export class UploadService {
 
   }
 
+  async mergeCsvFilesMicorservice(userEmail: string, file1Path: string, file2Path: string, jobId: string,) {
+    try {
 
+      const latestUpload = await this.uploadLog.findOne().sort({ createdAt: -1 });
+
+      if (latestUpload && !latestUpload.isProcessed) {
+        throw new HttpException(
+          'Previous upload not processed yet, please try after sometime',
+          HttpStatus.BAD_REQUEST
+        );
+      }
+      let body = {
+        userEmail: userEmail,
+        file1Path: `${process.env.UPLOAD_HOST}:${process.env.APP_PORT}/files/` + file1Path,
+        file2Path: `${process.env.UPLOAD_HOST}:${process.env.APP_PORT}/files/` + file2Path,
+        jobId: jobId,
+      }
+      this.uploadService.emit('process_upload', body);
+      return {
+        message: 'Files uploaded successfully',
+        jobId: jobId,
+        statusCode: HttpStatus.OK
+      }
+    } catch (error) {
+      console.error('Error in mergeCsvFilesMicorservice:', error);
+      return error;
+    }
+  }
   async mergeCsvFilesRefactor(userEmail: string, file1Path: string, file2Path: string, jobId: string, downloadCsv: boolean = false) {
     const startTime = new Date();
     let logUpdate: any;
@@ -1176,6 +1205,16 @@ export class UploadService {
                     {
                       $unset: ["discountCheck", "otherRecords"]
                     }
+                  ],
+
+                  //----------------- Pineline 4: International ----------------
+                  internationalBased: [
+                    { $match: { "payment_logs.international_payment": true } },
+                    {
+                      $set: {
+                        applicableFee: 0
+                      }
+                    },
                   ]
                 }
               },
@@ -1183,7 +1222,7 @@ export class UploadService {
               // Merge all facets into one array
               {
                 $project: {
-                  allDocs: { $concatArrays: ["$merchantBased", "$lfiBased", "$discountBased"] }
+                  allDocs: { $concatArrays: ["$merchantBased", "$lfiBased", "$discountBased", "$internationalBased"] }
                 }
               },
               { $unwind: "$allDocs" },
@@ -1226,7 +1265,7 @@ export class UploadService {
           status: 'Completed',
           completedAt: endTime,
           duration: durationTime,
-          remarks: `File processed successfully. Duration: ${durationTime}`
+          remarks: `File processed successfully.`
         },
         $push: {
           log: {
@@ -1247,7 +1286,7 @@ export class UploadService {
             status: 'Failed',
             completedAt: endTime,
             duration: durationTime,
-            remarks: `Processing failed after ${durationTime}}`
+            remarks: `Processing failed after ${durationTime}`
           },
           $push: {
             log: {
