@@ -23,13 +23,19 @@ RUN npm run build
 FROM node:20-slim
 
 ENV NODE_ENV=
-ENV MONGO_INITDB_ROOT_USERNAME=mongoadmin
-ENV MONGO_INITDB_ROOT_PASSWORD=rC9!*$L!Ku6pSSWx
-ENV MONGO_URL=mongodb://mongoadmin:rC9!*%24L!Ku6pSSWx@uniteydata:27017/billing?authSource=admin
+ENV MONGO_INITDB_ROOT_USERNAME=
+ENV MONGO_INITDB_ROOT_PASSWORD=
+ENV MONGO_URL=   #ex: mongodb://mongouser:password@uniteydata:27017/billing?authSource=admin
 ENV ACCESS_TOKEN_SECRET=access_token_secret
 ENV REFRESH_TOKEN_SECRET=refresh_token_secret
 ENV ACCESS_TOKEN_EXPIRY=30000
 ENV REFRESH_TOKEN_EXPIRY=300000
+
+#ENV for Microservice
+ENV UPLOAD_HOST=uniteybillingprocesslog
+ENV UPLOAD_PORT=3000
+ENV API_PORT=3000
+ENV API_HOST=uniteybillingapi
 
 RUN mkdir -p /usr/src/uniteybillingapi
 # Set the working directory
