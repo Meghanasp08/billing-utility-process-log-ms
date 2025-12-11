@@ -43,5 +43,6 @@ import { UsersModule } from './users/users.module';
   ],
   controllers: [AppController],
   providers: [AppService],
+  exports: [UploadModule],
 })
 export class AppModule { }

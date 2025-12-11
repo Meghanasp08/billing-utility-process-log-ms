@@ -72,6 +72,9 @@ export class UploadService {
     defaultHealthValue?: any; // 5%
     defaultLifeValue?: any; // 10%
     below4000BandValue?: any; // 5%
+    bulkPaymentMinTransactionThreshold?: any; // 10 transactions
+    bulkPaymentFlatFeeBelow10?: any; // 0.250 aed (250 fils)
+    bulkPaymentPerTransactionFeeAbove10?: any; // 0.025 aed (25 fils)
   } = {};
 
 
@@ -1267,7 +1270,8 @@ export class UploadService {
           status: 'Completed',
           completedAt: endTime,
           duration: durationTime,
-          remarks: `File processed successfully.`
+          remarks: `File processed successfully.`,
+          isProcessed: true
         },
         $push: {
           log: {
@@ -1288,7 +1292,8 @@ export class UploadService {
             status: 'Failed',
             completedAt: endTime,
             duration: durationTime,
-            remarks: `Processing failed after ${durationTime}`
+            remarks: `Processing failed after ${durationTime}`,
+            isProcessed: true
           },
           $push: {
             log: {
@@ -2050,21 +2055,25 @@ export class UploadService {
           // PEER-2-PEER
           else if (record.type === 'peer-2-peer') {
             if (record.group === 'payment-bulk') {
-              // if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
-              //   calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.paymentLargeValueFee.value).toFixed(3));
-              //   applicableFee = calculatedFee
-              //   unit_price = this.variables.paymentLargeValueFee.value;
-              //   volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
-
-              // } else {
-              calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.paymentNonLargevalueFeePeer.value).toFixed(3));
-
-              applicableFee = parseFloat((calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? this.variables.bulkMe2mePeer2PeerCap.value : calculatedFee).toFixed(3));
-              unit_price = this.variables.paymentNonLargevalueFeePeer.value;
-              volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
-              isCapped = calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? true : false // Assign boolean value
-              cappedAt = isCapped ? this.variables.bulkMe2mePeer2PeerCap.value : 0;
-              // }
+              const numTransactions = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
+              
+              if (numTransactions < this.variables.bulkPaymentMinTransactionThreshold.value) {
+                // Less than 10 transactions: flat fee of 250 fils
+                calculatedFee = parseFloat(this.variables.bulkPaymentFlatFeeBelow10.value.toFixed(3));
+                applicableFee = calculatedFee;
+                unit_price = this.variables.bulkPaymentFlatFeeBelow10.value;
+                volume = 1;
+                isCapped = false;
+                cappedAt = 0;
+              } else {
+                // 10 or more transactions: 25 fils per transaction
+                calculatedFee = parseFloat((numTransactions * this.variables.bulkPaymentPerTransactionFeeAbove10.value).toFixed(3));
+                applicableFee = calculatedFee;
+                unit_price = this.variables.bulkPaymentPerTransactionFeeAbove10.value;
+                volume = numTransactions;
+                isCapped = false;
+                cappedAt = 0;
+              }
             }
             else if (record.group === 'payment-non-bulk') {
               // if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
@@ -2087,12 +2096,25 @@ export class UploadService {
           // ME-2-ME
           else if (record.type === 'me-2-me') {
             if (record.group === 'payment-bulk') {
-              calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.paymentFeeMe2me.value).toFixed(3));
-              applicableFee = parseFloat((calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? this.variables.bulkMe2mePeer2PeerCap.value : calculatedFee).toFixed(3));
-              unit_price = this.variables.paymentFeeMe2me.value;
-              volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
-              isCapped = calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? true : false
-              cappedAt = isCapped ? this.variables.bulkMe2mePeer2PeerCap.value : 0;
+              const numTransactions = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
+              
+              if (numTransactions < this.variables.bulkPaymentMinTransactionThreshold.value) {
+                // Less than 10 transactions: flat fee of 250 fils
+                calculatedFee = parseFloat(this.variables.bulkPaymentFlatFeeBelow10.value.toFixed(3));
+                applicableFee = calculatedFee;
+                unit_price = this.variables.bulkPaymentFlatFeeBelow10.value;
+                volume = 1;
+                isCapped = false;
+                cappedAt = 0;
+              } else {
+                // 10 or more transactions: 25 fils per transaction
+                calculatedFee = parseFloat((numTransactions * this.variables.bulkPaymentPerTransactionFeeAbove10.value).toFixed(3));
+                applicableFee = calculatedFee;
+                unit_price = this.variables.bulkPaymentPerTransactionFeeAbove10.value;
+                volume = numTransactions;
+                isCapped = false;
+                cappedAt = 0;
+              }
             }
             else if (record.group === 'payment-non-bulk') {
               calculatedFee = parseFloat((this.variables.paymentFeeMe2me.value).toFixed(3));
@@ -2231,13 +2253,25 @@ export class UploadService {
           // PEER-2-PEER
           else if (record.type === 'peer-2-peer') {
             if (record.group === 'payment-bulk') {
-              calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.paymentNonLargevalueFeePeer.value).toFixed(3));
-
-              applicableFee = parseFloat((calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? this.variables.bulkMe2mePeer2PeerCap.value : calculatedFee).toFixed(3));
-              unit_price = this.variables.paymentNonLargevalueFeePeer.value;
-              volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
-              isCapped = calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? true : false // Assign boolean value
-              cappedAt = isCapped ? this.variables.bulkMe2mePeer2PeerCap.value : 0;
+              const numTransactions = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
+              
+              if (numTransactions < this.variables.bulkPaymentMinTransactionThreshold.value) {
+                // Less than 10 transactions: flat fee of 250 fils
+                calculatedFee = parseFloat(this.variables.bulkPaymentFlatFeeBelow10.value.toFixed(3));
+                applicableFee = calculatedFee;
+                unit_price = this.variables.bulkPaymentFlatFeeBelow10.value;
+                volume = 1;
+                isCapped = false;
+                cappedAt = 0;
+              } else {
+                // 10 or more transactions: 25 fils per transaction
+                calculatedFee = parseFloat((numTransactions * this.variables.bulkPaymentPerTransactionFeeAbove10.value).toFixed(3));
+                applicableFee = calculatedFee;
+                unit_price = this.variables.bulkPaymentPerTransactionFeeAbove10.value;
+                volume = numTransactions;
+                isCapped = false;
+                cappedAt = 0;
+              }
             }
             else if (record.group === 'payment-non-bulk') {
               calculatedFee = parseFloat(this.variables.paymentNonLargevalueFeePeer.value.toFixed(3));
@@ -2252,12 +2286,25 @@ export class UploadService {
           // ME-2-ME
           else if (record.type === 'me-2-me') {
             if (record.group === 'payment-bulk') {
-              calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.paymentFeeMe2me.value).toFixed(3));
-              applicableFee = parseFloat((calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? this.variables.bulkMe2mePeer2PeerCap.value : calculatedFee).toFixed(3));
-              unit_price = this.variables.paymentFeeMe2me.value;
-              volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
-              isCapped = calculatedFee > this.variables.bulkMe2mePeer2PeerCap.value ? true : false
-              cappedAt = isCapped ? this.variables.bulkMe2mePeer2PeerCap.value : 0;
+              const numTransactions = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
+              
+              if (numTransactions < this.variables.bulkPaymentMinTransactionThreshold.value) {
+                // Less than 10 transactions: flat fee of 250 fils
+                calculatedFee = parseFloat(this.variables.bulkPaymentFlatFeeBelow10.value.toFixed(3));
+                applicableFee = calculatedFee;
+                unit_price = this.variables.bulkPaymentFlatFeeBelow10.value;
+                volume = 1;
+                isCapped = false;
+                cappedAt = 0;
+              } else {
+                // 10 or more transactions: 25 fils per transaction
+                calculatedFee = parseFloat((numTransactions * this.variables.bulkPaymentPerTransactionFeeAbove10.value).toFixed(3));
+                applicableFee = calculatedFee;
+                unit_price = this.variables.bulkPaymentPerTransactionFeeAbove10.value;
+                volume = numTransactions;
+                isCapped = false;
+                cappedAt = 0;
+              }
             }
             else if (record.group === 'payment-non-bulk') {
               calculatedFee = parseFloat((this.variables.paymentFeeMe2me.value).toFixed(3));

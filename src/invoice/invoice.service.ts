@@ -6283,7 +6283,7 @@ export class InvoiceService {
             <div class="">
                 <div class="header">
                     <div>
-                        <div class="title">Collection Memo</div>
+                        <div class="title" style="color: #000046;">Collection Memo</div>
                         <h3 style="margin-top:7px; margin-bottom:8px;">Nebras Collection Services</h3>
                         <div class="memo-number">Collection Memo 00${displayIndex}</div>
                         <div class="date">${moment(data.generated_at).format('D MMMM YYYY')}</div>
@@ -7294,6 +7294,9 @@ export class InvoiceService {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LFI Statement of Fees</title>
+     <div class="title" style="margin-top: 20px; font-size: 20px; color: #000046;">
+            Collection Memo
+          </div>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -7442,6 +7445,7 @@ export class InvoiceService {
         <div class="header">
             <div>
                 <h1>LFI STATEMENT OF FEES</h1>
+                <h2 style="color: #000046;">Collection Memo</h2>
                 <h3>Nebras Collection Services</h3>
                 <p style="color: #1b194f;">Fee Statement 001<br>${moment(data.createdAt).format('DD MMMM YYYY')} </p>
                 <p class="lif-details"><br>${data.lfi_name}<br>LFI ID:${data.lfi_id}</p>
