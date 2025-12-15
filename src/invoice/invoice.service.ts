@@ -4692,11 +4692,19 @@ export class InvoiceService {
         };
     }
     async findCollectionMemoById(ID: any): Promise<any> {
+        // Check if it's a MongoDB ObjectId or LFI identifier
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(ID);
+        
+        let result;
+        if (isObjectId) {
+            // If it's an ObjectId, fetch by _id
+            result = await this.collectionMemoModel.findById(ID).exec();
+        } else {
+            // If it's not an ObjectId, treat it as lfi_id and fetch all documents for that LFI
+            result = await this.collectionMemoModel.find({ lfi_id: ID }).sort({ createdAt: -1 }).lean<any>();
+        }
 
-        const result = await this.collectionMemoModel.findById(ID).exec();
-
-        return result
-
+        return result;
     }
 
     async invoiceCreationSingleDay(tpp): Promise<any> {
@@ -6056,15 +6064,37 @@ export class InvoiceService {
         if (!lfiData)
             throw new NotFoundException('Invalid Lfi-ID');
 
-        const result = await this.collectionMemoModel.findOne({
+        // Fetch ALL collection memos for this LFI, month, and year
+        const allResults = await this.collectionMemoModel.find({
             lfi_id: lfi_id,
             invoice_month: month,
             invoice_year: year
         }).lean<any>();
 
-        result.lfi_details = lfiData;
+        if (!allResults || allResults.length === 0) {
+            throw new NotFoundException('No invoices found for this LFI');
+        }
 
-        return result
+        // Combine all TPPs from all invoices into one array
+        let combinedTpps = [];
+        let totalAmount = 0;
+
+        for (const invoice of allResults) {
+            if (invoice.tpp && Array.isArray(invoice.tpp)) {
+                combinedTpps = combinedTpps.concat(invoice.tpp);
+            }
+            totalAmount += Number(invoice.total_amount) || 0;
+        }
+
+        // Use the first invoice as base and merge all TPPs
+        const result = {
+            ...allResults[0],
+            tpp: combinedTpps,
+            total_amount: totalAmount,
+            lfi_details: lfiData
+        };
+
+        return result;
     }
 
     async generateInvoicePDFTpp(data: any, mail: boolean = false) {
