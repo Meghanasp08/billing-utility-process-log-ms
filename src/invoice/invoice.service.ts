@@ -7407,6 +7407,11 @@ export class InvoiceService {
             background-color: #c2c1eb !important;
         }
 
+        tr {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
         .table-total {
             text-align: right;
 
@@ -7469,6 +7474,23 @@ export class InvoiceService {
                 print-color-adjust: exact;
             }
 
+            table {
+                border-collapse: collapse;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            tr {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            td, th {
+                border: 1px solid #000046 !important;
+                box-sizing: border-box;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
       
         }
 
