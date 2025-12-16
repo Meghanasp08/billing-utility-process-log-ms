@@ -2039,10 +2039,10 @@ export class UploadService {
 
                 }
               } else {
-                calculatedFee = parseFloat((parseInt(record["payment_logs.amount"]) * (this.variables.nonLargeValueMerchantBps.value / 10000)).toFixed(3));
+                calculatedFee = parseFloat((parseFloat(record["payment_logs.amount"]) * (this.variables.nonLargeValueMerchantBps.value / 10000)).toFixed(3));
                 applicableFee = parseFloat((calculatedFee > this.variables.nonLargeValueCapMerchant.value ? this.variables.nonLargeValueCapMerchant.value : calculatedFee).toFixed(3));
                 unit_price = (this.variables.nonLargeValueMerchantBps.value / 10000);
-                volume = parseInt(record["payment_logs.amount"]) ?? 0;
+                volume = parseFloat(record["payment_logs.amount"]) ?? 0;
                 appliedLimit = 0;
                 limitApplied = false;
                 isCapped = calculatedFee > this.variables.nonLargeValueCapMerchant.value; // Assign boolean value
@@ -2237,10 +2237,10 @@ export class UploadService {
 
 
             } else {
-              calculatedFee = parseFloat((parseInt(record["payment_logs.amount"]) * (this.variables.nonLargeValueMerchantBps.value / 10000)).toFixed(3));
+              calculatedFee = parseFloat((parseFloat(record["payment_logs.amount"]) * (this.variables.nonLargeValueMerchantBps.value / 10000)).toFixed(3));
               applicableFee = parseFloat((calculatedFee > this.variables.nonLargeValueCapMerchant.value ? this.variables.nonLargeValueCapMerchant.value : calculatedFee).toFixed(3));
               unit_price = (this.variables.nonLargeValueMerchantBps.value / 10000);
-              volume = parseInt(record["payment_logs.amount"]) ?? 0;
+              volume = parseFloat(record["payment_logs.amount"]) ?? 0;
               appliedLimit = 0;
               limitApplied = false;
               isCapped = calculatedFee > this.variables.nonLargeValueCapMerchant.value; // Assign boolean value
