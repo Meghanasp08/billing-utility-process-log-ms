@@ -7,6 +7,7 @@ import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { uploadLog, uploadLogSchema } from './upload/schemas/upload-log.schema';
 import { BrokerageConfigModule } from './brokerage_config/brokerage_config.module';
 import { ConfigurationModule } from './configuration/configuration.module';
 import { DashboardModule } from './dashboard/dashboard.module';
@@ -19,6 +20,7 @@ import { UsersModule } from './users/users.module';
 @Module({
   imports: [
     MongooseModule.forRoot(process.env.MONGO_URL || 'mongodb://localhost:27017/defaultdb'),
+    MongooseModule.forFeature([{ name: uploadLog.name, schema: uploadLogSchema }]),
     AuthModule,
     ProfileModule,
     UploadModule,

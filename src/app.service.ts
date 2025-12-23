@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { UploadService } from './upload/upload.service';
+import { uploadLog, uploadLogDocument } from './upload/schemas/upload-log.schema';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as https from 'https';
@@ -7,7 +10,10 @@ import * as http from 'http';
 
 @Injectable()
 export class AppService {
-  constructor(private readonly uploadService: UploadService) {}
+  constructor(
+    private readonly uploadService: UploadService,
+    @InjectModel(uploadLog.name) private uploadLog: Model<uploadLogDocument>,
+  ) {}
 
   getHello(): string {
     return 'Hello World!';
@@ -42,6 +48,32 @@ export class AppService {
     } catch (error) {
       console.error('❌ Error in processUploadedFiles:', error);
       console.error('Stack:', error.stack);
+      
+      // Update database status to Failed
+      try {
+        await this.uploadLog.findOneAndUpdate(
+          { batchNo: jobId },
+          {
+            $set: {
+              status: 'Failed',
+              completedAt: new Date(),
+              remarks: `Processing failed: ${error.message}`,
+              isProcessed: true
+            },
+            $push: {
+              log: {
+                description: `Error: ${error.message}`,
+                status: 'Failed',
+                errorDetail: error.stack || error.message
+              }
+            }
+          }
+        );
+        console.log('📝 Database updated with failure status');
+      } catch (dbError) {
+        console.error('❌ Failed to update database:', dbError);
+      }
+      
       throw error;
     }
   }

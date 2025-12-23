@@ -616,6 +616,10 @@ export class InvoiceService {
         nonLargeValueMerchantBps = Number(nonLargeValueMerchantBps) / 10000
         const tppData = await this.tppDataModel.find();
 
+        console.log('🔍 DEBUG: Total TPPs found in database:', tppData.length);
+        console.log('🔍 DEBUG: TPP names:', tppData.map(t => ({ id: t.tpp_id, name: t.tpp_name })));
+        console.log('🔍 DEBUG: Looking for invoices for month:', month, 'year:', year);
+
         const startDate = new Date(year, month - 1, 1);
         const endDate = new Date(year, month, 0);
         const currentDate = new Date();
@@ -626,6 +630,23 @@ export class InvoiceService {
         let lfi_label = await this.lfi_label();
 
         for (const tpp of tppData) {
+            console.log('\n🔍 DEBUG: Processing TPP:', tpp.tpp_name, 'ID:', tpp.tpp_id);
+            
+            // Debug: Count matching logs before aggregation
+            const matchingLogsCount = await this.logsModel.countDocuments({
+                "raw_api_log_data.tpp_id": tpp?.tpp_id,
+                chargeable: true,
+                success: true,
+                duplicate: false,
+                $expr: {
+                    $and: [
+                        { $eq: [{ $month: "$raw_api_log_data.timestamp" }, month] },
+                        { $eq: [{ $year: "$raw_api_log_data.timestamp" }, year] }
+                    ]
+                }
+            });
+            console.log('🔍 DEBUG: Found', matchingLogsCount, 'chargeable logs for', tpp.tpp_name);
+
             const result = await this.logsModel.aggregate(
                 [
                     {
@@ -703,6 +724,12 @@ export class InvoiceService {
                             paymentTypeLabel: {
                                 $ne: null
                             }
+                        }
+                    },
+                    {
+                        $addFields: {
+                            debug_tpp_name: tpp.tpp_name,
+                            debug_tpp_id: tpp.tpp_id
                         }
                     },
                     {
@@ -1200,6 +1227,22 @@ export class InvoiceService {
                     }
                 ]
             )
+            
+            console.log('🔍 DEBUG: LFI aggregation starting for', tpp.tpp_name);
+            const lfiMatchCount = await this.logsModel.countDocuments({
+                "raw_api_log_data.tpp_id": tpp?.tpp_id,
+                success: true,
+                duplicate: false,
+                "payment_logs.international_payment": false,
+                $expr: {
+                    $and: [
+                        { $eq: [{ $month: "$raw_api_log_data.timestamp" }, month] },
+                        { $eq: [{ $year: "$raw_api_log_data.timestamp" }, year] }
+                    ]
+                }
+            });
+            console.log('🔍 DEBUG: LFI chargeable logs count:', lfiMatchCount);
+            
             const result_of_lfi = await this.logsModel.aggregate([
                 {
                     $match: {
@@ -1685,8 +1728,22 @@ export class InvoiceService {
                 notes: 'Invoice Added',
             }
 
+            console.log('📝 DEBUG: Preparing to save invoice for', tpp.tpp_name);
+            console.log('📝 DEBUG: Invoice data:', JSON.stringify({
+                tpp_id: tpp.tpp_id,
+                tpp_name: tpp.tpp_name,
+                invoice_month: month,
+                invoice_year: year,
+                invoice_total: Number(invoice_total.toFixed(2)),
+                lfi_total: Number(lfi_total.toFixed(2)),
+                items_count: updated_result.length,
+                lfi_usage_count: result_of_lfi.length
+            }, null, 2));
+
             const invoice = new this.invoiceModel(invoice_data)
             await invoice.save();
+            
+            console.log('✅ DEBUG: Invoice saved successfully for', tpp.tpp_name, 'with ID:', invoice._id);
 
 
             for (const obj of result_of_lfi) {
@@ -1956,9 +2013,39 @@ export class InvoiceService {
 
     }
     async invoiceTppCsv(data: any) {
+        console.log('\n🔍 DEBUG invoiceTppCsv: Starting CSV generation for TPP:', data.tpp_id, 'Month:', data.month, 'Year:', data.year);
+        
         const timezone: string = moment.tz.guess();
         const paymentTypeLabel = await this.paymentTypeLabel()
         const lfi_label = await this.lfi_label();
+
+        // Debug: Check if any logs exist for this TPP
+        const totalLogsCount = await this.logsModel.countDocuments({
+            "raw_api_log_data.tpp_id": data?.tpp_id
+        });
+        console.log('🔍 DEBUG: Total logs in DB for TPP', data.tpp_id, ':', totalLogsCount);
+
+        const chargeableLogsCount = await this.logsModel.countDocuments({
+            "raw_api_log_data.tpp_id": data?.tpp_id,
+            chargeable: true,
+            success: true,
+            duplicate: false
+        });
+        console.log('🔍 DEBUG: Chargeable logs for TPP', data.tpp_id, ':', chargeableLogsCount);
+
+        const monthlyLogsCount = await this.logsModel.countDocuments({
+            "raw_api_log_data.tpp_id": data?.tpp_id,
+            chargeable: true,
+            success: true,
+            duplicate: false,
+            $expr: {
+                $and: [
+                    { $eq: [{ $month: "$raw_api_log_data.timestamp" }, data?.month] },
+                    { $eq: [{ $year: "$raw_api_log_data.timestamp" }, data?.year] }
+                ]
+            }
+        });
+        console.log('🔍 DEBUG: Monthly chargeable logs for TPP', data.tpp_id, ':', monthlyLogsCount);
 
         const result_tpp = await this.logsModel.aggregate(
             [
@@ -6032,16 +6119,32 @@ export class InvoiceService {
         let month = data.month ?? data.invoice_month
         let year = data.year ?? data.invoice_year
 
+        console.log('\n🔍 DEBUG invoiceTppAggregation: Looking for invoice:', { tpp_id, month, year });
+
         const tppData = await this.tppDataModel.findOne({ tpp_id: data.tpp_id }).lean<any>();
-        if (!tppData)
+        if (!tppData) {
+            console.log('❌ ERROR: TPP not found in database:', data.tpp_id);
             throw new NotFoundException('Invalid Tpp-ID');
-        console.log(tppData)
+        }
+        console.log('✅ DEBUG: TPP found:', tppData.tpp_name);
+
+        const allInvoices = await this.invoiceModel.find({ tpp_id: tpp_id });
+        console.log('🔍 DEBUG: Total invoices for TPP', tpp_id, ':', allInvoices.length);
+        if (allInvoices.length > 0) {
+            console.log('🔍 DEBUG: Available invoice months/years:', allInvoices.map(i => ({ month: i.invoice_month, year: i.invoice_year })));
+        }
 
         const result = await this.invoiceModel.findOne({
             tpp_id: tpp_id,
             invoice_month: month,
             invoice_year: year
         })
+        
+        if (!result) {
+            console.log('❌ ERROR: No invoice found for TPP:', tpp_id, 'Month:', month, 'Year:', year);
+            throw new NotFoundException('Invoice not found for specified month and year');
+        }
+        console.log('✅ DEBUG: Invoice found with total:', result.invoice_total);
         console.log({
             tpp_id: tpp_id,
             invoice_month: month,
