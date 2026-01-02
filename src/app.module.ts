@@ -7,7 +7,6 @@ import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
-import { uploadLog, uploadLogSchema } from './upload/schemas/upload-log.schema';
 import { BrokerageConfigModule } from './brokerage_config/brokerage_config.module';
 import { ConfigurationModule } from './configuration/configuration.module';
 import { DashboardModule } from './dashboard/dashboard.module';
@@ -19,8 +18,40 @@ import { UploadModule } from './upload/upload.module';
 import { UsersModule } from './users/users.module';
 @Module({
   imports: [
-    MongooseModule.forRoot(process.env.MONGO_URL || 'mongodb://localhost:27017/defaultdb'),
-    MongooseModule.forFeature([{ name: uploadLog.name, schema: uploadLogSchema }]),
+    // MongooseModule.forRoot(process.env.MONGO_URL || 'mongodb://localhost:27017/defaultdb'),
+  //  ====================
+//     MongooseModule.forRoot(process.env.MONGO_URL || 'mongodb://localhost:27017/defaultdb', {
+//   connectionFactory: (connection) => {
+//     connection.on('error', (err) => {
+//       console.error('MongoDB connection error:', err);
+//     });
+//     connection.on('connected', () => {
+//       console.log('MongoDB connected successfully');
+//     });
+//     return connection;
+//   },
+// }),
+// ========
+
+MongooseModule.forRoot(process.env.MONGO_URL || 'mongodb://localhost:27017/defaultdb', {
+  retryWrites: false,              // CosmosDB doesn't support retryWrites
+  maxPoolSize: 50,                 // Connection pool size
+  socketTimeoutMS: 600000,         // 10 minutes - must be longer than maxTimeMS operations
+  serverSelectionTimeoutMS: 60000, // Server selection timeout
+  connectTimeoutMS: 60000,         // Initial connection timeout
+  connectionFactory: (connection) => {
+    connection.on('error', (err) => {
+      console.error('Database connection error:', err);
+    });
+    connection.on('connected', () => {
+      console.log('Database connected successfully');
+    });
+    connection.on('disconnected', () => {
+      console.log('Database disconnected');
+    });
+    return connection;
+  },
+}),
     AuthModule,
     ProfileModule,
     UploadModule,

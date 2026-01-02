@@ -76,7 +76,7 @@ export class UploadService {
     bulkPaymentFlatFeeBelow10?: any; // 0.250 aed (250 fils)
     bulkPaymentPerTransactionFeeAbove10?: any; // 0.025 aed (25 fils)
     bulkPaymentFlatFeeBelow10MeToMe?: any; // 0.2 aed (250 fils)
-    bulkPaymentPerTFeeAbove10MeToMe?: any; // 0.02 aed (25 fils)
+    bulkPaymentPerTFeeAbove10MeToMe?: any;
   } = {};
 
 
@@ -546,35 +546,8 @@ export class UploadService {
         duplicate: isDuplicate,
       };
     });
-    
-    console.log('🔍 DEBUG: Total processed records:', processedRecords.length);
-    const tppCounts = processedRecords.reduce((acc, record) => {
-      const tppName = record["raw_api_log_data.tpp_name"] || "Unknown";
-      acc[tppName] = (acc[tppName] || 0) + 1;
-      return acc;
-    }, {});
-    console.log('🔍 DEBUG: Records by TPP:', tppCounts);
-    
-    // Check for PAY NINE specifically
-    const payNineRecords = processedRecords.filter(r => 
-      r["raw_api_log_data.tpp_name"]?.includes("PAY NINE")
-    );
-    console.log('🔍 DEBUG: PAY NINE records found:', payNineRecords.length);
-    if (payNineRecords.length > 0) {
-      console.log('🔍 DEBUG: PAY NINE sample record:', JSON.stringify({
-        tpp_id: payNineRecords[0]["raw_api_log_data.tpp_id"],
-        tpp_name: payNineRecords[0]["raw_api_log_data.tpp_name"],
-        timestamp: payNineRecords[0]["raw_api_log_data.timestamp"],
-        chargeable: payNineRecords[0].chargeable,
-        success: payNineRecords[0].success,
-        duplicate: payNineRecords[0].duplicate
-      }, null, 2));
-    }
-    
     if (processedRecords.length) {
-      console.log('💾 DEBUG: Inserting', processedRecords.length, 'records into database...');
       const billData = await this.logModel.insertMany(processedRecords);
-      console.log('✅ DEBUG: Successfully inserted', billData.length, 'records');
       if (billData.length) {
         await this.uploadLog.findByIdAndUpdate(
           logUpdate._id,
@@ -602,39 +575,11 @@ export class UploadService {
   async mergeCsvFilesMicorservice(userEmail: string, file1Path: string, file2Path: string, jobId: string,) {
     try {
 
-      // Auto-cleanup stuck uploads older than 5 minutes
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-      await this.uploadLog.updateMany(
-        {
-          status: 'Processing',
-          uploadedAt: { $lt: fiveMinutesAgo }
-        },
-        {
-          $set: {
-            status: 'Failed',
-            isProcessed: true,
-            remarks: 'Processing timeout - automatically failed after 5 minutes',
-            completedAt: new Date()
-          },
-          $push: {
-            log: {
-              description: 'Upload timed out after 5 minutes',
-              status: 'Failed',
-              errorDetail: 'Processing took too long and was automatically marked as failed'
-            }
-          }
-        }
-      );
+      const latestUpload = await this.uploadLog.findOne().sort({ createdAt: -1 });
 
-      // Check for recent uploads (within last 5 minutes) that are still processing
-      const recentProcessingUpload = await this.uploadLog.findOne({ 
-        status: 'Processing',
-        uploadedAt: { $gte: fiveMinutesAgo }
-      }).sort({ createdAt: -1 });
-
-      if (recentProcessingUpload) {
+      if (latestUpload && !latestUpload.isProcessed) {
         throw new HttpException(
-          'Previous upload is still being processed, please try after sometime',
+          'Previous upload not processed yet, please try after sometime',
           HttpStatus.BAD_REQUEST
         );
       }
@@ -674,42 +619,23 @@ export class UploadService {
       globalData.forEach(obj => { this.variables[obj.key] = obj; });
 
       if (!file1Path) {
-        // Find existing log by batchNo (jobId) or create new one
-        logUpdate = await this.uploadLog.findOne({ batchNo: jobId });
-        
-        if (!logUpdate) {
-          logUpdate = await this.uploadLog.create({
-            batchNo: jobId,
-            uploadedAt: startTime,
-            raw_log_path: file1Path,
-            payment_log_path: file2Path,
-            key: 'inputFiles',
-            status: 'Failed',
-            uploadedBy: userEmail,
-            remarks: 'File Upload Failed, processing Stopped',
-            log: [{
-              description: "Uploading Failed for the raw data log",
-              status: "Failed",
-              errorDetail: "Missing file1Path for raw data log"
-            }],
-            isProcessed: true
-          });
-        } else {
-          await this.uploadLog.findByIdAndUpdate(logUpdate._id, {
-            $set: {
-              status: 'Failed',
-              remarks: 'File Upload Failed, processing Stopped',
-              isProcessed: true
-            },
-            $push: {
-              log: {
-                description: "Uploading Failed for the raw data log",
-                status: "Failed",
-                errorDetail: "Missing file1Path for raw data log"
-              }
-            }
-          });
+        logUpdate = await this.uploadLog.create({
+          batchNo: `${Date.now()}`,
+          uploadedAt: startTime,
+          raw_log_path: file1Path,
+          payment_log_path: file2Path,
+          key: 'inputFiles',
+          status: 'Failed',
+          uploadedBy: userEmail,
+          remarks: 'File UploadUpload Failed, processing Stopped',
+          log: [{
+            description: "Uploading Failed for the raw data log",
+            status: "Failed",
+            errorDetail: "Missing file1Path for raw data log"
+          }
+          ],
         }
+        )
 
         throw new HttpException({
           message: 'Missing raw data file',
@@ -717,44 +643,24 @@ export class UploadService {
         }, HttpStatus.BAD_REQUEST);
       }
       else {
-        // Find existing log by batchNo (jobId) or create new one
-        logUpdate = await this.uploadLog.findOne({ batchNo: jobId });
-        
-        if (!logUpdate) {
-          logUpdate = await this.uploadLog.create({
-            batchNo: jobId,
-            uploadedAt: startTime,
-            raw_log_path: file1Path,
-            payment_log_path: file2Path,
-            status: 'Processing',
-            key: 'inputFiles',
-            uploadedBy: userEmail,
-            remarks: 'File Uploaded, processing started',
-            log: [
-              {
-                description: "Processing and filter logic started",
-                status: "In Progress",
-                errorDetail: null
-              }
-            ]
-          });
-        } else {
-          // Update existing log
-          await this.uploadLog.findByIdAndUpdate(logUpdate._id, {
-            $set: {
-              raw_log_path: file1Path,
-              payment_log_path: file2Path,
-              status: 'Processing'
-            },
-            $push: {
-              log: {
-                description: "Processing and filter logic started",
-                status: "In Progress",
-                errorDetail: null
-              }
+        logUpdate = await this.uploadLog.create({
+          batchNo: `${Date.now()}`,
+          uploadedAt: startTime,
+          raw_log_path: file1Path,
+          payment_log_path: file2Path,
+          status: 'Processing',
+          key: 'inputFiles',
+          uploadedBy: userEmail,
+          remarks: 'File Uploaded, processing started',
+          log: [
+            {
+              description: "Processing and filter logic started",
+              status: "In Progress",
+              errorDetail: null
             }
-          });
+          ]
         }
+        )
       }
 
       const paymentDataMap = new Map<string, any>();
@@ -817,7 +723,7 @@ export class UploadService {
         });
       }
 
-      const batchSize = 50000;
+      const batchSize = 5000;
       let batch: any[] = [];
       let rowIndex = 0;
       let batchNumber = 1;
@@ -891,8 +797,10 @@ export class UploadService {
               console.log(`✅ Finished final batch #${batchNumber}`);
             }
             // 🔽 Migrate temp → final
+            console.log('Before final uploadLog update');
             console.log(`🎉 All ${rowIndex} rows processed successfully`);
-
+             console.log('After final uploadLog update');
+             
             await this.tempLogModel.aggregate([
               // Filter early by jobId
               { $match: { jobId: jobId } },
@@ -1821,8 +1729,6 @@ export class UploadService {
 
   async populateTppData(rawData: any[]) {
     try {
-      console.log('\n🔍 DEBUG populateTppData: Processing', rawData.length, 'raw data records');
-      
       // Use a Map to ensure uniqueness while extracting relevant fields
       const tppMap = new Map();
 
@@ -1832,7 +1738,6 @@ export class UploadService {
 
         if (tpp_id && !tppMap.has(tpp_id)) {
           tppMap.set(tpp_id, { tpp_id, tpp_name });
-          console.log('🔍 DEBUG: Found unique TPP:', tpp_name, 'ID:', tpp_id);
         }
       });
 
@@ -1842,18 +1747,16 @@ export class UploadService {
       // Insert or update TPP data
       for (const tppData of tppDataToInsert) {
         try {
-          const updateResult = await this.TppModel.updateOne(
+          await this.TppModel.updateOne(
             { tpp_id: tppData.tpp_id }, // Filter for existing record
             { $setOnInsert: tppData }, // Insert only if not found
             { upsert: true }           // Create new document if no match is found
           );
-          console.log('✅ DEBUG: TPP upserted:', tppData.tpp_name, 'upserted:', updateResult.upsertedCount, 'modified:', updateResult.modifiedCount);
         } catch (error) {
-          console.error(`❌ Error processing TPP ID ${tppData.tpp_id}:`, error.message);
+          console.error(`Error processing TPP ID ${tppData.tpp_id}:`, error.message);
         }
       }
 
-      console.log('✅ DEBUG: Completed processing', tppDataToInsert.length, 'TPP records');
       return `Processed ${tppDataToInsert.length} TPP records.`;
     } catch (error) {
       console.error("Error during TPP data processing:", error.message);
@@ -2069,7 +1972,7 @@ export class UploadService {
       let merchantArray: any[] = [];
 
       // STEP 2: Now map and use fast lookup
-      const calculatedData = await Promise.all(data.map(async (record: { [x: string]: string; }, recordIndex: number) => {
+      const calculatedData = await Promise.all(data.map(async (record: { [x: string]: string; }) => {
         let volume = 0;
         let calculatedFee = 0;
         let applicableFee = 0;
@@ -2080,26 +1983,9 @@ export class UploadService {
         let limitApplied = false;
         let isCapped: boolean = false;
         let cappedAt = 0;
-        
-        console.log(`\n💵 [DEBUG] Record #${recordIndex + 1} - Fee Calculation:`);
-        console.log(`[DEBUG] Payment ID: ${record["raw_api_log_data.payment_id"]}`);
-        console.log(`[DEBUG] Checking conditions:`);
-        console.log(`[DEBUG]   - lfiChargable: ${record.lfiChargable}`);
-        console.log(`[DEBUG]   - success: ${record.success}`);
-        console.log(`[DEBUG]   - Can calculate fee: ${record.lfiChargable && record.success}`);
-        
         if (record.lfiChargable && record.success) {
-          console.log(`[DEBUG] ✅ Proceeding with fee calculation`);
-          console.log(`[DEBUG] Record details:`);
-          console.log(`[DEBUG]   - group: ${record.group}`);
-          console.log(`[DEBUG]   - type: ${record.type}`);
-          console.log(`[DEBUG]   - is_large_corporate: ${record['raw_api_log_data.is_large_corporate']}`);
-          console.log(`[DEBUG]   - payment_type: ${record['raw_api_log_data.payment_type']}`);
-          console.log(`[DEBUG]   - merchant_id: ${record['payment_logs.merchant_id']}`);
-          console.log(`[DEBUG]   - amount: ${record['payment_logs.amount']}`);
 
           if (record.group === "payment-bulk" && Boolean(record['raw_api_log_data.is_large_corporate'])) {
-            console.log(`[DEBUG] 🎯 Matched: payment-bulk + large corporate`);
 
             return {
               ...record,
@@ -2115,38 +2001,25 @@ export class UploadService {
 
           // MERCHANT CALCULATION
           if (record.type === "merchant") {
-            console.log(`[DEBUG] 🏪 Merchant Calculation Path`);
-            console.log(`[DEBUG]   - payment_type: ${record["raw_api_log_data.payment_type"]}`);
-            console.log(`[DEBUG]   - merchant_id from payment log: ${record["payment_logs.merchant_id"]}`);
-            console.log(`[DEBUG]   - Is LargeValueCollection: ${record["raw_api_log_data.payment_type"] === 'LargeValueCollection'}`);
-            
             if (record["raw_api_log_data.payment_type"] === 'LargeValueCollection') {
-              console.log(`[DEBUG]   - Processing as LargeValueCollection`);
               if (record.group == 'payment-non-bulk') {
-                console.log(`[DEBUG]   - Group: payment-non-bulk`);
                 calculatedFee = this.variables.paymentLargeValueFee.value
                 applicableFee = calculatedFee
                 unit_price = this.variables.paymentLargeValueFee.value;
                 volume = 1;
-                console.log(`[DEBUG]   - Fee: ${calculatedFee}, Unit Price: ${unit_price}, Volume: ${volume}`);
               } else if (record.group == 'payment-bulk') {
-                console.log(`[DEBUG]   - Group: payment-bulk`);
                 calculatedFee = parseFloat((parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1) * this.variables.paymentLargeValueFee.value).toFixed(3));
                 applicableFee = calculatedFee
                 unit_price = this.variables.paymentLargeValueFee.value;
                 volume = parseInt(record["payment_logs.number_of_successful_transactions"] ?? 1);
-                console.log(`[DEBUG]   - Fee: ${calculatedFee}, Unit Price: ${unit_price}, Volume: ${volume}`);
               }
 
 
             } else {
-              console.log(`[DEBUG]   - Processing as non-LargeValueCollection merchant payment`);
 
               const date = new Date(record["raw_api_log_data.timestamp"]).toISOString().split("T")[0];
               const key = `${record["payment_logs.merchant_id"]}_${date}`;
-              console.log(`[DEBUG]   - Looking up merchant group with key: ${key}`);
               const merchantGroup = merchantGroupedMap[key];
-              console.log(`[DEBUG]   - Merchant group found: ${merchantGroup ? 'YES' : 'NO'}`);
               if (merchantGroup) {
                 result = [merchantGroup]; // For consistency if needed in frontend
                 if (result.length > 0) {
@@ -2239,7 +2112,7 @@ export class UploadService {
                 cappedAt = 0;
               } else {
                 // 10 or more transactions: 25 fils per transaction
-                calculatedFee = parseFloat((numTransactions * this.variables.bulkPaymentPerTransactionFeeAbove10.value).toFixed(3));
+                calculatedFee = parseFloat((numTransactions * this.variables.bulkPaymentPerTFeeAbove10MeToMe.value).toFixed(3));
                 applicableFee = calculatedFee;
                 unit_price = this.variables.bulkPaymentPerTFeeAbove10MeToMe.value;
                 volume = numTransactions;
@@ -2431,7 +2304,7 @@ export class UploadService {
                 // 10 or more transactions: 25 fils per transaction
                 calculatedFee = parseFloat((numTransactions * this.variables.bulkPaymentPerTFeeAbove10MeToMe.value).toFixed(3));
                 applicableFee = calculatedFee;
-                unit_price = this.variables.bulkPaymentPerTransactionFeeAbove10.value;
+                unit_price = this.variables.bulkPaymentPerTFeeAbove10MeToMe.value;
                 volume = numTransactions;
                 isCapped = false;
                 cappedAt = 0;
@@ -2489,23 +2362,7 @@ export class UploadService {
               applicableFee = calculatedFee;
             }
           }
-        } else {
-          console.log(`[DEBUG] ❌ Fee calculation skipped - Conditions not met:`);
-          console.log(`[DEBUG]   - lfiChargable: ${record.lfiChargable} (required: true)`);
-          console.log(`[DEBUG]   - success: ${record.success} (required: true)`);
-          console.log(`[DEBUG]   - All fees will be 0`);
         }
-
-        console.log(`[DEBUG] 🏁 Final Fee Calculation Results for Record #${recordIndex + 1}:`);
-        console.log(`[DEBUG]   - calculatedFee: ${calculatedFee}`);
-        console.log(`[DEBUG]   - applicableFee: ${applicableFee}`);
-        console.log(`[DEBUG]   - unit_price: ${unit_price}`);
-        console.log(`[DEBUG]   - volume: ${volume}`);
-        console.log(`[DEBUG]   - appliedLimit: ${appliedLimit}`);
-        console.log(`[DEBUG]   - limitApplied: ${limitApplied}`);
-        console.log(`[DEBUG]   - isCapped: ${isCapped}`);
-        console.log(`[DEBUG]   - cappedAt: ${cappedAt}`);
-        console.log(`[DEBUG]   - numberOfPages: ${numberOfPages}`);
 
         return {
           ...record,
@@ -2522,7 +2379,7 @@ export class UploadService {
         };
       }));
 
-      console.log('\n✅ [DEBUG] Fee calculation completed for all records\n');
+
       return calculatedData;
     } catch (error) {
       console.error("Error in calculateFee:", error);
@@ -2531,10 +2388,6 @@ export class UploadService {
   }
 
   async determineChargeableAndSuccess(data: any[], apiData: any[], logId: string) {
-    console.log('\n🔍 [DEBUG] Starting determineChargeableAndSuccess');
-    console.log(`[DEBUG] Total records to process: ${data.length}`);
-    console.log(`[DEBUG] Total API configurations: ${apiData.length}`);
-    
     // Convert API data into lists of chargeable URLs with their methods
     const chargableUrls = apiData
       .filter(api => api.chargeable_api_hub_fee === true)
@@ -2547,10 +2400,6 @@ export class UploadService {
     const QuotChargableUrls = apiData
       .filter(api => api.chargeable_quote_fee === true)
       .map(api => ({ endpoint: api.api_endpoint, method: api.api_operation.toUpperCase() }));
-    
-    console.log(`[DEBUG] Chargeable API Hub URLs count: ${chargableUrls.length}`);
-    console.log(`[DEBUG] Chargeable LFI/TPP URLs count: ${lfiChargableUrls.length}`);
-    console.log(`[DEBUG] Quote Chargeable URLs count: ${QuotChargableUrls.length}`);
 
 
 
@@ -2558,13 +2407,6 @@ export class UploadService {
       const rawDataEndpoint = await this.matchTemplateVersionUrl(record["raw_api_log_data.url"]);
       const rawDataMethod = record["raw_api_log_data.http_method"];
 
-      console.log(`\n📋 [DEBUG] Processing Record #${index + 1}:`);
-      console.log(`[DEBUG] Full URL: ${record["raw_api_log_data.url"]}`);
-      console.log(`[DEBUG] Endpoint (after version removal): ${rawDataEndpoint}`);
-      console.log(`[DEBUG] HTTP Method: ${rawDataMethod}`);
-      console.log(`[DEBUG] Payment ID: ${record["raw_api_log_data.payment_id"]}`);
-      console.log(`[DEBUG] TPP Response Code: ${record["raw_api_log_data.tpp_response_code_group"]}`);
-      console.log(`[DEBUG] LFI Response Code: ${record["raw_api_log_data.lfi_response_code_group"]}`);
 
       // Match the raw URL and method against chargeable API data
       const isChargeable = await Promise.all(
@@ -2593,12 +2435,6 @@ export class UploadService {
 
       // Determine if the record is successful based on response codes
       const success = /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.tpp_response_code_group"])
-      
-      console.log(`[DEBUG] ✅ Chargeable Flags:`);
-      console.log(`[DEBUG]   - isChargeable (API Hub): ${isChargeable}`);
-      console.log(`[DEBUG]   - islfiChargable (LFI/TPP): ${islfiChargable}`);
-      console.log(`[DEBUG]   - successQuote: ${successQuote}`);
-      console.log(`[DEBUG]   - success (based on response code): ${success}`);
       // &&
       //   /^2([a-zA-Z0-9]{2}|\d{2})$/.test(record["raw_api_log_data.lfi_response_code_group"]);
 
@@ -2653,12 +2489,6 @@ export class UploadService {
 
       }
 
-      console.log(`[DEBUG] 🏁 Final flags for record #${index + 1}:`);
-      console.log(`[DEBUG]   - chargeable: ${isChargeable}`);
-      console.log(`[DEBUG]   - lfiChargable: ${islfiChargable}`);
-      console.log(`[DEBUG]   - successfullQuote: ${successQuote}`);
-      console.log(`[DEBUG]   - success: ${success}`);
-
       return {
         ...record,
         chargeable: isChargeable,
@@ -2672,42 +2502,20 @@ export class UploadService {
     return moment.utc(str, moment.ISO_8601, true).isValid() && str.endsWith("Z");
   }
   async calculateApiHubFee(processedData: any[], apiData: any[],) {
-    console.log('\n💰 [DEBUG] Starting calculateApiHubFee');
-    console.log(`[DEBUG] Processing ${processedData.length} records for API Hub Fee calculation`);
-    
-    return await Promise.all(processedData.map(async (record, idx) => {
+    return await Promise.all(processedData.map(async record => {
 
       let discounted = false;
       let api_hub_fee = this.variables.paymentApiHubFee.value;
 
-      console.log(`\n🔍 [DEBUG] Record #${idx + 1} - Finding Group Data:`);
-      console.log(`[DEBUG] Payment ID: ${record["raw_api_log_data.payment_id"]}`);
-      
+
       const groupData = await this.findGroupData(record, apiData);
       let group = groupData?.key_name || "Other";
 
-      console.log(`[DEBUG] Group Data Found:`);
-      console.log(`[DEBUG]   - key_name: ${groupData?.key_name}`);
-      console.log(`[DEBUG]   - api_category: ${groupData?.api_category}`);
-      console.log(`[DEBUG]   - commission_category: ${groupData?.commission_category}`);
-      console.log(`[DEBUG]   - assigned group: ${group}`);
-
       if (groupData?.key_name === 'balance' || groupData?.key_name === 'confirmation') {
         group = "data";
-        console.log(`[DEBUG] Group reassigned to 'data' (balance/confirmation)`);
       }
-      
-      console.log(`[DEBUG] Checking payment status validation:`);
-      console.log(`[DEBUG]   - record.success (before): ${record.success}`);
-      console.log(`[DEBUG]   - payment_logs.status: ${record['payment_logs.status']}`);
-      console.log(`[DEBUG]   - Is payment group: ${groupData?.key_name === 'payment-bulk' || groupData?.key_name === 'payment-non-bulk' || groupData?.key_name === 'payment-data'}`);
-      
       if (record.success && (groupData?.key_name === 'payment-bulk' || groupData?.key_name === 'payment-non-bulk' || groupData?.key_name === 'payment-data')) {
-        const oldSuccess = record.success;
-        record.success = this.paymentStatus.includes(record['payment_logs.status']);
-        console.log(`[DEBUG]   - Valid payment statuses: ${JSON.stringify(this.paymentStatus)}`);
-        console.log(`[DEBUG]   - Status in valid list: ${this.paymentStatus.includes(record['payment_logs.status'])}`);
-        console.log(`[DEBUG]   - record.success (after): ${record.success} (changed from ${oldSuccess})`);
+        record.success = this.paymentStatus.includes(record['payment_logs.status'])
       }
       // if (record.chargeable && record.success &&
       //   (record["raw_api_log_data.url"].includes('confirmation-of-payee') || record["raw_api_log_data.url"].includes('balances'))) {
@@ -2741,33 +2549,10 @@ export class UploadService {
         api_hub_fee = 0;
       }
 
-      let calculatedType;
-      if (groupData?.key_name === 'payment-bulk' || groupData?.key_name === 'payment-non-bulk') {
-        calculatedType = this.getType(record);
-        console.log(`[DEBUG] Type calculation (payment group):`);
-        console.log(`[DEBUG]   - merchant_id: ${record["payment_logs.merchant_id"]}`);
-        console.log(`[DEBUG]   - payment_type: ${record["raw_api_log_data.payment_type"]}`);
-        console.log(`[DEBUG]   - Calculated type: ${calculatedType}`);
-      } else if (record.successfullQuote) {
-        calculatedType = groupData?.commission_category || "NA";
-        console.log(`[DEBUG] Type from commission_category: ${calculatedType}`);
-      } else {
-        calculatedType = 'NA';
-        console.log(`[DEBUG] Type defaulted to 'NA'`);
-      }
-
-      console.log(`[DEBUG] 🏁 Final values for record #${idx + 1}:`);
-      console.log(`[DEBUG]   - group: ${group}`);
-      console.log(`[DEBUG]   - type: ${calculatedType}`);
-      console.log(`[DEBUG]   - chargeable: ${record.chargeable}`);
-      console.log(`[DEBUG]   - lfiChargable: ${record.lfiChargable}`);
-      console.log(`[DEBUG]   - success: ${record.success}`);
-      console.log(`[DEBUG]   - api_hub_fee: ${record.chargeable ? api_hub_fee : 0}`);
-
       return {
         ...record,
         group,
-        type: calculatedType,
+        type: groupData?.key_name === 'payment-bulk' || groupData?.key_name === 'payment-non-bulk' ? this.getType(record) : record.successfullQuote ? groupData.commission_category || "NA" : 'NA',
         discountType: groupData?.key_name === 'balance' || groupData?.key_name === 'confirmation' ? groupData?.key_name : null,
         api_category: groupData?.api_category || null,
         discounted,
