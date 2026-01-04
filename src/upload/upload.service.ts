@@ -75,6 +75,8 @@ export class UploadService {
     bulkPaymentMinTransactionThreshold?: any; // 10 transactions
     bulkPaymentFlatFeeBelow10?: any; // 0.250 aed (250 fils)
     bulkPaymentPerTransactionFeeAbove10?: any; // 0.025 aed (25 fils)
+    bulkPaymentFlatFeeBelow10MeToMe?: any; // 0.2 aed (250 fils)
+    bulkPaymentPerTFeeAbove10MeToMe?: any;
   } = {};
 
 
@@ -721,7 +723,7 @@ export class UploadService {
         });
       }
 
-      const batchSize = 50000;
+      const batchSize = 5000;
       let batch: any[] = [];
       let rowIndex = 0;
       let batchNumber = 1;
@@ -795,8 +797,10 @@ export class UploadService {
               console.log(`✅ Finished final batch #${batchNumber}`);
             }
             // 🔽 Migrate temp → final
+            console.log('Before final uploadLog update');
             console.log(`🎉 All ${rowIndex} rows processed successfully`);
-
+             console.log('After final uploadLog update');
+             
             await this.tempLogModel.aggregate([
               // Filter early by jobId
               { $match: { jobId: jobId } },
@@ -2100,17 +2104,17 @@ export class UploadService {
               
               if (numTransactions < this.variables.bulkPaymentMinTransactionThreshold.value) {
                 // Less than 10 transactions: flat fee of 250 fils
-                calculatedFee = parseFloat(this.variables.bulkPaymentFlatFeeBelow10.value.toFixed(3));
+                calculatedFee = parseFloat(this.variables.bulkPaymentFlatFeeBelow10MeToMe.value.toFixed(3));
                 applicableFee = calculatedFee;
-                unit_price = this.variables.bulkPaymentFlatFeeBelow10.value;
+                unit_price = this.variables.bulkPaymentFlatFeeBelow10MeToMe.value;
                 volume = 1;
                 isCapped = false;
                 cappedAt = 0;
               } else {
                 // 10 or more transactions: 25 fils per transaction
-                calculatedFee = parseFloat((numTransactions * this.variables.bulkPaymentPerTransactionFeeAbove10.value).toFixed(3));
+                calculatedFee = parseFloat((numTransactions * this.variables.bulkPaymentPerTFeeAbove10MeToMe.value).toFixed(3));
                 applicableFee = calculatedFee;
-                unit_price = this.variables.bulkPaymentPerTransactionFeeAbove10.value;
+                unit_price = this.variables.bulkPaymentPerTFeeAbove10MeToMe.value;
                 volume = numTransactions;
                 isCapped = false;
                 cappedAt = 0;
@@ -2290,17 +2294,17 @@ export class UploadService {
               
               if (numTransactions < this.variables.bulkPaymentMinTransactionThreshold.value) {
                 // Less than 10 transactions: flat fee of 250 fils
-                calculatedFee = parseFloat(this.variables.bulkPaymentFlatFeeBelow10.value.toFixed(3));
+                calculatedFee = parseFloat(this.variables.bulkPaymentFlatFeeBelow10MeToMe.value.toFixed(3));
                 applicableFee = calculatedFee;
-                unit_price = this.variables.bulkPaymentFlatFeeBelow10.value;
+                unit_price = this.variables.bulkPaymentFlatFeeBelow10MeToMe.value;
                 volume = 1;
                 isCapped = false;
                 cappedAt = 0;
               } else {
                 // 10 or more transactions: 25 fils per transaction
-                calculatedFee = parseFloat((numTransactions * this.variables.bulkPaymentPerTransactionFeeAbove10.value).toFixed(3));
+                calculatedFee = parseFloat((numTransactions * this.variables.bulkPaymentPerTFeeAbove10MeToMe.value).toFixed(3));
                 applicableFee = calculatedFee;
-                unit_price = this.variables.bulkPaymentPerTransactionFeeAbove10.value;
+                unit_price = this.variables.bulkPaymentPerTFeeAbove10MeToMe.value;
                 volume = numTransactions;
                 isCapped = false;
                 cappedAt = 0;
