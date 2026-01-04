@@ -39,7 +39,7 @@ async function bootstrap() {
   console.log(` Microservice listening on ${process.env.UPLOAD_HOST || 'localhost'}:${process.env.UPLOAD_PORT || '3001'}`);
   
   // Start HTTP server
-  await app.listen(process.env.API_PORT || 3002);
+  await app.listen(process.env.API_PORT || 3002); 
   console.log(`HTTP API running on port ${process.env.API_PORT || 3002}`);
 }
 bootstrap();
