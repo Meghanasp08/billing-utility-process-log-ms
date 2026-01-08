@@ -2141,6 +2141,15 @@ export class UploadService {
               applicableFee = calculatedFee;
             } else if (record.group === 'data') {
               numberOfPages = Math.ceil(parseInt(record["raw_api_log_data.records"] ?? "0") / 100);
+              console.log(`[DEBUG]   - Data group detected, numberOfPages calculated: ${numberOfPages}`);
+              if (Boolean(record["raw_api_log_data.is_large_corporate"])) {
+                record.type = "corporate";
+                calculatedFee = parseFloat((numberOfPages * this.variables.dataLargeCorporateMdp.value).toFixed(3));
+                applicableFee = calculatedFee;
+                unit_price = this.variables.dataLargeCorporateMdp.value;
+                volume = numberOfPages;
+                console.log(`[DEBUG]   - Large corporate data fee applied: ${calculatedFee}`);
+              }
             } else {
               calculatedFee = 0;
               applicableFee = calculatedFee;
@@ -2354,8 +2363,17 @@ export class UploadService {
                 }, HttpStatus.BAD_REQUEST);
               }
               numberOfPages = Math.ceil(parseInt(record["raw_api_log_data.records"] ?? "0") / 100);
+              console.log("numberOfPages", numberOfPages);
               if (Boolean(record["raw_api_log_data.is_large_corporate"])) {
                 record.type = "corporate";
+                console.log("inside conditional num of pages", numberOfPages);
+                calculatedFee = parseFloat((numberOfPages * this.variables.dataLargeCorporateMdp.value).toFixed(3));
+                applicableFee = calculatedFee;
+                unit_price = this.variables.dataLargeCorporateMdp.value;
+                volume = numberOfPages;
+                console.log("calculatedFee", calculatedFee, "applicableFee", applicableFee, "unit_price", unit_price, "volume", volume);
+                
+              
               }
             } else {
               calculatedFee = 0;
