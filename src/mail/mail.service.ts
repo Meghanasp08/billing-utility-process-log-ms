@@ -216,7 +216,7 @@ export class MailService {
     const user_data = await user.save();
 
     if (forget_key === true) {
-      let passwordLink = `http://193.123.81.148:8888/reset-password/${token}`;
+      let passwordLink = `http://10.113.133.4:8080/reset-password/${token}`;
       const mail_data = {
         to: user.email,
         subject: 'Forgot Password',
@@ -226,7 +226,7 @@ export class MailService {
       await this.sendEmail(mail_data);
 
     } else {
-      let activationLink = `http://193.123.81.148:8888/email-verify/${token}`;
+      let activationLink = `http://10.113.133.4:8080/email-verify/${token}`;
       const mail_data = {
         to: user.email,
         subject: 'Activate your account',
@@ -277,7 +277,7 @@ export class MailService {
                 Please find below the access credentials to log into the Billing Utility system:
               </p>
               <ul style="font-size: 16px; color: #555;">
-                <li><strong>Access Portal:</strong> <a href="http://193.123.81.148:8888/" style="color: #007bff;">http://193.123.81.148:8888/</a></li>
+                <li><strong>Access Portal:</strong> <a href="http://10.113.133.4:8080/" style="color: #007bff;">http://10.113.133.4:8080/</a></li>
                 <li><strong>Username:</strong> ${data.email}</li>
               </ul>
 
